@@ -47,6 +47,7 @@ namespace IotWebApi.Areas.Scada.Controllers
                 {
                     jo[fieldArr[j]] = rand.Next(1000, 10000);
                 }
+                result.source.Add(jo);
             }
 
             Status = true;

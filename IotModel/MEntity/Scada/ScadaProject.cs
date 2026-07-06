@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("组态项目表")]
     [EntityCache]
     [SugarTable(TableName = "scada_project", TableDescription = "组态项目表", IsDisabledUpdateAll = true)]
-    public class ScadaProject : BaseEntity
+    public class ScadaProject : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 雪花主键

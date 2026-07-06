@@ -1,4 +1,5 @@
 ﻿using CenBoCommon.Zxx;
+using IotModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -49,6 +50,9 @@ namespace IotWebApi
                                 context.Result = new JsonResult(data);
                             }
                         }
+
+                        // 认证通过后写入单位上下文（AsyncLocal 随请求异步流转），供 DbContext 对 IUnitEntity 实体自动追加 UnitId 隔离
+                        if (context.Result == null) UnitScope.CurrentUnitId = model.UnitId;
                     }
                 }
                 catch (Exception)

@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("大屏项目表")]
     [EntityCache]
     [SugarTable(TableName = "dash_project", TableDescription = "大屏项目表", IsDisabledUpdateAll = true)]
-    public class DashProject : BaseEntity
+    public class DashProject : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 雪花主键

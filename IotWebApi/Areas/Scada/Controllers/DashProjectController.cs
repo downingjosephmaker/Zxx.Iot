@@ -155,6 +155,9 @@ namespace IotWebApi.Areas.Scada.Controllers
         [ApiGroup(ApiGroupNames.Scada)]
         public List<DashProject> GetListByPage(ActionPara model)
         {
+            var optmdl = Request.GetToken();
+            if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
+            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.UnitId.ToString() });
             int totalNumber = 0;
             var list = DashProjectDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;

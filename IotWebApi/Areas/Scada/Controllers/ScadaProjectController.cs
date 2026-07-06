@@ -124,9 +124,13 @@ namespace IotWebApi.Areas.Scada.Controllers
         public string DeleteById(long projectId)
         {
             Status = false;
-            Message = "设备信息删除失败。";
-            Status = ScadaProjectDAO.Instance.DeleteBy(t => t.SnowId == projectId);
-            if (Status) Message = "设备信息删除成功。";
+            Message = "组态项目信息删除失败。";
+            Status = ScadaProjectDAO.Instance.TranAction(() =>
+            {
+                ScadaProjectDAO.Instance.DeleteBy(t => t.SnowId == projectId);
+                ScadaProjectDataDAO.Instance.DeleteBy(t => t.ProjectId == projectId);
+            });
+            if (Status) Message = "组态项目信息删除成功。";
 
             return Message;
         }
@@ -142,6 +146,9 @@ namespace IotWebApi.Areas.Scada.Controllers
         [ApiGroup(ApiGroupNames.Scada)]
         public List<ScadaProject> GetListByPage(ActionPara model)
         {
+            var optmdl = Request.GetToken();
+            if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
+            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.UnitId.ToString() });
             int totalNumber = 0;
             var list = ScadaProjectDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;
@@ -256,7 +263,7 @@ namespace IotWebApi.Areas.Scada.Controllers
                 });
                 Status = ScadaProjectDAO.Instance.UpdateColumns(list, it => new
                 {
-                    it.ProjectStatus
+                    it.ProjectDefault
                 });
                 if (Status) Message = $"组态项目信息设置默认成功。";
             }

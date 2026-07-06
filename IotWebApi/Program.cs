@@ -347,6 +347,9 @@ app.ConfigureEventBus();
 // 使用控制路由 依靠特性[Route()]
 app.MapControllers();
 
+//SignalR信号中心端点，路径须与前端配置 VITE_BASE_URL_WIRHURL 保持一致
+app.MapHub<IotWebApi.Services.Jobs.ChatServer>("/signalr/chatHub");
+
 //// 监听应用启动完成事件，执行初始化逻辑
 //app.Lifetime.ApplicationStarted.Register(() =>
 //{

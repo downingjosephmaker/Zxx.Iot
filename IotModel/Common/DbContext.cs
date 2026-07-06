@@ -687,6 +687,9 @@ namespace IotModel
         private bool IsUseRedisCache = false;
         private readonly string typename = typeof(T).Name;
 
+        // 实体是否参与单位级数据隔离（实现 IUnitEntity）
+        private static readonly bool IsUnitScopedEntity = typeof(IUnitEntity).IsAssignableFrom(typeof(T));
+
         //数据验证
         private readonly EntityValidator<T> _validator = new EntityValidator<T>();
 
@@ -718,7 +721,45 @@ namespace IotModel
                 SqlSugarHelper.SqlSugar = "";
                 SqlSugarHelper.SqlError = SugarSqlFormat.FormatParam(exp.Sql, exp.Parametres);
             };
+            ApplyUnitScope(db);
             return db;
+        }
+
+        /// <summary>
+        /// 单位级数据隔离（SQL 路径）：对实现 IUnitEntity 的实体自动追加 UnitId 查询过滤，
+        /// 并在插入时回填 UnitId（实体已显式赋值时不覆盖）。
+        /// 仅在存在用户上下文（UnitScope.CurrentUnitId 有值）时生效，后台任务/插件无上下文，行为不变。
+        /// CopyNew 不继承 QueryFilter 与 DataExecuting，必须在每个新实例上挂载（同上方 AOP 钩子）。
+        /// </summary>
+        private static void ApplyUnitScope(ISqlSugarClient db)
+        {
+            if (!IsUnitScopedEntity) return;
+            var unitId = UnitScope.CurrentUnitId;
+            if (unitId == null) return;
+
+            db.QueryFilter.AddTableFilter<IUnitEntity>(it => it.UnitId == unitId.Value);
+            db.Aop.DataExecuting = (value, entityInfo) =>
+            {
+                if (entityInfo.OperationType == DataFilterType.InsertByObject
+                    && entityInfo.PropertyName == nameof(IUnitEntity.UnitId)
+                    && entityInfo.EntityValue is IUnitEntity entity
+                    && entity.UnitId == 0)
+                {
+                    entityInfo.SetValue(unitId.Value);
+                }
+            };
+        }
+
+        /// <summary>
+        /// 单位级数据隔离（缓存路径）：[EntityCache] 全表缓存绕过 SQL 过滤器，
+        /// 在缓存读取出口按 UnitScope 过滤；无用户上下文时原样返回全表。
+        /// </summary>
+        private static List<T> FilterUnitScope(List<T> list)
+        {
+            if (!IsUnitScopedEntity) return list;
+            var unitId = UnitScope.CurrentUnitId;
+            if (unitId == null || !list.IsZxxAny()) return list;
+            return list.Where(x => ((IUnitEntity)x).UnitId == unitId.Value).ToList();
         }
 
         private IDatabase RedisService
@@ -1271,7 +1312,7 @@ namespace IotModel
         private List<T> EnsureCacheLoaded()
         {
             var allList = GetListFromRedis().Result;
-            if (allList.IsZxxAny()) return allList;
+            if (allList.IsZxxAny()) return FilterUnitScope(allList);
 
             // 缓存空：从数据库查全表（不带任何 Where 条件）
             List<T> freshData;
@@ -1298,7 +1339,7 @@ namespace IotModel
                     LogSqlError(ex);
                 }
             }
-            return freshData;
+            return FilterUnitScope(freshData);
         }
 
         /// <summary>
@@ -2399,6 +2440,7 @@ namespace IotModel
             // 为本次事务创建独立连接实例，同时通过 _transactionDb 让事务内的所有
             // GetOperDb() 调用都使用此同一实例，确保事务一致性。
             var newDb = Db.CopyNew();
+            ApplyUnitScope(newDb);
             _transactionDb.Value = newDb;
             try
             {
