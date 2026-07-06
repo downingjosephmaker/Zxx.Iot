@@ -196,6 +196,16 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<QuartzService>());
 
 var ismain = AppSetting.GetConfig("DataSync:IsMain").ToLower();
 
+//注册SignalR信号中心
+builder.Services.AddSignalR(options =>
+{
+    //设置服务端向客户端 ping的间隔
+    options.KeepAliveInterval = TimeSpan.FromSeconds(60);
+    //设置客户端超时时间
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(130);
+    options.MaximumReceiveMessageSize = 1024 * 1024 * 10; // 数据包大小10M，默认限制为32K
+});
+
 //配置 IIS 的请求体大小
 builder.Services.Configure<IISServerOptions>(options =>
 {

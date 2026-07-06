@@ -1,6 +1,7 @@
 ﻿using CenBoCommon.Zxx;
 using IotLog;
 using IotModel;
+using IotWebApi.Services.Jobs;
 
 namespace IotWebApi
 {
