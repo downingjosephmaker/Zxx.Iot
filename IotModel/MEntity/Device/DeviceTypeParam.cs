@@ -98,6 +98,36 @@ namespace IotModel
         [SugarColumn(ColumnName = "param_change_value", Length = 18, DecimalDigits = 2, ColumnDescription = "最大跳变量", DefaultValue = "0.00", ColumnDataType = "decimal")]
         public decimal ParamChangeValue { get; set; }
         /// <summary>
+        /// 合理范围过滤开关(0:否1:是,配合最大/最小合法值,越界丢弃)
+        ///</summary>
+        [DisplayName("合理范围过滤开关(0:否1:是)")]
+        [SugarColumn(ColumnName = "range_filter_enable", Length = 1, ColumnDescription = "合理范围过滤开关(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool RangeFilterEnable { get; set; }
+        /// <summary>
+        /// 幅度过滤开关(0:否1:是,绝对差用最大跳变量,百分比用最大跳变百分比)
+        ///</summary>
+        [DisplayName("幅度过滤开关(0:否1:是)")]
+        [SugarColumn(ColumnName = "amplitude_filter_enable", Length = 1, ColumnDescription = "幅度过滤开关(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool AmplitudeFilterEnable { get; set; }
+        /// <summary>
+        /// 最大跳变百分比(相对前值,0=不启用百分比判定)
+        ///</summary>
+        [DisplayName("最大跳变百分比")]
+        [SugarColumn(ColumnName = "max_amplitude_percent", Length = 18, DecimalDigits = 2, ColumnDescription = "最大跳变百分比(0=不启用)", DefaultValue = "0.00", ColumnDataType = "decimal")]
+        public decimal MaxAmplitudePercent { get; set; }
+        /// <summary>
+        /// 连续异常容错开关(0:否1:是,连续N次幅度异常认定真实阶跃接受该值)
+        ///</summary>
+        [DisplayName("连续异常容错开关(0:否1:是)")]
+        [SugarColumn(ColumnName = "continuous_filter_enable", Length = 1, ColumnDescription = "连续异常容错开关(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool ContinuousFilterEnable { get; set; }
+        /// <summary>
+        /// 连续异常次数阈值(默认3)
+        ///</summary>
+        [DisplayName("连续异常次数阈值")]
+        [SugarColumn(ColumnName = "max_continuous_count", ColumnDescription = "连续异常次数阈值(默认3)", DefaultValue = "3", ColumnDataType = "int")]
+        public int MaxContinuousCount { get; set; } = 3;
+        /// <summary>
         /// 是否显示(0:否1:是)
         ///</summary>
         [DisplayName("是否显示(0:否1:是)")]

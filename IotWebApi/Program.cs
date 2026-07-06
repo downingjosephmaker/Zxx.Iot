@@ -240,6 +240,20 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryWriteServ
 builder.Services.AddSingleton<TelemetryLatestService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryLatestService>());
 
+// 策略合并服务(三级scope逐字段合并,StrategyChangedEvent触发热重载)
+builder.Services.AddSingleton<StrategyMergeService>();
+
+// 采集侧异常值过滤链(范围/幅度/连续容错)
+builder.Services.AddSingleton<ValueFilterService>();
+
+// 推送策略引擎(对外发布节流+静默兜底,最新值缓存不受约束)
+builder.Services.AddSingleton<PushGateService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PushGateService>());
+
+// 上下线判定服务(离线疑似中间态防抖+上线通知限频)
+builder.Services.AddSingleton<OfflineDebounceService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<OfflineDebounceService>());
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

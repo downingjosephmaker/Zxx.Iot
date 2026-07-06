@@ -55,11 +55,31 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly IHubContext<ChatServer> _hubContext;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext)
+        /// <summary>
+        /// 采集侧异常值过滤链(范围/幅度/连续容错)
+        /// </summary>
+        private readonly ValueFilterService _valueFilterService;
+
+        /// <summary>
+        /// 推送策略引擎(对外发布节流,最新值不受约束)
+        /// </summary>
+        private readonly PushGateService _pushGateService;
+
+        /// <summary>
+        /// 上下线判定服务(离线疑似中间态防抖)
+        /// </summary>
+        private readonly OfflineDebounceService _offlineDebounceService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService)
         {
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
+            _valueFilterService = valueFilterService;
+            _pushGateService = pushGateService;
+            _pushGateService.FlushHandler = FlushHeldPoints;  //节流/静默到期的点位由本服务补写历史/遥测/SignalR
+            _offlineDebounceService = offlineDebounceService;
+            _offlineDebounceService.ConfirmHandler = ConfirmOffline;  //疑似离线确认后由本服务落库+推送
             _channel = Channel.CreateBounded<PluginEvent>(new BoundedChannelOptions(QueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
@@ -214,9 +234,14 @@ namespace IotWebApi.Services
             var deviceupdates = new Dictionary<int, DeviceInfoEntity>();
             var historylist = new List<EventHistoryEntity>();
             var telemetrypoints = new List<TelemetryPoint>();
+            var latestpoints = new List<TelemetryPoint>();
 
             foreach (var data in validlist)
             {
+                // 0.采集侧三级异常值过滤(范围/幅度/连续容错,被滤除的参数本轮整体丢弃)
+                data.deviceparam = data.deviceparam.Where(t => _valueFilterService.Accept(data.device.DeviceTypeCode, data.DeviceId, t.ParamCode, t.ParamValue)).ToList();
+                if (!data.deviceparam.IsZxxAny()) continue;
+
                 // 1.按ParamCode合并更新设备参数最新值(设备参数表是实时值的唯一事实来源)
                 var param = paramlist.FirstOrDefault(t => t.DeviceId == data.DeviceId);
                 if (param != null && param.ExpandObjects.IsZxxAny())
@@ -236,12 +261,20 @@ namespace IotWebApi.Services
                 // 2.更新设备在线状态(插件上报的device副本已带最新状态)
                 deviceupdates[data.DeviceId] = data.device;
 
-                // 3.生成历史记录快照(一台设备一次采集一行)
+                // 3.推送策略判定:通过的点位才对外发布,扣下的由引擎按节流窗口/静默周期补发
+                var devicepoints = BuildTelemetryPoints(data);
+                latestpoints.AddRange(devicepoints);
+                var publishpoints = devicepoints.Where(t => _pushGateService.ShouldPublish(data.device.DeviceTypeCode, t)).ToList();
+                if (!publishpoints.IsZxxAny()) continue;
+                telemetrypoints.AddRange(publishpoints);
+
+                // 4.生成历史记录快照(只含本轮对外发布的点位)
+                var pubcodes = publishpoints.Select(t => t.ParamCode).ToHashSet();
                 var history = new EventHistoryEntity
                 {
                     SnowId = SnowModel.Instance.NewId(),
                     EventTime = data.deviceparam.FirstOrDefault(t => !t.CollectTime.IsZxxNullOrEmpty())?.CollectTime ?? DateTime.Now.ToDateTimeString(),
-                    ExpandObject = data.deviceparam.Select(t => new Expand_EventHistory
+                    ExpandObject = data.deviceparam.Where(t => pubcodes.Contains(t.ParamCode)).Select(t => new Expand_EventHistory
                     {
                         ParamCode = t.ParamCode,
                         ParamName = t.ParamName,
@@ -252,19 +285,63 @@ namespace IotWebApi.Services
                 };
                 FillEventBase(history, data.device, unitlist, buildlist, deptlist, typelist);
                 historylist.Add(history);
-
-                // 4.投递遥测窄表写入队列(未配置Timescale连接串时服务内部直接忽略)
-                telemetrypoints.AddRange(BuildTelemetryPoints(data));
             }
 
             if (paramupdates.Count > 0) DeviceParamDAO.Instance.UpdateColumns(paramupdates.Values.ToList(), it => new { it.ExpandJson });
             if (deviceupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates.Values.ToList(), it => new { it.DeviceState, it.LastOnlineTime, it.DeviceAlarm });
             if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
+            if (latestpoints.IsZxxAny()) _latestService.Update(latestpoints);  //最新值缓存不受推送策略约束,永远即时更新
             if (telemetrypoints.IsZxxAny())
             {
                 _telemetryService.Enqueue(telemetrypoints);
-                _latestService.Update(telemetrypoints);
                 BroadcastDeviceData(telemetrypoints);
+            }
+        }
+
+        /// <summary>
+        /// 推送策略补发回调(节流窗口/静默周期到期的点位,补写历史/遥测/SignalR)
+        /// </summary>
+        private void FlushHeldPoints(List<TelemetryPoint> points)
+        {
+            try
+            {
+                if (!points.IsZxxAny()) return;
+                _telemetryService.Enqueue(points);
+                _latestService.Update(points);
+                BroadcastDeviceData(points);
+
+                var deviceids = points.Select(t => (int)t.DeviceId).Distinct().ToList();
+                var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
+                if (!devlist.IsZxxAny()) return;
+                var unitlist = BasicunitInfoDAO.Instance.GetList();
+                var buildlist = BuildInfoDAO.Instance.GetList();
+                var deptlist = DeptInfoDAO.Instance.GetList();
+                var typelist = DeviceTypeDAO.Instance.GetList();
+
+                var historylist = new List<EventHistoryEntity>();
+                foreach (var group in points.GroupBy(t => t.DeviceId))
+                {
+                    var dbdev = devlist.FirstOrDefault(t => t.DeviceId == group.Key);
+                    if (dbdev == null) continue;
+                    var history = new EventHistoryEntity
+                    {
+                        SnowId = SnowModel.Instance.NewId(),
+                        EventTime = DateTime.Now.ToDateTimeString(),
+                        ExpandObject = group.Select(t => new Expand_EventHistory
+                        {
+                            ParamCode = t.ParamCode,
+                            ParamName = t.ParamName,
+                            ParamValue = t.Value.HasValue ? t.Value.Value.ToString() : t.ValueStr
+                        }).ToList()
+                    };
+                    FillEventBase(history, dbdev, unitlist, buildlist, deptlist, typelist);
+                    historylist.Add(history);
+                }
+                if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
             }
         }
 
@@ -288,16 +365,26 @@ namespace IotWebApi.Services
                 var dbdev = devlist.FirstOrDefault(t => t.DeviceId == data.DeviceId);
                 if (dbdev == null || dbdev.DeviceState == data.device.DeviceState) continue;
 
+                // 离线不即时落库:进入疑似离线中间态,超过确认时长由回调正式判离线(判定级防抖)
+                if (data.device.DeviceState != 2)
+                {
+                    _offlineDebounceService.OnSuspectOffline(data.DeviceId, data.device.DeviceState);
+                    continue;
+                }
+
+                // 上线即时生效(疑似离线期间恢复则静默取消);上线通知同设备60秒限频
+                bool notify = _offlineDebounceService.OnOnline(data.DeviceId);
                 dbdev.DeviceState = data.device.DeviceState;
                 if (!data.device.LastOnlineTime.IsZxxNullOrEmpty()) dbdev.LastOnlineTime = data.device.LastOnlineTime;
                 deviceupdates[dbdev.DeviceId] = dbdev;
+                if (!notify) continue;
 
                 var run = new EventRun
                 {
                     SnowId = SnowModel.Instance.NewId(),
                     EventTime = DateTime.Now.ToDateTimeString(),
-                    EventType = data.device.DeviceState == 2 ? "设备通信恢复" : "设备离线",
-                    EventContent = $"设备[{dbdev.DeviceName}]{(data.device.DeviceState == 2 ? "通信恢复上线" : "通信中断离线")}"
+                    EventType = "设备通信恢复",
+                    EventContent = $"设备[{dbdev.DeviceName}]通信恢复上线"
                 };
                 FillEventBase(run, dbdev, unitlist, buildlist, deptlist, typelist);
                 runlist.Add(run);
@@ -308,6 +395,54 @@ namespace IotWebApi.Services
             {
                 EventRunDAO.Instance.InsertRange(runlist);
                 BroadcastDeviceState(runlist);
+            }
+        }
+
+        /// <summary>
+        /// 离线确认回调(疑似离线超过确认时长的设备正式落库并推送,事件携带原因)
+        /// </summary>
+        private void ConfirmOffline(List<(int DeviceId, int DeviceState, string Reason)> confirms)
+        {
+            try
+            {
+                if (!confirms.IsZxxAny()) return;
+                var deviceids = confirms.Select(t => t.DeviceId).Distinct().ToList();
+                var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
+                if (!devlist.IsZxxAny()) return;
+                var unitlist = BasicunitInfoDAO.Instance.GetList();
+                var buildlist = BuildInfoDAO.Instance.GetList();
+                var deptlist = DeptInfoDAO.Instance.GetList();
+                var typelist = DeviceTypeDAO.Instance.GetList();
+
+                var deviceupdates = new List<DeviceInfoEntity>();
+                var runlist = new List<EventRun>();
+                foreach (var confirm in confirms)
+                {
+                    var dbdev = devlist.FirstOrDefault(t => t.DeviceId == confirm.DeviceId);
+                    if (dbdev == null || dbdev.DeviceState == confirm.DeviceState) continue;
+                    dbdev.DeviceState = confirm.DeviceState;
+                    deviceupdates.Add(dbdev);
+
+                    var run = new EventRun
+                    {
+                        SnowId = SnowModel.Instance.NewId(),
+                        EventTime = DateTime.Now.ToDateTimeString(),
+                        EventType = "设备离线",
+                        EventContent = $"设备[{dbdev.DeviceName}]通信中断离线,原因:{confirm.Reason}"
+                    };
+                    FillEventBase(run, dbdev, unitlist, buildlist, deptlist, typelist);
+                    runlist.Add(run);
+                }
+                if (deviceupdates.IsZxxAny()) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates, it => new { it.DeviceState });
+                if (runlist.IsZxxAny())
+                {
+                    EventRunDAO.Instance.InsertRange(runlist);
+                    BroadcastDeviceState(runlist);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
             }
         }
 
