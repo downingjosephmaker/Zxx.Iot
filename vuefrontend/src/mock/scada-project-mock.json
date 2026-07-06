@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "message": "获取成功",
+  "data": {
+    "items": [
+      {
+        "SnowId": 1756699001001,
+        "ProjectName": "智能工厂监控系统",
+        "Description": "基于SCADA技术的智能工厂生产线实时监控与数据采集系统，支持设备状态监测、报警管理、历史数据分析等功能",
+        "Status": 1,
+        "Version": "v1.2.0",
+        "Thumbnail": "/images/projects/smart-factory-thumbnail.jpg",
+        "IsDeleted": 0,
+        "UnitId": 1001,
+        "ExpandJson": "{\"tags\":[\"工业4.0\",\"智能制造\",\"实时监控\"],\"deviceCount\":156,\"viewCount\":8,\"lastBackup\":\"2024-01-15T10:30:00Z\"}",
+        "CreateTime": "2024-01-10T09:15:30Z",
+        "UpdateTime": "2024-01-15T14:22:10Z",
+        "CreateBy": "admin",
+        "UpdateBy": "engineer01",
+        "CreateId": 1001,
+        "UpdateId": 1002,
+        "CreateName": "系统管理员",
+        "UpdateName": "工程师张三"
+      },
+      {
+        "SnowId": 1756699001002,
+        "ProjectName": "能源管理平台",
+        "Description": "综合能源管理与优化平台，集成电力、燃气、水务等多种能源的监控、分析与调度功能，实现能源使用效率最大化",
+        "Status": 0,
+        "Version": "v2.1.3",
+        "Thumbnail": "/images/projects/energy-management-thumbnail.jpg",
+        "IsDeleted": 0,
+        "UnitId": 1002,
+        "ExpandJson": "{\"tags\":[\"能源管理\",\"节能减排\",\"智慧能源\"],\"deviceCount\":89,\"viewCount\":12,\"lastBackup\":\"2024-01-12T16:45:00Z\"}",
+        "CreateTime": "2024-01-08T11:20:15Z",
+        "UpdateTime": "2024-01-14T09:18:45Z",
+        "CreateBy": "admin",
+        "UpdateBy": "engineer02",
+        "CreateId": 1001,
+        "UpdateId": 1003,
+        "CreateName": "系统管理员",
+        "UpdateName": "工程师李四"
+      }
+    ],
+    "total": 2,
+    "page": 1,
+    "size": 10
+  }
+}

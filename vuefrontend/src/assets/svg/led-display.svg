@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" width="280" height="80">
+  <defs>
+    <!-- LED 发光滤镜效果 -->
+    <filter id="led-glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="led-glow-strong">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- 背景渐变 -->
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0a0a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景板 - 紧凑设计 -->
+  <rect width="280" height="80" rx="6" fill="url(#bg-gradient)" stroke="#333" stroke-width="2"/>
+
+  <!-- LED 显示区域容器 - 居中垂直对齐 -->
+  <g id="led-container" transform="translate(10, 40)">
+    <!-- 文本内容 (由 LedDisplayComponent 动态更新) -->
+    <text id="led-text"
+          x="0"
+          y="0"
+          font-family="'Courier New', monospace"
+          font-size="42"
+          font-weight="bold"
+          fill="#ff3333"
+          filter="url(#led-glow-strong)"
+          dominant-baseline="middle">88:88:88</text>
+  </g>
+</svg>

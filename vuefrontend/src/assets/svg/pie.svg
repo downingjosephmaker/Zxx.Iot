@@ -1,0 +1,18 @@
+<svg viewBox="0 0 24 24" width="24px" height="24px" xmlns="http://www.w3.org/2000/svg">
+ <!-- 外圆边框 -->
+ <circle cx="12" cy="12" r="10" fill="none" stroke="#000" stroke-width="0.8"/>
+ 
+ <!-- 饼图分割线 -->
+ <g stroke="#000" stroke-width="0.6">
+  <line x1="12" y1="2" x2="12" y2="22"/>
+  <line x1="2" y1="12" x2="22" y2="12"/>
+ </g>
+ 
+ <!-- 扇形轮廓 -->
+ <g fill="none" stroke="#000" stroke-width="0.4">
+  <path d="M 12 2 A 10 10 0 0 1 22 12"/>
+  <path d="M 22 12 A 10 10 0 0 1 12 22"/>
+  <path d="M 12 22 A 10 10 0 0 1 2 12"/>
+  <path d="M 2 12 A 10 10 0 0 1 12 2"/>
+ </g>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 画板背景 -->
+  <rect x="8" y="8" width="48" height="48" rx="4" fill="#ffffff" stroke="#409eff" stroke-width="2"/>
+
+  <!-- 画笔路径 -->
+  <path d="M 16 40 Q 20 32, 28 28 T 40 24 T 48 28"
+        stroke="#409eff"
+        stroke-width="3"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- 画笔工具 -->
+  <g transform="translate(48, 12)">
+    <!-- 画笔笔杆 -->
+    <line x1="0" y1="0" x2="8" y2="8" stroke="#606266" stroke-width="2" stroke-linecap="round"/>
+    <!-- 画笔笔尖 -->
+    <circle cx="8" cy="8" r="2" fill="#409eff"/>
+    <!-- 画笔手柄 -->
+    <circle cx="-1" cy="-1" r="3" fill="#67c23a" stroke="#606266" stroke-width="1"/>
+  </g>
+
+  <!-- 调色板点 -->
+  <circle cx="14" cy="50" r="2" fill="#f56c6c"/>
+  <circle cx="20" cy="50" r="2" fill="#67c23a"/>
+  <circle cx="26" cy="50" r="2" fill="#409eff"/>
+  <circle cx="32" cy="50" r="2" fill="#e6a23c"/>
+</svg>

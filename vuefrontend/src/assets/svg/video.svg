@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" viewBox="0 0 21 15">
+ <metadata>
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title/>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ 
+ <!-- 外圆边框 -->
+ <circle cx="12" cy="12" r="10" fill="none" stroke="#000" stroke-width="0.8"/>
+ 
+ <!-- 播放三角形 -->
+ <path d="M 9 7 L 9 17 L 17 12 Z" fill="none" stroke="#000" stroke-width="0.8" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 折线图标 -->
+  <path d="M3 18L7 14L13 16L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 数据点 -->
+  <circle cx="3" cy="18" r="2" fill="currentColor"/>
+  <circle cx="7" cy="14" r="2" fill="currentColor"/>
+  <circle cx="13" cy="16" r="2" fill="currentColor"/>
+  <circle cx="21" cy="8" r="2" fill="currentColor"/>
+</svg>

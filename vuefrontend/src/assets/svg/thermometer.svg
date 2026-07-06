@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="140" viewBox="0 0 80 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 默认液体渐变（蓝到红） -->
+    <linearGradient id="thermometer-liquid-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6B6B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 底部大圆球 - 外圈（深灰色边框，固定颜色） -->
+  <circle id="thermometer-outer-bulb" cx="28" cy="112" r="22" fill="#f5f5f5" stroke="#3d4852" stroke-width="6"/>
+
+  <!-- 玻璃管主体 - 外壳（深灰色粗边框，固定颜色） -->
+  <rect id="thermometer-tube" x="10" y="10" width="36" height="92"
+        rx="18" ry="18"
+        fill="#f5f5f5"
+        stroke="#3d4852"
+        stroke-width="6"/>
+
+  <!-- 内部白色背景（固定颜色） -->
+  <rect id="thermometer-inner-bg" x="16" y="16" width="24" height="80"
+        rx="12" ry="12"
+        fill="#ffffff"
+        stroke="none"/>
+
+  <!-- 🎯 进度条轨道元素 - 用于兼容进度条动画（不可见） -->
+  <rect id="A-GXP_TRACK"
+        x="22"
+        y="20"
+        width="12"
+        height="76"
+        fill="none"
+        stroke="none"
+        opacity="0"/>
+
+  <!-- 液体通道裁剪区域 -->
+  <clipPath id="liquidClip">
+    <rect x="22" y="20" width="12" height="76" rx="6" ry="6"/>
+  </clipPath>
+
+  <!-- 液体容器 -->
+  <g id="liquidContainer" clip-path="url(#liquidClip)">
+    <!-- 🎯 液体矩形 - 兼容进度条动画的 A-GXP_FILL -->
+    <rect id="A-GXP_FILL"
+          x="22"
+          y="58"
+          width="12"
+          height="38"
+          fill="#FF6B6B"
+          style="transform-origin: 50% 100%"/>
+  </g>
+
+  <!-- 底部液体球 - 内圈（与液柱同色，会被图标效果改变） -->
+  <circle id="thermometer-bulb" cx="28" cy="112" r="16" fill="#FF6B6B"/>
+
+  <!-- 刻度线组（固定颜色） -->
+  <g id="scaleMarks" stroke="#3d4852" stroke-width="3" stroke-linecap="round">
+    <line x1="52" y1="24" x2="68" y2="24"/>
+    <line x1="52" y1="36" x2="62" y2="36" stroke-width="2.5"/>
+    <line x1="52" y1="48" x2="68" y2="48"/>
+    <line x1="52" y1="60" x2="62" y2="60" stroke-width="2.5"/>
+    <line x1="52" y1="72" x2="68" y2="72"/>
+    <line x1="52" y1="84" x2="62" y2="84" stroke-width="2.5"/>
+    <line x1="52" y1="96" x2="68" y2="96"/>
+  </g>
+
+  <!-- 🌡️ 温度数值显示 -->
+  <text id="A-GXP_LABEL"
+        x="28"
+        y="58"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-size="10"
+        font-family="Arial, sans-serif"
+        font-weight="bold"
+        fill="#3d4852">30℃</text>
+
+  <script type="text/javascript">
+    <![CDATA[
+    (function() {
+      // 🔑 获取当前SVG元素
+      var waterShape = document.getElementById('A-GXP_FILL');
+      var labelElement = document.getElementById('A-GXP_LABEL');
+
+      if (!waterShape) {
+        console.warn('⚠️ 温度计初始化失败：未找到 A-GXP_FILL 元素');
+        return;
+      }
+
+      var svgRoot = waterShape;
+      while (svgRoot && svgRoot.tagName !== 'svg') {
+        svgRoot = svgRoot.parentElement;
+      }
+
+      if (!svgRoot) {
+        console.error('无法找到SVG根元素');
+        return;
+      }
+
+      var bulb = svgRoot.querySelector('#thermometer-bulb');
+      var trackElement = svgRoot.querySelector('#A-GXP_TRACK');
+
+      // 获取结构性元素（需要保持固定颜色的元素）
+      var structuralElements = {
+        outerBulb: svgRoot.querySelector('#thermometer-outer-bulb'),
+        tube: svgRoot.querySelector('#thermometer-tube'),
+        innerBg: svgRoot.querySelector('#thermometer-inner-bg'),
+        scaleMarks: svgRoot.querySelector('#scaleMarks')
+      };
+
+      // 保存结构性元素的原始颜色
+      var originalColors = {
+        outerBulb: { fill: '#f5f5f5', stroke: '#3d4852' },
+        tube: { fill: '#f5f5f5', stroke: '#3d4852' },
+        innerBg: { fill: '#ffffff', stroke: 'none' },
+        scaleMarks: { fill: 'none', stroke: '#3d4852' }
+      };
+
+      // 默认配置
+      var initValue = 30;
+      var _pn_value = initValue;
+      var _pn_min = 0;
+      var _pn_max = 100;
+
+      // 🔐 强制恢复结构性元素的原始颜色
+      function restoreStructuralColors() {
+        // 外圈球泡
+        if (structuralElements.outerBulb) {
+          structuralElements.outerBulb.setAttribute('fill', originalColors.outerBulb.fill);
+          structuralElements.outerBulb.setAttribute('stroke', originalColors.outerBulb.stroke);
+          structuralElements.outerBulb.style.fill = originalColors.outerBulb.fill;
+          structuralElements.outerBulb.style.stroke = originalColors.outerBulb.stroke;
+        }
+
+        // 玻璃管
+        if (structuralElements.tube) {
+          structuralElements.tube.setAttribute('fill', originalColors.tube.fill);
+          structuralElements.tube.setAttribute('stroke', originalColors.tube.stroke);
+          structuralElements.tube.style.fill = originalColors.tube.fill;
+          structuralElements.tube.style.stroke = originalColors.tube.stroke;
+        }
+
+        // 内部背景
+        if (structuralElements.innerBg) {
+          structuralElements.innerBg.setAttribute('fill', originalColors.innerBg.fill);
+          structuralElements.innerBg.style.fill = originalColors.innerBg.fill;
+        }
+
+        // 刻度线
+        if (structuralElements.scaleMarks) {
+          structuralElements.scaleMarks.setAttribute('stroke', originalColors.scaleMarks.stroke);
+          structuralElements.scaleMarks.style.stroke = originalColors.scaleMarks.stroke;
+        }
+      }
+
+      // 使用 MutationObserver 监听样式变化，自动恢复结构性元素颜色
+      function setupStyleProtection() {
+        var observer = new MutationObserver(function(mutations) {
+          var needsRestore = false;
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' &&
+                (mutation.attributeName === 'style' ||
+                 mutation.attributeName === 'fill' ||
+                 mutation.attributeName === 'stroke')) {
+              var target = mutation.target;
+              // 检查是否是结构性元素被修改
+              if (target.id === 'thermometer-outer-bulb' ||
+                  target.id === 'thermometer-tube' ||
+                  target.id === 'thermometer-inner-bg' ||
+                  target.id === 'scaleMarks') {
+                needsRestore = true;
+              }
+            }
+          });
+
+          if (needsRestore) {
+            // 延迟恢复，确保SvgManager完成样式应用
+            setTimeout(restoreStructuralColors, 0);
+          }
+        });
+
+        // 监听所有结构性元素
+        Object.values(structuralElements).forEach(function(el) {
+          if (el) {
+            observer.observe(el, {
+              attributes: true,
+              attributeFilter: ['style', 'fill', 'stroke']
+            });
+          }
+        });
+
+        // 同时监听SVG根元素的子树变化（克隆操作）
+        observer.observe(svgRoot, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['style', 'fill', 'stroke']
+        });
+      }
+
+      // 🎯 同步底部球泡颜色（监听 A-GXP_FILL 的变化）
+      function syncBulbColor() {
+        if (!bulb || !waterShape) return;
+
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' &&
+                (mutation.attributeName === 'fill' || mutation.attributeName === 'style')) {
+              var liquidColor = waterShape.style.fill || waterShape.getAttribute('fill');
+              if (liquidColor && !liquidColor.includes('url(')) {
+                bulb.style.fill = liquidColor;
+                bulb.setAttribute('fill', liquidColor);
+              }
+            }
+          });
+        });
+
+        observer.observe(waterShape, {
+          attributes: true,
+          attributeFilter: ['style', 'fill']
+        });
+
+        // 立即同步一次
+        var liquidColor = waterShape.style.fill || waterShape.getAttribute('fill');
+        if (liquidColor && !liquidColor.includes('url(')) {
+          bulb.style.fill = liquidColor;
+          bulb.setAttribute('fill', liquidColor);
+        }
+      }
+
+      // 🌡️ 监听液位变化，自动更新温度数值显示
+      function setupLabelUpdate() {
+        if (!labelElement || !waterShape || !trackElement) return;
+
+        var trackHeight = parseFloat(trackElement.getAttribute('height') || '76');
+
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' &&
+                (mutation.attributeName === 'height' || mutation.attributeName === 'y')) {
+              // 根据液位高度计算百分比
+              var fillHeight = parseFloat(waterShape.getAttribute('height') || '0');
+              var percentage = Math.round((fillHeight / trackHeight) * 100);
+              percentage = Math.max(0, Math.min(100, percentage));
+
+              // 更新文本显示
+              labelElement.textContent = percentage + '℃';
+            }
+          });
+        });
+
+        observer.observe(waterShape, {
+          attributes: true,
+          attributeFilter: ['height', 'y']
+        });
+
+        // 立即更新一次
+        var fillHeight = parseFloat(waterShape.getAttribute('height') || '38');
+        var percentage = Math.round((fillHeight / trackHeight) * 100);
+        labelElement.textContent = percentage + '℃';
+      }
+
+      // 🌡️ 更新温度计液位高度（根据百分比）
+      function updateLiquidLevel(pct) {
+        if (!waterShape || !trackElement || !labelElement) return;
+
+        // 限制范围 0-100
+        pct = Math.max(_pn_min, Math.min(_pn_max, pct));
+        var relativePct = ((pct - _pn_min) / (_pn_max - _pn_min)) * 100;
+        var displayPct = Math.max(0, Math.min(100, Math.round(relativePct)));
+
+        // 更新文本显示
+        labelElement.textContent = displayPct + '℃';
+
+        // 计算液位高度和位置
+        var trackHeight = parseFloat(trackElement.getAttribute('height') || '76');
+        var trackY = parseFloat(trackElement.getAttribute('y') || '20');
+        var fillHeight = trackHeight * (pct - _pn_min) / (_pn_max - _pn_min);
+        var fillY = trackY + trackHeight - fillHeight;
+
+        // 更新液位矩形的位置和高度
+        waterShape.setAttribute('y', fillY.toString());
+        waterShape.setAttribute('height', fillHeight.toString());
+
+        console.log('🌡️ 更新温度计液位:', {
+          pct: pct,
+          displayPct: displayPct,
+          fillHeight: fillHeight,
+          fillY: fillY
+        });
+      }
+
+      // 🎯 兼容进度条动画的 putValue 接口
+      function putValue(idOrValue, value) {
+        // 单参数：直接设置温度值（仅更新球泡颜色，不更新液位）
+        if (arguments.length === 1) {
+          // 温度计的 putValue 不直接更新液位
+          // 液位由 SvgManager 的进度条动画控制
+          console.log('🌡️ 温度计 putValue (单参数):', idOrValue);
+          return;
+        }
+
+        // 双参数：属性设置
+        switch(idOrValue) {
+          case '_pc_fillColor':
+            // 设置液体颜色
+            if (waterShape) {
+              waterShape.style.fill = value;
+              waterShape.setAttribute('fill', value);
+            }
+            if (bulb) {
+              bulb.style.fill = value;
+              bulb.setAttribute('fill', value);
+            }
+            console.log('🎨 设置液体颜色:', value);
+            // 确保结构性元素不受影响
+            restoreStructuralColors();
+            break;
+          case '_pn_value':
+            _pn_value = parseFloat(value);
+            console.log('🌡️ 设置温度值:', _pn_value);
+            // 更新液位高度
+            updateLiquidLevel(_pn_value);
+            break;
+          case '_pn_min':
+            _pn_min = parseFloat(value);
+            break;
+          case '_pn_max':
+            _pn_max = parseFloat(value);
+            break;
+          case '_pc_textColor':
+            // 设置文本颜色
+            if (labelElement) {
+              labelElement.style.fill = value;
+              labelElement.setAttribute('fill', value);
+            }
+            console.log('🎨 设置文本颜色:', value);
+            break;
+          case '_pn_textSize':
+            // 设置文本大小
+            if (labelElement) {
+              labelElement.style.fontSize = value;
+              labelElement.setAttribute('font-size', value);
+            }
+            console.log('📏 设置文本大小:', value);
+            break;
+        }
+      }
+
+      // 🔑 暴露接口（兼容进度条动画）
+      svgRoot.__svgInstance = {
+        putValue: putValue,
+        getValue: function() { return _pn_value; },
+        initValue: initValue,
+        _pn_value: _pn_value,
+        _pn_min: _pn_min,
+        _pn_max: _pn_max
+      };
+
+      console.log('✅ 温度计 putValue 函数已暴露到 __svgInstance');
+
+      // 初始化
+      setTimeout(function() {
+        // 设置样式保护
+        setupStyleProtection();
+        // 恢复结构性颜色
+        restoreStructuralColors();
+        // 同步球泡颜色
+        syncBulbColor();
+        // 设置标签更新
+        setupLabelUpdate();
+        // 设置初始液位（使用当前的_pn_value而不是硬编码的initValue）
+        updateLiquidLevel(_pn_value);
+
+        console.log('🌡️ 温度计初始化完成，当前温度:', _pn_value + '℃');
+      }, 100);
+    })();
+    ]]>
+  </script>
+</svg>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="21"
+  height="15"
+  viewBox="0 0 21 15"
+  preserveAspectRatio="none"
+  version="1.1">
+  <title>Gauge Progress Vertical</title>
+  <desc>垂直进度条基础结构，供属性面板驱动动画。</desc>
+
+  <defs>
+    <!-- 轨道渐变 -->
+    <linearGradient id="gauge-track-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F1F5F9" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+
+    <!-- 填充渐变 -->
+    <linearGradient id="gauge-fill-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#1D4ED8" />
+      <stop offset="45%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#93C5FD" />
+    </linearGradient>
+
+    <!-- 光泽效果 -->
+    <linearGradient id="gauge-highlight-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5" />
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- 投影 -->
+    <filter id="gauge-shadow" x="-150%" y="-20%" width="300%" height="180%">
+      <feDropShadow dx="0" dy="0.4" stdDeviation="0.6" flood-color="#1D4ED8" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- 外边框 -->
+  <rect
+    id="A-GXP_BORDER"
+    x="5.9"
+    y="0.35"
+    width="9.2"
+    height="14.3"
+    rx="2.1"
+    ry="2.1"
+    fill="#0F172A"
+    opacity="0.12" />
+
+  <!-- 轨道 -->
+  <rect
+    id="A-GXP_TRACK"
+    x="6.3"
+    y="0.6"
+    width="8.5"
+    height="13.8"
+    rx="1.8"
+    ry="1.8"
+    fill="url(#gauge-track-gradient)"
+    stroke="#CBD5F5"
+    stroke-width="0.18" />
+
+  <!-- 填充区域（由属性编辑器更新高度/位置） -->
+  <rect
+    id="A-GXP_FILL"
+    x="6.3"
+    y="10.26"
+    width="8.5"
+    height="4.14"
+    rx="1.4"
+    ry="1.4"
+    fill="url(#gauge-fill-gradient)"
+    filter="url(#gauge-shadow)" />
+
+  <!-- 高光 -->
+  <path
+    d="M7.2,1.2 h2.1 v12.7 c-0.8,-0.4 -1.4,-0.5 -2.1,-1 z"
+    fill="url(#gauge-highlight-gradient)" />
+
+  <!-- 刻度 -->
+  <g
+    id="A-GXP_MARKS"
+    fill="#94A3B8"
+    opacity="0.85">
+    <rect x="15.2" y="1.8" width="1.2" height="0.24" rx="0.12" />
+    <rect x="15.2" y="4.6" width="1.2" height="0.24" rx="0.12" />
+    <rect x="15.2" y="7.4" width="1.2" height="0.24" rx="0.12" />
+    <rect x="15.2" y="10.2" width="1.2" height="0.24" rx="0.12" />
+    <rect x="15.2" y="13.0" width="1.2" height="0.24" rx="0.12" />
+  </g>
+
+  <!-- 预览标签：属性编辑器可替换文字颜色等 -->
+  <text
+    id="A-GXP_LABEL"
+    x="10.5"
+    y="7.5"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-size="2.2"
+    font-family="Inter, Arial, sans-serif"
+    font-weight="600"
+    fill="#0F172A">30%</text>
+
+  <script type="text/javascript">
+    <![CDATA[
+    (function() {
+      // 🔑 获取当前SVG元素 - 通过脚本所在的SVG
+      const currentScript = document.currentScript;
+      const svgRoot = currentScript ? currentScript.ownerSVGElement || currentScript.closest('svg') : null;
+
+      if (!svgRoot) {
+        console.error('无法找到SVG根元素');
+        return;
+      }
+
+      // 🔑 使用SVG内部的querySelector，避免跨组件查找
+      const getElement = (id) => svgRoot.querySelector('#' + id);
+
+      let initValue = 30;
+      //!export-start
+      let _pc_borderColor = "#CBD5F5ff";
+      let _pc_fillColor = "#3B82F6ff";
+      let _pc_trackColor = "#E2E8F0ff";
+      let _pc_textColor = "#0F172Aff";
+      let _pn_textSize = 2.2;
+      let _pn_value = initValue;
+      let _pn_min = 0;
+      let _pn_max = 100;
+      //!export-end
+
+      function init() {
+        const track = getElement('A-GXP_TRACK');
+        const fill = getElement('A-GXP_FILL');
+        const label = getElement('A-GXP_LABEL');
+
+        if (track) track.style.stroke = _pc_borderColor;
+        // 🎨 修复：检查是否已有用户设置的颜色（渐变或纯色），如果有就不覆盖
+        if (fill) {
+          const currentFill = fill.style.fill || fill.getAttribute('fill') || '';
+          // 只有在填充为空、或者是SVG内置渐变、或者是默认蓝色时才应用默认颜色
+          const isDefaultOrEmpty = !currentFill ||
+                                   currentFill.includes('gauge-fill-gradient') ||
+                                   currentFill === _pc_fillColor ||
+                                   currentFill === 'rgb(59, 130, 246)' ||
+                                   currentFill === '#3B82F6';
+          if (isDefaultOrEmpty) {
+            fill.style.fill = _pc_fillColor;
+          }
+        }
+        if (label) {
+          label.style.fill = _pc_textColor;
+          label.style.fontSize = _pn_textSize;
+        }
+        updateProgressLevel(_pn_value);
+      }
+
+      function updateProgressLevel(pct) {
+        const fill = getElement('A-GXP_FILL');
+        const label = getElement('A-GXP_LABEL');
+
+        if (!fill || !label) return;
+
+        pct = Math.max(_pn_min, Math.min(_pn_max, pct));
+        const relativePct = Math.round(((pct - _pn_min) / (_pn_max - _pn_min)) * 100);
+        const displayPct = Math.max(0, Math.min(100, relativePct));
+
+        label.textContent = displayPct + '%';
+
+        const trackHeight = 13.8;
+        const fillHeight = trackHeight * (pct - _pn_min) / (_pn_max - _pn_min);
+        const fillY = 0.6 + trackHeight - fillHeight;
+
+        fill.setAttribute('y', fillY.toString());
+        fill.setAttribute('height', fillHeight.toString());
+        // 🎨 修复：移除每次更新都重置颜色的代码 - 保留用户在"图标效果"中设置的渐变色
+        // fill.setAttribute('fill', _pc_fillColor); // ❌ 注释掉，避免覆盖用户渐变
+      }
+
+      function putValue(id, value) {
+        switch(id) {
+          case '_pc_borderColor': _pc_borderColor = value; init(); break;
+          case '_pc_fillColor': _pc_fillColor = value; init(); break;
+          case '_pc_trackColor': _pc_trackColor = value; init(); break;
+          case '_pc_textColor': _pc_textColor = value; init(); break;
+          case '_pn_textSize': _pn_textSize = parseFloat(value); init(); break;
+          case '_pn_value':
+            _pn_value = parseFloat(value);
+            updateProgressLevel(_pn_value);
+            break;
+        }
+      }
+
+      // 🔑 关键：将函数和变量注册到SVG元素本身
+      svgRoot.__svgInstance = {
+        putValue: putValue,
+        updateProgressLevel: updateProgressLevel,
+        getValue: () => _pn_value,
+        initValue: initValue,
+        _pn_value: _pn_value,
+        _pn_min: _pn_min,
+        _pn_max: _pn_max
+      };
+
+      setTimeout(() => {
+        init();
+      }, 100);
+    })();
+    ]]>
+  </script>
+</svg>

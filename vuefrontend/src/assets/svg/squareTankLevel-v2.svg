@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+  <!-- Livello acqua con path -->
+  <path id="waterShape" fill="#3399ff" d="" stroke-width="1" />
+  <path id="waterShapeBorder" fill="none" stroke="#444444" stroke-width="4" stroke-linecap="round" d="" />
+  <rect id="tankBorder" x="7" y="7" width="136" height="136" stroke="#888888" stroke-width="4" fill="none" />
+
+  <!-- Static preview (used in <img>) -->
+  <path id="previewWater" fill="#74b1e6" d="M9 70 Q42 66, 75 70 Q108 74, 141 70 V141 H9 Z"/>
+
+  <text id="tankText" x="75" y="85" text-anchor="middle" font-size="24" fill="#000000" font-family="Arial">30%</text>
+
+  <script type="text/javascript">
+    <![CDATA[
+    (function() {
+      // 🔑 获取当前SVG元素
+      const currentScript = document.currentScript;
+      const svgRoot = currentScript ? currentScript.ownerSVGElement || currentScript.closest('svg') : null;
+
+      if (!svgRoot) {
+        console.error('无法找到SVG根元素');
+        return;
+      }
+
+      // 🔑 使用SVG内部的querySelector
+      const getElement = (id) => svgRoot.querySelector('#' + id);
+
+      let initValue = 30;
+      //!export-start
+      let _pc_borderColor = "#898989ff";
+      let _pc_waterColor = "#74b1e6ff";
+      let _pc_waterBorderColor = "#3781d8ff";
+      let _pc_textColor = "#000000ff";
+      let _pn_textSize = 24;
+      let _pn_value = initValue;
+      let _pn_min = 0;
+      let _pn_max = 100;
+      //!export-end
+
+      function init() {
+        const pw = getElement('previewWater');
+        if (pw) pw.style.display = "none";
+
+        const tankBorder = getElement('tankBorder');
+        const waterShape = getElement('waterShape');
+        const tankText = getElement('tankText');
+
+        if (tankBorder) tankBorder.style.stroke = _pc_borderColor;
+        // 🎨 修复：检查是否已有用户设置的颜色（渐变或纯色），如果有就不覆盖
+        if (waterShape) {
+          const currentFill = waterShape.style.fill || waterShape.getAttribute('fill') || '';
+          // 只有在填充为空或者是默认颜色时才应用默认颜色
+          const isDefaultOrEmpty = !currentFill ||
+                                   currentFill === _pc_waterColor ||
+                                   currentFill === 'rgb(116, 177, 230)' ||
+                                   currentFill === '#74b1e6' ||
+                                   currentFill === '#3399ff';
+          if (isDefaultOrEmpty) {
+            waterShape.style.fill = _pc_waterColor;
+          }
+        }
+        if (tankText) {
+          tankText.style.fill = _pc_textColor;
+          tankText.style.fontSize = _pn_textSize + 'px';
+        }
+        updateWaterLevel(_pn_value);
+      }
+
+      let animationFrame = null;
+
+      function updateWaterLevel(pct) {
+        const shape = getElement('waterShape');
+        const shapeBorder = getElement('waterShapeBorder');
+        const tankText = getElement('tankText');
+
+        if (!shape || !shapeBorder || !tankText) return;
+
+        pct = Math.max(_pn_min, Math.min(_pn_max, pct));
+        const relativePct = Math.round(((pct - _pn_min) / (_pn_max - _pn_min)) * 100);
+        const displayPct = Math.max(0, Math.min(100, relativePct));
+        tankText.textContent = displayPct + '%';
+
+        const x = 9;
+        const y = 9;
+        const width = 132;
+        const height = 132;
+        const fillHeight = height * (pct - _pn_min) / (_pn_max - _pn_min);
+        const topY = y + height - fillHeight;
+
+        const waveCount = 4;
+        const waveAmp = 4;
+        const waveWidth = width / waveCount;
+
+        let wavePath = `M ${x} ${topY}`;
+        for (let i = 0; i < waveCount; i++) {
+          const xStart = x + i * waveWidth;
+          const xMid = xStart + waveWidth / 2;
+          const xEnd = xStart + waveWidth;
+          const yCtrl = topY + (i % 2 === 0 ? -waveAmp : waveAmp);
+          wavePath += ` Q ${xMid} ${yCtrl}, ${xEnd} ${topY}`;
+        }
+        wavePath += ` V ${y + height} H ${x} Z`;
+
+        let waveBorderPath = `M ${x} ${topY}`;
+        for (let i = 0; i < waveCount; i++) {
+          const xStart = x + i * waveWidth;
+          const xMid = xStart + waveWidth / 2;
+          const xEnd = xStart + waveWidth;
+          const yCtrl = topY + (i % 2 === 0 ? -waveAmp : waveAmp);
+          waveBorderPath += ` Q ${xMid} ${yCtrl}, ${xEnd} ${topY}`;
+        }
+        waveBorderPath += ` V ${y + height} H ${x} Z`;
+
+        shape.setAttribute('d', wavePath);
+        shapeBorder.setAttribute('d', waveBorderPath);
+
+        // 🎨 修复：移除每次更新都重置颜色的代码 - 保留用户在"图标效果"中设置的渐变色
+        // shape.setAttribute('fill', _pc_waterColor); // ❌ 注释掉,避免覆盖用户渐变
+        // shape.setAttribute('stroke', _pc_waterColor); // ❌ 注释掉,避免覆盖用户渐变
+        shape.setAttribute('stroke-width', '1');
+        // shapeBorder.setAttribute('stroke', _pc_waterBorderColor); // ❌ 注释掉,避免覆盖用户渐变
+        shapeBorder.setAttribute('stroke-width', '4');
+        shape.setAttribute('stroke-linecap', 'round');
+        shapeBorder.setAttribute('stroke-linecap', 'round');
+      }
+
+      let animationTimer = null;
+
+      function putValue(id, value) {
+        switch(id) {
+          case '_pc_borderColor': _pc_borderColor = value; init(); break;
+          case '_pc_waterColor': _pc_waterColor = value; init(); break;
+          case '_pc_waterBorderColor': _pc_waterBorderColor = value; init(); break;
+          case '_pc_textColor': _pc_textColor = value; init(); break;
+          case '_pn_textSize': _pn_textSize = parseInt(value); init(); break;
+          case '_pn_value':
+            let newValue = parseFloat(value);
+            newValue = Math.max(_pn_min, Math.min(_pn_max, newValue));
+            const step = newValue > _pn_value ? 0.5 : -0.5;
+            const delay = 10;
+
+            const animateStep = () => {
+              if (_pn_value === newValue) {
+                animationTimer = null;
+                return;
+              }
+              _pn_value += step;
+              updateWaterLevel(_pn_value);
+              animationTimer = setTimeout(animateStep, delay);
+            };
+
+            if (animationTimer !== null) clearTimeout(animationTimer);
+            if (_pn_value !== newValue) animateStep();
+            break;
+        }
+      }
+
+      // 🔑 关键：将函数和变量注册到SVG元素本身
+      svgRoot.__svgInstance = {
+        putValue: putValue,
+        updateWaterLevel: updateWaterLevel,
+        getValue: () => _pn_value,
+        initValue: initValue,
+        _pn_value: _pn_value,
+        _pn_min: _pn_min,
+        _pn_max: _pn_max
+      };
+
+      setTimeout(() => {
+        init();
+      }, 100);
+    })();
+    ]]>
+  </script>
+</svg>

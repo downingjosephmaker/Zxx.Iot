@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 连接器线条 -->
+  <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <!-- 箭头 -->
+  <path d="M16 8L20 12L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 起始连接点 -->
+  <circle cx="4" cy="12" r="2" fill="currentColor"/>
+  <!-- 中间连接点 -->
+  <circle cx="8" cy="12" r="1" fill="currentColor"/>
+  <circle cx="12" cy="12" r="1" fill="currentColor"/>
+</svg>
