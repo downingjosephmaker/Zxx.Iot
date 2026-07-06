@@ -234,7 +234,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Split
     {
-        public static DbType _DbType = DbType.Tidb;
+        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 
@@ -285,7 +285,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Custom
     {
-        public static DbType _DbType = DbType.Tidb;
+        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 

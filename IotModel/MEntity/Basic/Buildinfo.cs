@@ -9,7 +9,7 @@ namespace IotModel
     [DisplayName("建筑表")]
     [EntityCache]
     [SugarTable(TableName = "build_info", TableDescription = "建筑表", IsDisabledUpdateAll = true)]
-    public class BuildInfo : BaseEntity
+    public class BuildInfo : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 建筑ID

@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("设备关联表")]
     [EntityCache]
     [SugarTable(TableName = "device_relevance", TableDescription = "设备关联表", IsDisabledUpdateAll = true)]
-    public class DeviceRelevance : BaseEntity
+    public class DeviceRelevance : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 雪花主键

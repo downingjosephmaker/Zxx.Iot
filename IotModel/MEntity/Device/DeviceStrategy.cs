@@ -8,7 +8,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("设备策略表")]
     [SugarTable(TableName = "device_strategy", TableDescription = "设备策略表", IsDisabledUpdateAll = true)]
-    public class DeviceStrategy : BaseEntity
+    public class DeviceStrategy : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 设备主键

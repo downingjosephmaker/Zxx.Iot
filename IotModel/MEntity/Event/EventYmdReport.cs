@@ -9,7 +9,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("野猫墩抄表")]
     [SugarTable(TableName = "event_ymd_report", TableDescription = "野猫墩抄表", IsDisabledUpdateAll = true)]
-    public class EventYmdReport
+    public class EventYmdReport : IUnitEntity
     {
         /// <summary>
         /// 雪花主键

@@ -19,7 +19,8 @@ namespace IotWebApi
         private AppSetting()
         {
             var builder = new ConfigurationBuilder()
-                .AddJsonFile(IsDevelopment ? "appsettings.Development.json" : "appsettings.json", optional: false, reloadOnChange: true);
+                .AddJsonFile(IsDevelopment ? "appsettings.Development.json" : "appsettings.json", optional: false, reloadOnChange: true)
+                .AddEnvironmentVariables(); //环境变量覆盖配置文件(嵌套键用双下划线,如 DefaultValues__DesKey)
             Config = builder.Build();
         }
 

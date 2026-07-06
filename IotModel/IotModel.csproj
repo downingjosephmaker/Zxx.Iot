@@ -6,19 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="CenBoPlugin\**" />
-		<Compile Remove="MTriEntity\**" />
-		<EmbeddedResource Remove="CenBoPlugin\**" />
-		<EmbeddedResource Remove="MTriEntity\**" />
-		<None Remove="CenBoPlugin\**" />
-		<None Remove="MTriEntity\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Remove="Common\NBModel.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
 		<PackageReference Include="SqlSugarCore" Version="5.1.4.216" />
 		<PackageReference Include="StackExchange.Redis" Version="3.0.11" />

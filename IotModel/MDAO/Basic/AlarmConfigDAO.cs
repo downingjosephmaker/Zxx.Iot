@@ -64,7 +64,7 @@ WHERE NOT EXISTS (SELECT 1 FROM `alarm_config` WHERE `id` = 4);";
                 Db.Ado.ExecuteCommand(seedSql);
 
                 // 注册防抖补发 Job 到 schedule_job（幂等：仅当不存在该任务类时插入）
-                // Program.cs 中 JobInitializer.InitializeJobs 当前被注释，这里兜底注入；QuartzService.StartAsync 会自动加载调度。
+                // JobInitializer.InitializeJobs 的系统任务清单不含该任务，这里注入；QuartzService.StartAsync 会自动加载调度。
                 RegisterDebounceFlushJob();
             }
             catch (Exception ex)

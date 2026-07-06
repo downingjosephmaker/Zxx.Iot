@@ -122,27 +122,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Compile Remove="Areas\DeviceLifecycle\**" />
-	  <Compile Remove="Areas\Report\**" />
-	  <Compile Remove="Areas\YxeThird\**" />
-	  <Content Remove="Areas\DeviceLifecycle\**" />
-	  <Content Remove="Areas\Report\**" />
-	  <Content Remove="Areas\YxeThird\**" />
-	  <EmbeddedResource Remove="Areas\DeviceLifecycle\**" />
-	  <EmbeddedResource Remove="Areas\Report\**" />
-	  <EmbeddedResource Remove="Areas\YxeThird\**" />
-	  <None Remove="Areas\DeviceLifecycle\**" />
-	  <None Remove="Areas\Report\**" />
-	  <None Remove="Areas\YxeThird\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Remove="Common\ClassHelper.cs" />
-	  <Compile Remove="Services\Jobs\WaterLeakageJob.cs" />
-	  <Compile Remove="Services\Jobs\WaterMLJob.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\CenBoCommon.Zxx\CenBoCommon.Zxx.csproj" />
 	  <ProjectReference Include="..\CenboEventBus\CenboEventBus.csproj" />
 	  <ProjectReference Include="..\IotLog\IotLog.csproj" />

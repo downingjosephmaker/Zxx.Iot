@@ -13,6 +13,10 @@ namespace IotModel
         [Description("是否反向工程")]
         public Boolean Migration { get; set; } = true;
 
+        /// <summary>数据库类型(Tidb/MySql/PostgreSQL,对应SqlSugar.DbType枚举名)</summary>
+        [Description("数据库类型(Tidb/MySql/PostgreSQL,对应SqlSugar.DbType枚举名)")]
+        public String DbTypeName { get; set; } = "Tidb";
+
         /// <summary>Mysql数据库连接字符串</summary>
         [Description("Mysql数据库连接字符串")]
         public String MysqlConString { get; set; } = "Server=192.168.0.100;Port=3306;Database=zhjngkdb;Uid=root;Pwd=cenBo@123;Charset=utf8mb4;AllowLoadLocalInfile=true;SslMode=None;Pooling=true;Min Pool Size=1;Max Pool Size=5;";

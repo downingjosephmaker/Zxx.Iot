@@ -14,7 +14,10 @@ namespace IotWebApi
 {
     public class EncryptsHelper
     {
-        private static string DESKey = "IotWebApi";
+        /// <summary>
+        /// 令牌加解密缺省密钥(读取配置 DefaultValues:DesKey,未配置时保持历史默认值兼容存量令牌)
+        /// </summary>
+        private static readonly string DESKey = AppSetting.GetConfig("DefaultValues:DesKey") ?? "IotWebApi";
         /// <summary> 
         /// 使用缺省密钥字符串加密 
         /// </summary> 

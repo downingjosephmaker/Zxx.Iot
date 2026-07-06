@@ -9,7 +9,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("设备类型参数报警配置表")]
     [SugarTable(TableName = "device_type_alarm_config", TableDescription = "设备类型参数报警配置表", IsDisabledUpdateAll = true)]
-    public class DeviceTypeAlarmConfig : BaseEntity
+    public class DeviceTypeAlarmConfig : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 雪花主键

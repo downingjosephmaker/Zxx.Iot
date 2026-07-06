@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("空调舒适度")]
     [EntityCache]
     [SugarTable(TableName = "device_comfort", TableDescription = "空调舒适度", IsDisabledUpdateAll = true)]
-    public class DeviceComfort : BaseEntity
+    public class DeviceComfort : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 雪花主键

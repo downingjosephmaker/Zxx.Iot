@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("现有设备大类")]
     [EntityCache]
     [SugarTable(TableName = "device_type_run", TableDescription = "现有设备大类", IsDisabledUpdateAll = true)]
-    public class DeviceTypeRun
+    public class DeviceTypeRun : IUnitEntity
     {
         /// <summary>
         /// 雪花主键

@@ -42,8 +42,8 @@ public static class EventBusSetup
         // ================= 兜底注册：确保关键事件总线可用 =================
         // 自动注册依赖"存在对应的 IIntegrationEventHandler<T>"。
         // PluginService 注入 IEventBus<PluginEvent> 用于向插件发布消息，
-        // 但其处理器(原 PluginEventHandler)已随插件命令基础设施移除，
-        // 此处无条件注册，保证 PluginService 能正常解析、应用可启动。
+        // 正常情况下 PluginEventHandler 会触发自动注册，
+        // 此处兜底注册，保证处理器缺失时 PluginService 仍能正常解析、应用可启动。
         EnsureEventBusRegistered<PluginEvent>(services);
     }
 

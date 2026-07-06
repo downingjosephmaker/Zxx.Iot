@@ -8,7 +8,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("设备表")]
     [SugarTable(TableName = "device_info", TableDescription = "设备表", IsDisabledUpdateAll = true)]
-    public class DeviceInfo : BaseEntity
+    public class DeviceInfo : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 设备主键

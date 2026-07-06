@@ -231,6 +231,10 @@ builder.Services.AddEventBusSetup();
 
 builder.Services.AddSingleton<PluginService>();
 
+// 数据入库服务(消费插件上行事件,攒批写入数据库)
+builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环
+
 var app = builder.Build();
 app.Use(next => context =>
 {
@@ -350,28 +354,28 @@ app.MapControllers();
 //SignalR信号中心端点，路径须与前端配置 VITE_BASE_URL_WIRHURL 保持一致
 app.MapHub<IotWebApi.Services.Jobs.ChatServer>("/signalr/chatHub");
 
-//// 监听应用启动完成事件，执行初始化逻辑
-//app.Lifetime.ApplicationStarted.Register(() =>
-//{
-//    // 等应用启动延迟5秒执行，确保所有服务都已初始化
-//    Task.Delay(2000).ContinueWith(_ =>
-//    {
-//        try
-//        {
-//            // 获取QuartzService实例
-//            var quartzService = app.Services.GetService<QuartzService>();
-//            if (quartzService != null)
-//            {
-//                // 初始化系统任务
-//                IotWebApi.Services.Jobs.JobInitializer.InitializeJobs(quartzService);
-//            }
-//        }
-//        catch (Exception ex)
-//        {
-//            Console.WriteLine($"任务初始化失败: {ex.Message}");
-//        }
-//    });
-//});
+// 监听应用启动完成事件，执行初始化逻辑
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    // 等应用启动延迟2秒执行，确保所有服务都已初始化
+    Task.Delay(2000).ContinueWith(_ =>
+    {
+        try
+        {
+            // 获取QuartzService实例
+            var quartzService = app.Services.GetService<QuartzService>();
+            if (quartzService != null)
+            {
+                // 初始化系统任务
+                IotWebApi.Services.Jobs.JobInitializer.InitializeJobs(quartzService);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"任务初始化失败: {ex.Message}");
+        }
+    });
+});
 
 //等待数据库连接就绪，连接失败时阻塞重试而不是崩溃退出
 await DatabaseHealthCheck.WaitForConnectionAsync(retryIntervalSeconds: 30);

@@ -6,7 +6,7 @@ namespace IotModel
     /// <summary>
     /// 记录基础表
     /// </summary>
-    public class EventBase
+    public class EventBase : IUnitEntity
     {
         /// <summary>
         /// 单位ID

@@ -9,7 +9,7 @@ namespace IotModel
     [DisplayName("组织表")]
     [EntityCache]
     [SugarTable(TableName = "dept_info", TableDescription = "组织表", IsDisabledUpdateAll = true)]
-    public class DeptInfo : BaseEntity
+    public class DeptInfo : BaseEntity, IUnitEntity
     {
         /// <summary>
         /// 组织ID
