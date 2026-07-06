@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 兼容 .NET Framework / .NET Core / .NET 5+，
+         供 ZhjngkWebApi(net8)、Service.4G_ZT、各插件统一引用 -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>CenboNew.ServiceLog</RootNamespace>
+    <!-- 故意沿用旧命名空间：让现有 280+ 处 using CenboNew.ServiceLog 零改动切换 -->
+    <AssemblyName>Zhjngk.ServiceLog</AssemblyName>
+    <Description>Serilog 版统一日志库（兼容替换 CenboNew.ServiceLog）</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.0.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.0" />
+    <!-- 可选：直推 Grafana Loki，未部署 Loki 时该 sink 不会触发 -->
+    <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.3.0" />
+  </ItemGroup>
+
+</Project>

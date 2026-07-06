@@ -1,0 +1,256 @@
+﻿@using Swashbuckle.AspNetCore.Swagger;
+@using System;
+@using System.Collections.Generic;
+@using CenBoCommon.Zxx;
+@using IotWebApi.Common;
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Swagger API文档代码文件</title>
+    <style type='text/css'>
+        table, table td, table th {
+            border: 1px solid #000000;
+            border-collapse: collapse;
+        }
+
+        table {
+            table-layout: fixed;
+            word-break: break-all;
+        }
+
+        tr {
+            height: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div style='width:1000px; margin: 0 auto'>
+        <h1 align="center">@Model.Info.Title</h1>
+        <h1 align="center">接口文档 @Model.Info.Version</h1>
+        <br>
+        <h2>@NumChangeHelper.NumToChinese(1)、(@Model.Info.Description)接口描述</h2>
+        @foreach (var metadata in Model.Components.Schemas)
+        {
+            if (metadata.Key == "MetaData")
+            {
+                <h4>1.1、@metadata.Value.Description</h4>
+                <table border='1' cellspacing='0' cellpadding='0' style="table-layout: fixed; word-break: break-all;border: 1px solid #000000;border-collapse: collapse;" width='100%'>
+                    <tr style="background-color: #6495ED;" align='center'>
+                        <td style="border: 1px solid #000000;border-collapse: collapse;">参数名</td>
+                        <td style="border: 1px solid #000000;border-collapse: collapse;">参数类型</td>
+                        <td style="border: 1px solid #000000;border-collapse: collapse;">是否必填</td>
+                        <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='2'>说明</td>
+                    </tr>
+                    @foreach (var proper in metadata.Value.Properties)
+                    {
+                        <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                            <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Key</td>
+                            <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Type</td>
+                            <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Nullable</td>
+                            <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='2'>@proper.Value.Description</td>
+                        </tr>
+                    }
+                </table>
+            }
+        }
+        <br>
+        @{
+            int h2index = 1;
+        }
+        @foreach (var apitag in Model.Tags)
+        {
+            h2index++;
+            string apiname = $"/{apitag.Name}/";
+            var dicapi = Model.Components.Schemas.ToDictionary();
+            int h4index = 0;
+            <h2>@NumChangeHelper.NumToChinese(h2index)、@apitag.Description</h2>
+            @foreach (var item in Model.Paths)
+            {
+                if (item.Key.IndexOf(apiname) > -1)
+                {
+                    if (item.Value.Operations != null)
+                    {
+                        h4index++;
+                        foreach (var operation in item.Value.Operations)
+                        {
+                            <h4>@h2index.@h4index、@operation.Value.Summary</h4>
+                            <table border='1' cellspacing='0' cellpadding='0' width='100%' style="table-layout: fixed; word-break: break-all;border: 1px solid #000000;border-collapse: collapse;">
+                                <tr style="border: 1px solid #000000;border-collapse: collapse;">
+                                    <td style="border: 1px solid #000000;border-collapse: collapse;">URL</td>
+                                    <td colspan='4'>@item.Key</td>
+                                </tr>
+                                <tr style="border: 1px solid #000000;border-collapse: collapse;">
+                                    <td style="border: 1px solid #000000;border-collapse: collapse;">请求方式</td>
+                                    <td colspan='4'>
+                                        @operation.Key
+                                    </td>
+                                </tr>
+
+                                @if (operation.Value.Parameters != null && operation.Value.Parameters.Count > 0)
+                                {
+                                    List<Microsoft.OpenApi.IOpenApiParameter> headerlist = new List<Microsoft.OpenApi.IOpenApiParameter>();
+                                    List<Microsoft.OpenApi.IOpenApiParameter> querylist = new List<Microsoft.OpenApi.IOpenApiParameter>();
+                                    foreach (var param in operation.Value.Parameters)
+                                    {
+                                        if (param.In == Microsoft.OpenApi.ParameterLocation.Header)
+                                        {
+                                            headerlist.Add(param);
+                                        }
+                                        else if (param.In == Microsoft.OpenApi.ParameterLocation.Query)
+                                        {
+                                            querylist.Add(param);
+                                        }
+                                    }
+                                    if (headerlist.IsZxxAny())
+                                    {
+                                        <tr style="background-color: #FFA54F;">
+                                            <td colspan='5'>Header参数</td>
+                                        </tr>
+                                        <tr style="background-color: #6495ED;" align='center'>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">参数名</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">参数类型</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='3'>说明</td>
+                                        </tr>
+                                        @foreach (var header in headerlist)
+                                        {
+                                            <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;" align="left">@header.Name</td>
+                                                @if (header.Schema == null)
+                                                {
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@header.In</td>
+                                                }
+                                                else
+                                                {
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@header.Schema.Type</td>
+                                                }
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='3'>@header.Description</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (querylist.IsZxxAny())
+                                    {
+                                        <tr style="background-color: #FFA54F;">
+                                            <td colspan='5'>Url参数</td>
+                                        </tr>
+                                        <tr style="background-color: #6495ED;" align='center'>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">参数名</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">参数类型</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">是否必填</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='2'>说明</td>
+                                        </tr>
+                                        @foreach (var query in querylist)
+                                        {
+                                            <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;" align="left">@query.Name</td>
+                                                @if (query.Schema == null)
+                                                {
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@query.In</td>
+                                                }
+                                                else
+                                                {
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@query.Schema.Type</td>
+                                                }
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;">@query.Required</td>
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;" align="left" colspan='2'>@query.Description</td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+
+                                @if (operation.Value.RequestBody != null && operation.Value.RequestBody.Content.Count > 0)
+                                {
+                                    var dicschema = SwaggerHelper.GetRequestBody(operation.Value.RequestBody, dicapi);
+                                    if (dicschema.Count > 0)
+                                    {
+                                        foreach (string schemakey in dicschema.Keys)
+                                        {
+                                            <tr style="background-color: #FFA54F;">
+                                                <td colspan='5'>@dicschema[schemakey]</td>
+                                            </tr>
+                                            <tr style="background-color: #6495ED;" align='center'>
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;">参数名</td>
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;">参数类型</td>
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;">是否必填</td>
+                                                <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='2'>说明</td>
+                                            </tr>
+
+                                            @foreach (var proper in dicapi[schemakey].Properties)
+                                            {
+                                                <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;" align="left">@proper.Key</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Type</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Nullable</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;" align="left" colspan='2'>@proper.Value.Description</td>
+                                                </tr>
+                                            }
+                                        }
+                                    }
+                                }
+
+                                <tr>
+                                    <td colspan='5'></td>
+                                </tr>
+                                <tr style="background-color:#98FB98;">
+                                    <td colspan='5'>返回状态码</td>
+                                </tr>
+                                <tr style="background-color: #6495ED;" align='center'>
+                                    <td style="border: 1px solid #000000;border-collapse: collapse;">状态码</td>
+                                    <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='4'>说明</td>
+                                </tr>
+                                @if (operation.Value.Responses != null && operation.Value.Responses.Count > 0)
+                                {
+                                    foreach (var response in operation.Value.Responses)
+                                    {
+                                        <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;">@response.Key</td>
+                                            <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='4'>@response.Value.Description</td>
+                                        </tr>
+                                    }
+                                }
+
+                                @if (operation.Value.Responses != null && operation.Value.Responses.Values.Count > 0)
+                                {
+                                    foreach (var response in operation.Value.Responses.Values)
+                                    {
+                                        var dicschema = SwaggerHelper.GetResponses(operation.Value.Responses, dicapi);
+                                        if (dicschema.Count > 0)
+                                        {
+                                            foreach (string schemakey in dicschema.Keys)
+                                            {
+                                                <tr style="background-color:#98FB98;">
+                                                    <td colspan='5'>@dicschema[schemakey]</td>
+                                                </tr>
+                                                <tr style="background-color: #6495ED;" align='center'>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">参数名</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">参数类型</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;">是否必填</td>
+                                                    <td style="border: 1px solid #000000;border-collapse: collapse;" colspan='2'>说明</td>
+                                                </tr>
+
+                                                @foreach (var proper in dicapi[schemakey].Properties)
+                                                {
+                                                    <tr align='center' style="border: 1px solid #000000;border-collapse: collapse;">
+                                                        <td style="border: 1px solid #000000;border-collapse: collapse;" align="left">@proper.Key</td>
+                                                        <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Type</td>
+                                                        <td style="border: 1px solid #000000;border-collapse: collapse;">@proper.Value.Nullable</td>
+                                                        <td style="border: 1px solid #000000;border-collapse: collapse;" align="left" colspan='2'>@proper.Value.Description</td>
+                                                    </tr>
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                }
+
+                            </table>
+                            <br>
+                        }
+                    }
+                }
+            }
+        }
+    </div>
+</body>
+</html>

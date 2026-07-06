@@ -1,0 +1,133 @@
+﻿<html lang="zh-CN">
+<head>
+    <title>登录接口文档</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="../css/login.css">
+</head>
+<body>
+    <div class="ape">
+        <div class='control'>
+            <h1 style="padding-left: 32px;">
+                Api文档<br />
+            </h1>
+        </div>
+        <div class='control block-cube block-input'>
+            <input id="userName" name='userName' placeholder='请输入用户名' type='text' value="superadmin">
+            <div class='bg-top'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg-right'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg'>
+                <div class='bg-inner'></div>
+            </div>
+        </div>
+        <div class='control block-cube block-input'>
+            <input id="password" name='password' placeholder='请输入密码' type='password' value="Admin@666">
+            <div class='bg-top'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg-right'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg'>
+                <div class='bg-inner'></div>
+            </div>
+        </div>
+        <button class='btn block-cube block-cube-hover' type='button' onclick="login();">
+            <div class='bg-top'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg-right'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='bg'>
+                <div class='bg-inner'></div>
+            </div>
+            <div class='text'>
+                登 录
+            </div>
+        </button>
+    </div>
+    <div id="overlay" class="overlay">
+        <div class="loader"></div>
+    </div>
+</body>
+
+<script src="../js/jquery.min.js" type="text/javascript"></script>
+<script src="../js/jsencrypt.min.js"></script>
+<script src="../js/raspublickey.js"></script>
+<script src="../js/jquery.md5.js"></script>
+<script type="text/javascript">
+    function showOverlay() {
+        // 显示遮罩层
+        document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function hideOverlay() {
+        // 隐藏遮罩层
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    function getQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return decodeURI(r[2]);
+        return null;
+    }
+
+    function login() {
+        showOverlay();
+        var userName = $("#userName").val();
+        var _password = $("#password").val();
+
+        if (!userName) {
+            alert('请输入用户名！');
+            hideOverlay();
+            return
+        }
+        if (!_password) {
+            alert('请输入密码');
+            hideOverlay();
+            return
+        }
+
+        var password = $.md5(_password);
+        var encrypt = new JSEncrypt();
+        encrypt.setPublicKey(public_key);
+        var encrypted_pass = encrypt.encrypt(password);
+        let postData = {
+            "UserUid": userName,
+            "UserPwd": encrypted_pass,
+            "SourceType": "Web",
+        };
+
+        $.ajax({
+            url: "/Api/Login/LoginApiXml",
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify(postData),
+            dataType: 'json',
+            success: function (result) {
+                //var result = JSON.parse(data);
+                if (result.Status) {
+                    let redirect = getQueryString("redirect");
+                    if (redirect != null && redirect.length > 0) {
+                        window.location.href = redirect;
+                    } else {
+                        window.location.href = "/swagger/index.html";
+                    }
+                }
+                else {
+                    alert('用户名或密码错误')
+                    hideOverlay();
+                }
+            }, error: function () {
+                alert('用户名或密码错误')
+                hideOverlay();
+            }
+        });
+    }
+</script>

@@ -1,0 +1,16 @@
+.vs
+obj
+bin
+*.user
+Swagger.xml
+.config
+ScaffoldingReadMe.txt
+PublishProfiles
+.idea
+.trae
+.claude
+.ace-tool
+.playwright-mcp
+/openspec
+/docs
+

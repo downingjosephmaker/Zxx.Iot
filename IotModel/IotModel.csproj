@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<SatelliteResourceLanguages>en;de;pt</SatelliteResourceLanguages>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="CenBoPlugin\**" />
+		<Compile Remove="MTriEntity\**" />
+		<EmbeddedResource Remove="CenBoPlugin\**" />
+		<EmbeddedResource Remove="MTriEntity\**" />
+		<None Remove="CenBoPlugin\**" />
+		<None Remove="MTriEntity\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="Common\NBModel.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="FluentValidation" Version="12.1.1" />
+		<PackageReference Include="SqlSugarCore" Version="5.1.4.216" />
+		<PackageReference Include="StackExchange.Redis" Version="3.0.11" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\CenBoCommon.Zxx\CenBoCommon.Zxx.csproj" />
+	  <ProjectReference Include="..\DynamicExpresso\DynamicExpresso.csproj" />
+	  <ProjectReference Include="..\IotLog\IotLog.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="NewLife.Core">
+	    <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
+	  </Reference>
+	  <Reference Include="XCode">
+	    <HintPath>..\ZhjngkLib\XCode.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SatelliteResourceLanguages>en;de;pt</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CenBoCommon.Zxx\CenBoCommon.Zxx.csproj" />
+    <ProjectReference Include="..\CenboEventBus\CenboEventBus.csproj" />
+    <ProjectReference Include="..\IotLog\IotLog.csproj" />
+    <ProjectReference Include="..\IotModel\IotModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NewLife.Core">
+      <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="XCode">
+      <HintPath>..\ZhjngkLib\XCode.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
