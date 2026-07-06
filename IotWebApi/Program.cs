@@ -232,8 +232,13 @@ builder.Services.AddEventBusSetup();
 builder.Services.AddSingleton<PluginService>();
 
 // 遥测批量写入服务(Binary COPY写TimescaleDB遥测窄表,未配置连接串时不启用)
+builder.Services.AddSingleton<TelemetryPointMap>();  //点位映射解析器,写入器与最新值服务共用
 builder.Services.AddSingleton<TelemetryWriteService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryWriteService>());
+
+// 最新值缓存服务(内存实时更新,批量刷Redis与telemetry_latest,实时查询不扫时序表)
+builder.Services.AddSingleton<TelemetryLatestService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryLatestService>());
 
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用

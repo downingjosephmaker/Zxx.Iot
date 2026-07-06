@@ -79,6 +79,30 @@ namespace IotWebApi.Services.Jobs
             => await Clients.Group("SignalRUsers").SendAsync("ReceiveMessage", user, message); //将消息发送给 SignalR Users 组中的所有客户端
 
         /// <summary>
+        /// 加入设备分组(设备详情页订阅实时数据,服务端推送经ReceiveDeviceData/ReceiveDeviceState下发)
+        /// </summary>
+        public async Task JoinDeviceGroup(long deviceId)
+            => await Groups.AddToGroupAsync(Context.ConnectionId, $"device:{deviceId}");
+
+        /// <summary>
+        /// 离开设备分组(页面离开时调用,连接断开时SignalR自动清理)
+        /// </summary>
+        public async Task LeaveDeviceGroup(long deviceId)
+            => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"device:{deviceId}");
+
+        /// <summary>
+        /// 加入告警分组(告警中心页按单位订阅实时告警,告警引擎落地后经ReceiveAlarm下发)
+        /// </summary>
+        public async Task JoinAlarmGroup(int unitId)
+            => await Groups.AddToGroupAsync(Context.ConnectionId, $"alarm:{unitId}");
+
+        /// <summary>
+        /// 离开告警分组
+        /// </summary>
+        public async Task LeaveAlarmGroup(int unitId)
+            => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"alarm:{unitId}");
+
+        /// <summary>
         /// 在客户端连接到中心时执行操作
         /// </summary>
         /// <returns></returns>

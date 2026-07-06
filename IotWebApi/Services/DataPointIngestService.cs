@@ -2,6 +2,8 @@ using CenBoCommon.Zxx;
 using CenboEventBus;
 using IotLog;
 using IotModel;
+using IotWebApi.Services.Jobs;
+using Microsoft.AspNetCore.SignalR;
 using System.Threading.Channels;
 
 namespace IotWebApi.Services
@@ -43,9 +45,21 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly TelemetryWriteService _telemetryService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService)
+        /// <summary>
+        /// 最新值缓存服务(协议解析数据同步更新内存最新值)
+        /// </summary>
+        private readonly TelemetryLatestService _latestService;
+
+        /// <summary>
+        /// SignalR中心上下文(按device:{id}分组推送实时数据)
+        /// </summary>
+        private readonly IHubContext<ChatServer> _hubContext;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext)
         {
             _telemetryService = telemetryService;
+            _latestService = latestService;
+            _hubContext = hubContext;
             _channel = Channel.CreateBounded<PluginEvent>(new BoundedChannelOptions(QueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
@@ -246,7 +260,12 @@ namespace IotWebApi.Services
             if (paramupdates.Count > 0) DeviceParamDAO.Instance.UpdateColumns(paramupdates.Values.ToList(), it => new { it.ExpandJson });
             if (deviceupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates.Values.ToList(), it => new { it.DeviceState, it.LastOnlineTime, it.DeviceAlarm });
             if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
-            if (telemetrypoints.IsZxxAny()) _telemetryService.Enqueue(telemetrypoints);
+            if (telemetrypoints.IsZxxAny())
+            {
+                _telemetryService.Enqueue(telemetrypoints);
+                _latestService.Update(telemetrypoints);
+                BroadcastDeviceData(telemetrypoints);
+            }
         }
 
         /// <summary>
@@ -285,7 +304,11 @@ namespace IotWebApi.Services
             }
 
             if (deviceupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates.Values.ToList(), it => new { it.DeviceState, it.LastOnlineTime });
-            if (runlist.IsZxxAny()) EventRunDAO.Instance.InsertRange(runlist);
+            if (runlist.IsZxxAny())
+            {
+                EventRunDAO.Instance.InsertRange(runlist);
+                BroadcastDeviceState(runlist);
+            }
         }
 
         /// <summary>
@@ -331,6 +354,32 @@ namespace IotWebApi.Services
             }
 
             if (controllist.IsZxxAny()) EventControlDAO.Instance.InsertRange(controllist);
+        }
+
+        /// <summary>
+        /// 按设备分组推送实时数据(组名device:{deviceId},客户端监听ReceiveDeviceData;
+        /// 尽力而为不阻塞入库,推送失败仅记日志)
+        /// </summary>
+        private void BroadcastDeviceData(List<TelemetryPoint> points)
+        {
+            foreach (var group in points.GroupBy(t => t.DeviceId))
+            {
+                var deviceid = group.Key;
+                _hubContext.Clients.Group($"device:{deviceid}").SendAsync("ReceiveDeviceData", group.ToList().ToJson())
+                    .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{deviceid}]实时数据推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
+            }
+        }
+
+        /// <summary>
+        /// 按设备分组推送上下线状态变化(客户端监听ReceiveDeviceState)
+        /// </summary>
+        private void BroadcastDeviceState(List<EventRun> runlist)
+        {
+            foreach (var run in runlist)
+            {
+                _hubContext.Clients.Group($"device:{run.DeviceId}").SendAsync("ReceiveDeviceState", run.ToJson())
+                    .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{run.DeviceId}]状态推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
+            }
         }
 
         /// <summary>

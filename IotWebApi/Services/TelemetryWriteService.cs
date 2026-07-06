@@ -3,7 +3,6 @@ using IotLog;
 using IotModel;
 using Npgsql;
 using NpgsqlTypes;
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace IotWebApi.Services
@@ -72,9 +71,9 @@ namespace IotWebApi.Services
         private readonly Channel<TelemetryPoint> _channel;
 
         /// <summary>
-        /// 点位映射内存缓存((设备,参数编码)→point_id,首见落库终身复用)
+        /// 点位映射解析器(与最新值缓存服务共用同一份缓存)
         /// </summary>
-        private readonly ConcurrentDictionary<(long DeviceId, string ParamCode), int> _pointCache = new();
+        private readonly TelemetryPointMap _pointMap;
 
         /// <summary>
         /// Timescale连接字符串(空=服务未启用)
@@ -91,8 +90,9 @@ namespace IotWebApi.Services
         /// </summary>
         private Task _consumeTask;
 
-        public TelemetryWriteService()
+        public TelemetryWriteService(TelemetryPointMap pointMap)
         {
+            _pointMap = pointMap;
             _connString = DbSetting.Current.TimescaleConString;
             _channel = Channel.CreateBounded<TelemetryPoint>(new BoundedChannelOptions(QueueCapacity)
             {
@@ -225,14 +225,14 @@ namespace IotWebApi.Services
         {
             await using var conn = new NpgsqlConnection(_connString);
             await conn.OpenAsync(token);
-            await EnsurePointIdsAsync(conn, batch, token);
+            await _pointMap.EnsureAsync(conn, batch, token);
 
             // Npgsql 5.x(SqlSugar传递引用)无BeginBinaryImportAsync(6.0新增),同步开启COPY后仍可异步写行
             await using var writer = conn.BeginBinaryImport(
                 "COPY iot_ts.telemetry (device_id, point_id, ts, value, value_str, quality) FROM STDIN (FORMAT BINARY)");
             foreach (var point in batch)
             {
-                if (!_pointCache.TryGetValue((point.DeviceId, point.ParamCode), out int pointid)) continue;
+                if (!_pointMap.TryGet(point.DeviceId, point.ParamCode, out int pointid)) continue;
                 await writer.StartRowAsync(token);
                 await writer.WriteAsync(point.DeviceId, NpgsqlDbType.Bigint, token);
                 await writer.WriteAsync(pointid, NpgsqlDbType.Integer, token);
@@ -244,25 +244,6 @@ namespace IotWebApi.Services
                 await writer.WriteAsync(point.Quality, NpgsqlDbType.Smallint, token);
             }
             await writer.CompleteAsync(token);
-        }
-
-        /// <summary>
-        /// 补齐本批点位映射(缓存未命中的(设备,参数编码)UPSERT进point_map并回填point_id)
-        /// </summary>
-        private async Task EnsurePointIdsAsync(NpgsqlConnection conn, List<TelemetryPoint> batch, CancellationToken token)
-        {
-            foreach (var group in batch.GroupBy(t => (t.DeviceId, t.ParamCode)))
-            {
-                if (group.Key.ParamCode.IsZxxNullOrEmpty() || _pointCache.ContainsKey(group.Key)) continue;
-                await using var cmd = new NpgsqlCommand(
-                    "INSERT INTO iot_ts.point_map (device_id, param_code, param_name) VALUES (@did, @code, @name) " +
-                    "ON CONFLICT (device_id, param_code) DO UPDATE SET param_name = EXCLUDED.param_name RETURNING point_id", conn);
-                cmd.Parameters.AddWithValue("did", group.Key.DeviceId);
-                cmd.Parameters.AddWithValue("code", group.Key.ParamCode);
-                cmd.Parameters.AddWithValue("name", group.First().ParamName ?? "");
-                var result = await cmd.ExecuteScalarAsync(token);
-                if (result != null) _pointCache[group.Key] = Convert.ToInt32(result);
-            }
         }
 
         #endregion
