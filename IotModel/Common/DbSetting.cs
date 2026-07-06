@@ -29,6 +29,10 @@ namespace IotModel
         [Description("Sqlite数据库连接字符串")]
         public string SqliteConString { get; set; } = "DataSource=Administrative/division2023.db;Pooling=true;Mode=ReadWrite;";
 
+        /// <summary>Timescale遥测库连接字符串(空=遥测写入服务不启用;DDL见database/timescaledb)</summary>
+        [Description("Timescale遥测库连接字符串(空=遥测写入服务不启用;DDL见database/timescaledb)")]
+        public String TimescaleConString { get; set; } = "";
+
         /// <summary>Tendis是否启用集群</summary>
         [Description("Tendis是否启用集群")]
         public Boolean IsTendisCluster { get; set; } = false;

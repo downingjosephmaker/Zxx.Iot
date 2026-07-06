@@ -231,6 +231,10 @@ builder.Services.AddEventBusSetup();
 
 builder.Services.AddSingleton<PluginService>();
 
+// 遥测批量写入服务(Binary COPY写TimescaleDB遥测窄表,未配置连接串时不启用)
+builder.Services.AddSingleton<TelemetryWriteService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryWriteService>());
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

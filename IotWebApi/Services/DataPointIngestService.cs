@@ -38,8 +38,14 @@ namespace IotWebApi.Services
         /// </summary>
         private Task _consumeTask;
 
-        public DataPointIngestService()
+        /// <summary>
+        /// 遥测批量写入服务(协议解析数据同步投递TimescaleDB遥测窄表)
+        /// </summary>
+        private readonly TelemetryWriteService _telemetryService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService)
         {
+            _telemetryService = telemetryService;
             _channel = Channel.CreateBounded<PluginEvent>(new BoundedChannelOptions(QueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
@@ -193,6 +199,7 @@ namespace IotWebApi.Services
             var paramupdates = new Dictionary<int, DeviceParamEntity>();
             var deviceupdates = new Dictionary<int, DeviceInfoEntity>();
             var historylist = new List<EventHistoryEntity>();
+            var telemetrypoints = new List<TelemetryPoint>();
 
             foreach (var data in validlist)
             {
@@ -231,11 +238,15 @@ namespace IotWebApi.Services
                 };
                 FillEventBase(history, data.device, unitlist, buildlist, deptlist, typelist);
                 historylist.Add(history);
+
+                // 4.投递遥测窄表写入队列(未配置Timescale连接串时服务内部直接忽略)
+                telemetrypoints.AddRange(BuildTelemetryPoints(data));
             }
 
             if (paramupdates.Count > 0) DeviceParamDAO.Instance.UpdateColumns(paramupdates.Values.ToList(), it => new { it.ExpandJson });
             if (deviceupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates.Values.ToList(), it => new { it.DeviceState, it.LastOnlineTime, it.DeviceAlarm });
             if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
+            if (telemetrypoints.IsZxxAny()) _telemetryService.Enqueue(telemetrypoints);
         }
 
         /// <summary>
@@ -320,6 +331,42 @@ namespace IotWebApi.Services
             }
 
             if (controllist.IsZxxAny()) EventControlDAO.Instance.InsertRange(controllist);
+        }
+
+        /// <summary>
+        /// 将一台设备的采集参数转换为遥测点位(数值型进value,其余进value_str)
+        /// </summary>
+        private static List<TelemetryPoint> BuildTelemetryPoints(DeviceData data)
+        {
+            var points = new List<TelemetryPoint>();
+            foreach (var income in data.deviceparam)
+            {
+                if (income.ParamCode.IsZxxNullOrEmpty()) continue;
+                var point = new TelemetryPoint
+                {
+                    DeviceId = data.DeviceId,
+                    ParamCode = income.ParamCode,
+                    ParamName = income.ParamName,
+                    Ts = ToUtcTime(income.CollectTime),
+                    Quality = 0
+                };
+                if (double.TryParse(income.ParamValue, out double value)) point.Value = value;
+                else point.ValueStr = income.ParamValue;
+                points.Add(point);
+            }
+            return points;
+        }
+
+        /// <summary>
+        /// 采集时间(本地时间字符串)转UTC(telemetry的timestamptz列要求UTC Kind)
+        /// </summary>
+        private static DateTime ToUtcTime(string collecttime)
+        {
+            if (!collecttime.IsZxxNullOrEmpty() && DateTime.TryParse(collecttime, out DateTime time))
+            {
+                return DateTime.SpecifyKind(time, DateTimeKind.Local).ToUniversalTime();
+            }
+            return DateTime.UtcNow;
         }
 
         /// <summary>
