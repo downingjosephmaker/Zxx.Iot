@@ -229,5 +229,18 @@ namespace IotModel
         [DisplayName("采集节点标识(OPC UA NodeId)")]
         [SugarColumn(ColumnName = "collect_node_id", IsNullable = true, Length = 200, ColumnDescription = "采集节点标识(OPC UA NodeId)", DefaultValue = "", ColumnDataType = "varchar")]
         public string CollectNodeId { get; set; }
+        /// <summary>
+        /// 是否告警源(0:否 1:是,§9.6:设备自报告警状态位按普通点位采集,
+        /// 平台告警引擎按此标记自动合成"非0即告警"规则统一裁决,协议层不做告警语义)
+        ///</summary>
+        [DisplayName("是否告警源(0:否1:是)")]
+        [SugarColumn(ColumnName = "is_alarm_source", Length = 1, ColumnDescription = "是否告警源(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool IsAlarmSource { get; set; }
+        /// <summary>
+        /// 告警源关联的告警类型ID(alarm_config字典,等级/通知/防抖/文字模板由此继承)
+        ///</summary>
+        [DisplayName("告警源告警类型ID")]
+        [SugarColumn(ColumnName = "alarm_config_id", ColumnDescription = "告警源告警类型ID", DefaultValue = "0", ColumnDataType = "int")]
+        public int AlarmConfigId { get; set; }
     }
 }

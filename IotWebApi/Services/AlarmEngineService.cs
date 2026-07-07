@@ -277,6 +277,25 @@ namespace IotWebApi.Services
                         .GroupBy(t => t.DeviceId)
                         .ToDictionary(g => g.Key, g => g.First().DeviceTypeCode ?? "");
 
+                    // 点表告警源(§9.6:is_alarm_source=1的点位=设备自报告警状态位,
+                    // 自动合成"非0即告警"规则并入产品级,等级/通知/防抖/模板经alarm_config_id继承,
+                    // 规则ID取负点位主键防与配置行冲突;平台引擎是唯一裁决者,协议层不建第二套告警逻辑)
+                    var alarmsources = (DeviceTypeParamDAO.Instance.GetList() ?? new List<DeviceTypeParamEntity>())
+                        .Where(t => t.IsAlarmSource && t.AlarmConfigId > 0 && !t.ParamCode.IsZxxNullOrEmpty()).ToList();
+                    foreach (var item in alarmsources)
+                    {
+                        dict.TryGetValue(item.AlarmConfigId, out var srcdict);
+                        var rule = BuildRule(-item.SnowId, item.ParamCode, $"{item.ParamCode} > 0",
+                            srcdict?.TextTemplate ?? "", srcdict?.IsNote ?? false, srcdict);
+                        if (rule == null) continue;
+                        if (!typerules.TryGetValue(item.DeviceTypeCode ?? "", out var srclist))
+                        {
+                            srclist = new List<EffectiveRule>();
+                            typerules[item.DeviceTypeCode ?? ""] = srclist;
+                        }
+                        srclist.Add(rule);
+                    }
+
                     // 离线告警字典行(§9.6:AlarmType或EventType含"离线"即认定,等级/通知/确认时长由此继承)
                     _offlineConfig = dict.Values.FirstOrDefault(t =>
                         t.AlarmType?.Contains("离线") == true || t.EventType?.Contains("离线") == true);
