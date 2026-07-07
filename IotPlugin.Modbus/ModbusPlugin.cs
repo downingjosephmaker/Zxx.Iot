@@ -117,6 +117,8 @@ namespace IotPlugin.Modbus
                         _serverChannel = new TcpServerChannel(_config.NetPort)
                         {
                             EndpointResolver = ResolveServerEndpoint,
+                            // DTU注册包模式(§6.6:配置启用后拨入连接先发ASCII注册ID匹配DeviceGateway)
+                            RegistrationResolver = _config.EnableDtuRegistration ? new DtuRegistrationHandler(ResolveDtuRegistration) : null,
                             // RTU over TCP无长度域不可靠拆帧,依赖DTU按串口空闲间隙切包(一包一帧)
                             FrameReceived = (ep, frame) => OnFrame(_serverEngine, ep, frame, false),
                             SessionOpened = ep => PublishRunStateByEndpoint(ep, 2),
@@ -400,6 +402,41 @@ namespace IotPlugin.Modbus
             {
                 return _endpointMap.Keys.FirstOrDefault(k => k.Equals(ip, StringComparison.OrdinalIgnoreCase));
             }
+        }
+
+        /// <summary>
+        /// DTU注册包→绑定端点键(§6.6:取可打印ASCII前缀作注册ID,匹配拨入设备的网关编号DeviceGateway;
+        /// 未匹配返回null继续等待,超时由通道踢连接;紧随的回车换行一并消费)
+        /// </summary>
+        private string? ResolveDtuRegistration(byte[] data, out int consumed)
+        {
+            consumed = 0;
+            int end = 0;
+            while (end < data.Length && end < 64 && data[end] >= 0x20 && data[end] <= 0x7E) end++;
+            if (end == 0) return null;
+            string regid = System.Text.Encoding.ASCII.GetString(data, 0, end).Trim();
+            if (regid.Length == 0) return null;
+            string? endpoint = null;
+            lock (_bindingLock)
+            {
+                foreach (var kv in _endpointMap)
+                {
+                    if (kv.Value.Any(b => !b.IsTcpMode && regid.Equals(b.Device.DeviceGateway?.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    {
+                        endpoint = kv.Key;
+                        break;
+                    }
+                }
+            }
+            if (endpoint == null)
+            {
+                LogHelper.Info($"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。");
+                return null;
+            }
+            consumed = end;
+            while (consumed < data.Length && (data[consumed] == 0x0D || data[consumed] == 0x0A)) consumed++;
+            LogHelper.Info($"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。");
+            return endpoint;
         }
 
         #endregion

@@ -24,6 +24,13 @@ namespace IotPlugin.Modbus
         public int NetPort { get; set; } = 20010;
 
         /// <summary>
+        /// 启用DTU注册包模式(§6.6:启用后拨入连接须先发注册包——可打印ASCII注册ID(可带回车换行),
+        /// 匹配设备网关编号DeviceGateway绑定会话,超时未注册踢连接;关闭时按来源IP匹配DeviceIp)
+        /// </summary>
+        [DisplayName("启用DTU注册包模式(默认关闭)")]
+        public bool EnableDtuRegistration { get; set; } = false;
+
+        /// <summary>
         /// 同通道指令发送间隔(毫秒,兼作RS-485从站喘息时间)
         /// </summary>
         [DisplayName("同通道指令发送间隔(毫秒)")]
