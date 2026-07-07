@@ -254,6 +254,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<PushGateService>()
 builder.Services.AddSingleton<OfflineDebounceService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<OfflineDebounceService>());
 
+// 告警引擎(基于最新值缓存评估两级告警规则,三型防抖,独立事件通道)
+builder.Services.AddSingleton<AlarmEngineService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<AlarmEngineService>());
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

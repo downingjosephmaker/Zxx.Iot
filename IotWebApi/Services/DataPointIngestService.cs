@@ -70,7 +70,12 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly OfflineDebounceService _offlineDebounceService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService)
+        /// <summary>
+        /// 告警引擎(基于最新值缓存评估两级告警规则)
+        /// </summary>
+        private readonly AlarmEngineService _alarmEngineService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService)
         {
             _telemetryService = telemetryService;
             _latestService = latestService;
@@ -80,6 +85,8 @@ namespace IotWebApi.Services
             _pushGateService.FlushHandler = FlushHeldPoints;  //节流/静默到期的点位由本服务补写历史/遥测/SignalR
             _offlineDebounceService = offlineDebounceService;
             _offlineDebounceService.ConfirmHandler = ConfirmOffline;  //疑似离线确认后由本服务落库+推送
+            _alarmEngineService = alarmEngineService;
+            _alarmEngineService.FireHandler = HandleAlarmFired;  //告警成立/恢复由本服务落库+推送
             _channel = Channel.CreateBounded<PluginEvent>(new BoundedChannelOptions(QueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
@@ -290,7 +297,15 @@ namespace IotWebApi.Services
             if (paramupdates.Count > 0) DeviceParamDAO.Instance.UpdateColumns(paramupdates.Values.ToList(), it => new { it.ExpandJson });
             if (deviceupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates.Values.ToList(), it => new { it.DeviceState, it.LastOnlineTime, it.DeviceAlarm });
             if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
-            if (latestpoints.IsZxxAny()) _latestService.Update(latestpoints);  //最新值缓存不受推送策略约束,永远即时更新
+            if (latestpoints.IsZxxAny())
+            {
+                _latestService.Update(latestpoints);  //最新值缓存不受推送策略约束,永远即时更新
+                // 告警评估基于最新值缓存,走独立事件通道不受推送节流影响(§7.3硬规则)
+                foreach (var group in latestpoints.GroupBy(t => (int)t.DeviceId))
+                {
+                    _alarmEngineService.Evaluate(group.Key, group.Select(t => t.ParamCode).ToHashSet());
+                }
+            }
             if (telemetrypoints.IsZxxAny())
             {
                 _telemetryService.Enqueue(telemetrypoints);
@@ -514,6 +529,52 @@ namespace IotWebApi.Services
             {
                 _hubContext.Clients.Group($"device:{run.DeviceId}").SendAsync("ReceiveDeviceState", run.ToJson())
                     .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{run.DeviceId}]状态推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
+            }
+        }
+
+        /// <summary>
+        /// 告警成立/恢复回调(告警事件走独立通道不经推送节流:EventSignal落库+SignalR告警组推送)
+        /// </summary>
+        private void HandleAlarmFired(List<AlarmFireInfo> fires)
+        {
+            try
+            {
+                if (!fires.IsZxxAny()) return;
+                var deviceids = fires.Select(t => t.DeviceId).Distinct().ToList();
+                var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
+                if (!devlist.IsZxxAny()) return;
+                var unitlist = BasicunitInfoDAO.Instance.GetList();
+                var buildlist = BuildInfoDAO.Instance.GetList();
+                var deptlist = DeptInfoDAO.Instance.GetList();
+                var typelist = DeviceTypeDAO.Instance.GetList();
+
+                var signallist = new List<EventSignal>();
+                foreach (var fire in fires)
+                {
+                    var dbdev = devlist.FirstOrDefault(t => t.DeviceId == fire.DeviceId);
+                    if (dbdev == null) continue;
+                    var signal = new EventSignal
+                    {
+                        SnowId = SnowModel.Instance.NewId(),
+                        EventTime = DateTime.Now.ToDateTimeString(),
+                        EventType = fire.EventType,
+                        EventValue = fire.ValueText,
+                        EventContent = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}"
+                    };
+                    FillEventBase(signal, dbdev, unitlist, buildlist, deptlist, typelist);
+                    signallist.Add(signal);
+                }
+                if (!signallist.IsZxxAny()) return;
+                EventSignalDAO.Instance.InsertRange(signallist);
+                foreach (var signal in signallist)
+                {
+                    _hubContext.Clients.Group($"alarm:{signal.UnitId}").SendAsync("ReceiveAlarm", signal.ToJson())
+                        .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{signal.DeviceId}]告警推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"告警落库推送失败：{ex}", Service_CATEGORY);
             }
         }
 
