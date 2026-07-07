@@ -187,5 +187,41 @@ namespace IotModel
         [DisplayName("是否自定义告警显示(0:否1:是)")]
         [SugarColumn(ColumnName = "is_custom_alarm", Length = 1, ColumnDescription = "是否自定义告警显示(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
         public bool IsCustomAlarm { get; set; }
+        /// <summary>
+        /// 采集功能码(0:不采集,1/2/3/4:Modbus读区;寄存器地址复用参数地址ParamAddr)
+        ///</summary>
+        [DisplayName("采集功能码(0:不采集,1/2/3/4:Modbus读区)")]
+        [SugarColumn(ColumnName = "collect_func_code", Length = 0, ColumnDescription = "采集功能码(0:不采集,1/2/3/4:Modbus读区)", DefaultValue = "0", ColumnDataType = "int")]
+        public int CollectFuncCode { get; set; }
+        /// <summary>
+        /// 采集数据类型(int16/uint16/int32/uint32/int64/float32/float64/bcd/string/bool,空=uint16)
+        ///</summary>
+        [DisplayName("采集数据类型")]
+        [SugarColumn(ColumnName = "collect_data_type", IsNullable = true, Length = 10, ColumnDescription = "采集数据类型(空=uint16)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string CollectDataType { get; set; }
+        /// <summary>
+        /// 字节序四选一(ABCD/CDAB/BADC/DCBA,空=ABCD)
+        ///</summary>
+        [DisplayName("字节序(ABCD/CDAB/BADC/DCBA)")]
+        [SugarColumn(ColumnName = "collect_byte_order", IsNullable = true, Length = 10, ColumnDescription = "字节序四选一(空=ABCD)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string CollectByteOrder { get; set; }
+        /// <summary>
+        /// 位偏移(-1:整字取值,>=0:按位取布尔)
+        ///</summary>
+        [DisplayName("位偏移(-1整字)")]
+        [SugarColumn(ColumnName = "collect_bit_offset", Length = 0, ColumnDescription = "位偏移(-1整字,>=0按位取布尔)", DefaultValue = "-1", ColumnDataType = "int")]
+        public int CollectBitOffset { get; set; } = -1;
+        /// <summary>
+        /// 占用寄存器数(0:按数据类型推导,bcd/string须显式配置)
+        ///</summary>
+        [DisplayName("占用寄存器数(0按类型推导)")]
+        [SugarColumn(ColumnName = "collect_reg_length", Length = 0, ColumnDescription = "占用寄存器数(0按数据类型推导)", DefaultValue = "0", ColumnDataType = "int")]
+        public int CollectRegLength { get; set; }
+        /// <summary>
+        /// 是否可写(0:否1:是,FC03保持寄存器经FC06/16下发)
+        ///</summary>
+        [DisplayName("是否可写(0:否1:是)")]
+        [SugarColumn(ColumnName = "collect_writable", Length = 1, ColumnDescription = "是否可写(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool CollectWritable { get; set; }
     }
 }
