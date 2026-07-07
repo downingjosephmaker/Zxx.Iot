@@ -79,8 +79,15 @@ class PureHttp {
           PureHttp.initConfig.beforeRequestCallback(config);
           return config;
         }
-        /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题） */
-        const whiteList = ["/refresh-token", "/login"];
+        /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题）
+         * 注意用endsWith匹配，须写真实URL末段：刷新接口不进白名单会在过期时等待自己造成死锁 */
+        const whiteList = [
+          "/refresh-token",
+          "/login",
+          "/GetRefreshToken",
+          "/LoginUserFun",
+          "/LoginJtddFun"
+        ];
         return whiteList.some(url => config.url.endsWith(url))
           ? config
           : new Promise(resolve => {
@@ -103,6 +110,11 @@ class PureHttp {
                         );
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
+                      })
+                      .catch(() => {
+                        // 刷新失败=会话不可续（超出硬窗口/用户停用），清队列并登出
+                        PureHttp.requests = [];
+                        useUserStoreHook().logOut2();
                       })
                       .finally(() => {
                         PureHttp.isRefreshing = false;

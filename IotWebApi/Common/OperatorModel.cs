@@ -113,6 +113,11 @@ namespace IotWebApi
         /// 用户验证TOKEN
         /// </summary>
         public string LoginToken { get; set; }
+
+        /// <summary>
+        /// 令牌软过期时间(前端到点走GetRefreshToken无感换签;服务端硬窗口仍由tokentimeouthour裁决)
+        /// </summary>
+        public DateTime TokenExpireTime { get; set; }
         /// <summary>
         /// 大屏跳转路径
         ///</summary>

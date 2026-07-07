@@ -115,8 +115,8 @@ export const useUserStore = defineStore("pure-user", {
                 accessToken: result.LoginToken,
                 /** 用于调用刷新`accessToken`的接口时所需的`token` */
                 refreshToken: result.LoginToken,
-                /** `accessToken`的过期时间（格式'xxxx/xx/xx xx:xx:xx'） */
-                expires: "",
+                /** `accessToken`的软过期时间（后端TokenExpireTime，到点走无感刷新换签） */
+                expires: result.TokenExpireTime || "",
                 /** 单位总数 */
                 UnitAllCount: result.UnitAllCount || 0
               };
@@ -165,8 +165,8 @@ export const useUserStore = defineStore("pure-user", {
                 accessToken: result.LoginToken,
                 /** 用于调用刷新`accessToken`的接口时所需的`token` */
                 refreshToken: result.LoginToken,
-                /** `accessToken`的过期时间（格式'xxxx/xx/xx xx:xx:xx'） */
-                expires: "",
+                /** `accessToken`的软过期时间（后端TokenExpireTime，到点走无感刷新换签） */
+                expires: result.TokenExpireTime || "",
                 /** 单位总数 */
                 UnitAllCount: result.UnitAllCount || 0
               };
@@ -233,14 +233,23 @@ export const useUserStore = defineStore("pure-user", {
     GET_IS_SYSTEM() {
       return storageSession().getItem<any>("is-system")?.data ?? false;
     },
-    /** 刷新`token` */
+    /** 刷新`token`（适配后端{Status,Result}信封，Result为RefreshTokenInfo序列化串） */
     async handRefreshToken(data) {
       return new Promise<RefreshTokenResult>((resolve, reject) => {
         refreshTokenApi(data)
-          .then(data => {
-            if (data) {
-              setToken(data.data);
-              resolve(data);
+          .then(datas => {
+            if (datas?.Status) {
+              const result = JSON.parse(datas.Result);
+              storage.setItem("token", result.AccessToken);
+              setToken({
+                accessToken: result.AccessToken,
+                refreshToken: result.RefreshToken,
+                expires: result.Expires
+              } as DataInfo<Date>);
+              datas.data = { accessToken: result.AccessToken };
+              resolve(datas);
+            } else {
+              reject(new Error(datas?.Message || "令牌刷新失败"));
             }
           })
           .catch(error => {

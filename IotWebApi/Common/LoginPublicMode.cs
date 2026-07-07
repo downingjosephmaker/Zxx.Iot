@@ -11,6 +11,16 @@ namespace IotWebApi
     public static class LoginPublicMode
     {
         /// <summary>
+        /// 令牌软过期小时数(DefaultValues:tokenrefreshhour,未配置回落24;
+        /// 前端到点走GetRefreshToken换签,服务端硬窗口仍由tokentimeouthour裁决)
+        /// </summary>
+        public static int GetTokenRefreshHours()
+        {
+            int hours = AppSetting.GetConfig("DefaultValues:tokenrefreshhour").ToZxxInt();
+            return hours > 0 ? hours : 24;
+        }
+
+        /// <summary>
         /// 通用登录方法
         /// </summary>
         /// <param name="user"></param>
@@ -28,6 +38,7 @@ namespace IotWebApi
                     UserID = user.UserId,
                     UserName = user.TrueName,
                     LoginTime = time,
+                    TokenExpireTime = time.AddHours(GetTokenRefreshHours()),
                     SourceType = sourceType,
                     UnitId = user.UnitId,
                     UnitName = user.UnitName,

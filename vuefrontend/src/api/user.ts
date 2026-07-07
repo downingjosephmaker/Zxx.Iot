@@ -24,14 +24,13 @@ export type UserResult = {
 };
 
 export type RefreshTokenResult = {
-  success: boolean;
-  data: {
-    /** `token` */
+  Status: boolean;
+  /** 序列化的RefreshTokenInfo{AccessToken,RefreshToken,Expires} */
+  Result: string;
+  Message: string;
+  /** 由user store刷新成功后回填，供http拦截器重放队列使用 */
+  data?: {
     accessToken: string;
-    /** 用于调用刷新`accessToken`的接口时所需的`token` */
-    refreshToken: string;
-    /** `accessToken`的过期时间（格式'xxxx/xx/xx xx:xx:xx'） */
-    expires: Date;
   };
 };
 
