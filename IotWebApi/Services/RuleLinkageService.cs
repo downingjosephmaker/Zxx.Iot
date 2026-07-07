@@ -25,7 +25,8 @@ namespace IotWebApi.Services
         /// </summary>
         private static readonly HashSet<string> CommandWhitelist = new(StringComparer.OrdinalIgnoreCase)
         {
-            "netmodbuswrite", "netdlt645timesync", "netdlt645read", "netcjt188read", "netcjt188valve"
+            "netmodbuswrite", "netdlt645timesync", "netdlt645read", "netcjt188read", "netcjt188valve",
+            "nets7write", "netopcuawrite"
         };
 
         /// <summary>

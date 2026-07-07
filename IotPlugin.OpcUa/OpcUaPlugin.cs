@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using CenBoCommon.Zxx;
 using CenboEventBus;
@@ -14,7 +15,8 @@ namespace IotPlugin.OpcUa
     /// OPC UA采集插件(M3.6下半:OPCFoundation官方客户端栈,平台直连型;
     /// 一台设备=一个OPC UA服务器(opc.tcp://DeviceIp:DevicePort),点表NodeId取collect_node_id列;
     /// 双模式:订阅推送(Subscription+MonitoredItem,服务端变化上报)/批量轮询读(ReadValueId);
-    /// 匿名/用户名两种认证(证书认证待后续);每设备独立会话循环+ReconnectBackoff退避重连)
+    /// 匿名/用户名两种认证(证书认证待后续);每设备独立会话循环+ReconnectBackoff退避重连;
+    /// 写下发netopcuawrite:CollectWritable点位入每设备写队列由会话循环串行消费)
     /// </summary>
     public class OpcUaPlugin : ICenBoPlugin
     {
@@ -38,6 +40,9 @@ namespace IotPlugin.OpcUa
             public DeviceParamEntity? DeviceParam;
             public List<DeviceTypeParam> Points = new();
             public volatile bool Online;
+
+            /// <summary>待写请求队列(Session实例非线程安全,写必须由本设备会话循环串行消费)</summary>
+            public readonly ConcurrentQueue<OpcUaWriteRequest> WriteQueue = new();
         }
 
         public void PluginInit(IEventBus<PluginEvent> eventBus) => _eventBus = eventBus;
@@ -290,9 +295,11 @@ namespace IotPlugin.OpcUa
                     else
                     {
                         RunSubscription(binding, session);
+                        // 保活循环500ms切片,顺带消费写队列(写延迟上限500ms)
                         while (!token.IsCancellationRequested && session.Connected)
                         {
-                            await Task.Delay(5_000, token);
+                            DrainWriteQueue(binding, session);
+                            await Task.Delay(500, token);
                         }
                     }
                 }
@@ -310,6 +317,7 @@ namespace IotPlugin.OpcUa
                         PublishRunState(binding, 0);
                     }
                     try { session?.Close(); session?.Dispose(); } catch { }
+                    FailPendingWrites(binding, "OPC UA会话断开，写请求未执行");
                 }
                 if (token.IsCancellationRequested) break;
                 try { await Task.Delay(backoff.NextDelayMs(), token); }
@@ -371,6 +379,7 @@ namespace IotPlugin.OpcUa
             }));
             while (!token.IsCancellationRequested && session.Connected)
             {
+                DrainWriteQueue(binding, session);
                 session.Read(null, 0, TimestampsToReturn.Neither, nodes,
                     out DataValueCollection results, out _);
                 var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -380,8 +389,138 @@ namespace IotPlugin.OpcUa
                     values[binding.Points[i].ParamCode] = Convert.ToString(results[i].Value, CultureInfo.InvariantCulture) ?? "";
                 }
                 if (values.Any()) PublishValues(binding, values);
-                await Task.Delay(_config!.CollectCycleMs, token);
+                // 采集周期500ms切片,顺带消费写队列(写延迟不受周期长短拖累)
+                int remaining = _config!.CollectCycleMs;
+                while (remaining > 0 && !token.IsCancellationRequested && session.Connected)
+                {
+                    int slice = Math.Min(500, remaining);
+                    await Task.Delay(slice, token);
+                    remaining -= slice;
+                    DrainWriteQueue(binding, session);
+                }
             }
+        }
+
+        #endregion
+
+        #region 写下发
+
+        /// <summary>
+        /// 冲刷写队列(由持有会话的循环线程调用——Session非线程安全;单条失败只回执不断连)
+        /// </summary>
+        private void DrainWriteQueue(OpcUaDeviceBinding binding, Session session)
+        {
+            while (session.Connected && binding.WriteQueue.TryDequeue(out var request))
+            {
+                bool success = false;
+                string message;
+                try
+                {
+                    object converted = ConvertWriteValue(session, request.Point, request.ParamValue);
+                    var writevalue = new WriteValue
+                    {
+                        NodeId = new NodeId(request.Point.CollectNodeId),
+                        AttributeId = Attributes.Value,
+                        Value = new DataValue(new Variant(converted))
+                    };
+                    session.Write(null, new WriteValueCollection { writevalue },
+                        out StatusCodeCollection results, out _);
+                    if (results.Count > 0 && StatusCode.IsGood(results[0]))
+                    {
+                        success = true;
+                        message = "写入成功";
+                        LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。");
+                    }
+                    else
+                    {
+                        message = $"服务器拒绝写入：{(results.Count > 0 ? results[0].ToString() : "无状态码")}";
+                        LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]被拒，{message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    message = $"写入异常：{ex.Message}";
+                    LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}");
+                }
+                _ = PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, success, message);
+            }
+        }
+
+        /// <summary>
+        /// 工程值字符串按点表数据类型转换为CLR值(未配置类型时读服务器当前值按其运行时类型转换,
+        /// 避免Variant类型不匹配被BadTypeMismatch拒绝;转换失败上抛由调用方回执)
+        /// </summary>
+        private static object ConvertWriteValue(Session session, DeviceTypeParam point, string value)
+        {
+            var type = (point.CollectDataType ?? "").Trim().ToLowerInvariant();
+            value = value?.Trim() ?? "";
+            switch (type)
+            {
+                case "bool":
+                case "bit":
+                    return value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+                case "byte":
+                    return byte.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case "int16":
+                    return short.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case "uint16":
+                    return ushort.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case "int32":
+                    return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case "uint32":
+                    return uint.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case "float32":
+                    return float.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+                case "float64":
+                case "double":
+                    return double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+                case "string":
+                    return value;
+                default:
+                    var current = session.ReadValue(new NodeId(point.CollectNodeId));
+                    if (current?.Value == null) return value;
+                    return Convert.ChangeType(value, current.Value.GetType(), CultureInfo.InvariantCulture);
+            }
+        }
+
+        /// <summary>
+        /// 断线清空写队列并逐条发失败回执
+        /// </summary>
+        private void FailPendingWrites(OpcUaDeviceBinding binding, string reason)
+        {
+            while (binding.WriteQueue.TryDequeue(out var request))
+            {
+                _ = PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, false, reason);
+            }
+        }
+
+        /// <summary>
+        /// 发布控制结果消息
+        /// </summary>
+        private async Task PublishControlResultAsync(string commandid, int deviceid, string devicename, bool success, string message)
+        {
+            if (commandid.IsZxxNullOrEmpty()) return;
+            var result = new PluginControlResultMessage
+            {
+                CommandId = commandid,
+                ResultTime = DateTime.Now.ToDateTimeString(),
+                DeviceResults = new List<ControlDeviceResult>
+                {
+                    new ControlDeviceResult
+                    {
+                        DeviceId = deviceid,
+                        DeviceName = devicename,
+                        Success = success,
+                        Message = message,
+                        ResultTime = DateTime.Now.ToDateTimeString()
+                    }
+                }
+            };
+            await SendMessageAsync(new PluginMessage
+            {
+                MessageType = PluginMessageEnum.控制结果,
+                MessageJson = result.ToJson()
+            });
         }
 
         #endregion
@@ -498,7 +637,7 @@ namespace IotPlugin.OpcUa
         #region 接收主程序消息
 
         /// <summary>
-        /// 接收主程序消息入口(心跳;OPC UA写下发待后续实现)
+        /// 接收主程序消息入口(心跳/设备控制)
         /// </summary>
         public async Task ReceiveMessageAsync(PluginMessage mess)
         {
@@ -508,8 +647,67 @@ namespace IotPlugin.OpcUa
                     LogHelper.Info($"{PluginName}：收到心跳。");
                     break;
                 case PluginMessageEnum.设备控制:
-                    LogHelper.Info($"{PluginName}：OPC UA写下发暂未实现，忽略控制消息。");
+                    await HandleDeviceControlAsync(mess.MessageJson);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 处理写点位控制(netopcuawrite:按参数编码定位点表NodeId,入每设备写队列由会话循环串行消费——
+        /// Session实例非线程安全,不可在消息线程直接写)
+        /// </summary>
+        private async Task HandleDeviceControlAsync(string? messagejson)
+        {
+            if (messagejson.IsZxxNullOrEmpty())
+            {
+                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                return;
+            }
+            OpcUaControlCommand? command;
+            try { command = messagejson.ToObject<OpcUaControlCommand>(); }
+            catch (Exception ex) { LogHelper.Error(ex); return; }
+            if (command == null || command.ConContent.IsZxxNullOrEmpty())
+            {
+                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                return;
+            }
+            if (!string.Equals(command.ClassName?.Trim(), "netopcuawrite", StringComparison.OrdinalIgnoreCase))
+            {
+                LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                return;
+            }
+            NetOpcUaWrite? model;
+            try { model = command.ConContent.ToObject<NetOpcUaWrite>(); }
+            catch { LogHelper.Info($"{PluginName}：NetOpcUaWrite解析失败。"); return; }
+            if (model == null || model.ParamCode.IsZxxNullOrEmpty()) return;
+
+            foreach (var deviceid in command.DeviceIds.Distinct())
+            {
+                OpcUaDeviceBinding? binding;
+                lock (_bindingLock) { _deviceMap.TryGetValue(deviceid, out binding); }
+                if (binding == null)
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, "", false, "未找到设备绑定信息");
+                    continue;
+                }
+                var point = binding.Points.Find(t => string.Equals(t.ParamCode, model.ParamCode, StringComparison.OrdinalIgnoreCase));
+                if (point == null || !point.CollectWritable || point.CollectNodeId.IsZxxNullOrEmpty())
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, binding.Device.DeviceName, false, "点位不存在、不可写或未配置NodeId");
+                    continue;
+                }
+                if (!binding.Online)
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, binding.Device.DeviceName, false, "服务器离线，写请求未受理");
+                    continue;
+                }
+                binding.WriteQueue.Enqueue(new OpcUaWriteRequest
+                {
+                    CommandId = command.CommandId,
+                    Point = point,
+                    ParamValue = model.ParamValue
+                });
+                LogHelper.Info($"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。");
             }
         }
 

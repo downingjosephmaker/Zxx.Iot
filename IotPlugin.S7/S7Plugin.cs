@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using CenBoCommon.Zxx;
 using CenboEventBus;
@@ -14,7 +15,8 @@ namespace IotPlugin.S7
     /// 每设备独立采集循环+ReconnectBackoff退避重连(库自带IO不经指令引擎);
     /// 点表约定:CollectFuncCode 1=DB/2=M/3=I/4=Q区,ParamAddr=DB号×1000000+字节地址(M/I/Q区DB=0),
     /// CollectDataType bool/byte/int16/uint16/int32/uint32/float32(S7大端),CollectBitOffset位偏移;
-    /// 按(区,DB)分组经PointBatchBuilder连续性合包批量读;暂只读,写下发待后续)
+    /// 按(区,DB)分组经PointBatchBuilder连续性合包批量读;
+    /// 写下发nets7write:CollectWritable点位入每设备写队列由采集循环串行消费)
     /// </summary>
     public class S7Plugin : ICenBoPlugin
     {
@@ -38,6 +40,9 @@ namespace IotPlugin.S7
             public List<DeviceTypeParam> Points = new();
             public CpuType Cpu = CpuType.S71200;
             public volatile bool Online;
+
+            /// <summary>待写请求队列(Plc实例非线程安全,写必须由本设备采集循环串行消费)</summary>
+            public readonly ConcurrentQueue<S7WriteRequest> WriteQueue = new();
         }
 
         public void PluginInit(IEventBus<PluginEvent> eventBus) => _eventBus = eventBus;
@@ -250,6 +255,7 @@ namespace IotPlugin.S7
 
                     while (!token.IsCancellationRequested && plc.IsConnected)
                     {
+                        await DrainWriteQueueAsync(binding, plc, token);
                         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                         foreach (var batch in batches)
                         {
@@ -290,6 +296,7 @@ namespace IotPlugin.S7
                         PublishRunState(binding, 0);
                     }
                     try { plc?.Close(); } catch { }
+                    FailPendingWrites(binding, "PLC连接断开，写请求未执行");
                 }
                 if (token.IsCancellationRequested) break;
                 try { await Task.Delay(backoff.NextDelayMs(), token); }
@@ -374,6 +381,137 @@ namespace IotPlugin.S7
 
         private static uint ReadU32(byte[] buffer, int offset) =>
             (uint)((buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3]);
+
+        #endregion
+
+        #region 写下发
+
+        /// <summary>
+        /// 冲刷写队列(采集循环每轮先写后读,保证写优先;单条失败只回执不断连)
+        /// </summary>
+        private async Task DrainWriteQueueAsync(S7DeviceBinding binding, Plc plc, CancellationToken token)
+        {
+            while (!token.IsCancellationRequested && binding.WriteQueue.TryDequeue(out var request))
+            {
+                bool success = false;
+                string message;
+                try
+                {
+                    var buffer = EncodeWriteValue(request.Point, request.ParamValue);
+                    if (buffer == null)
+                    {
+                        message = "值编码失败或类型不支持写入";
+                    }
+                    else
+                    {
+                        var (area, db) = request.Point.CollectFuncCode switch
+                        {
+                            2 => (DataType.Memory, 0),
+                            3 => (DataType.Input, 0),
+                            4 => (DataType.Output, 0),
+                            _ => (DataType.DataBlock, request.Point.ParamAddr / 1_000_000)
+                        };
+                        int start = request.Point.ParamAddr % 1_000_000;
+                        var type = (request.Point.CollectDataType ?? "").Trim().ToLowerInvariant();
+                        if (type is "bool" or "bit")
+                        {
+                            // 位写走WriteBitAsync,避免读改写整字节竞态
+                            bool bit = request.ParamValue.Trim() is "1" or "true" or "True" or "TRUE";
+                            await plc.WriteBitAsync(area, db, start, Math.Max(0, request.Point.CollectBitOffset), bit, token);
+                        }
+                        else
+                        {
+                            await plc.WriteBytesAsync(area, db, start, buffer, token);
+                        }
+                        success = true;
+                        message = "写入成功";
+                        LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。");
+                    }
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    message = $"写入异常：{ex.Message}";
+                    LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}");
+                }
+                await PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, success, message);
+            }
+        }
+
+        /// <summary>
+        /// 工程值字符串按点表数据类型编码为S7大端字节(bool由位写单独处理返回占位)
+        /// </summary>
+        private static byte[]? EncodeWriteValue(DeviceTypeParam point, string value)
+        {
+            var type = (point.CollectDataType ?? "").Trim().ToLowerInvariant();
+            value = value?.Trim() ?? "";
+            switch (type)
+            {
+                case "bool":
+                case "bit":
+                    return new byte[1];
+                case "byte":
+                    return byte.TryParse(value, out var b) ? new[] { b } : null;
+                case "int16":
+                    return short.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i16)
+                        ? new[] { (byte)(i16 >> 8), (byte)i16 } : null;
+                case "int32":
+                    return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32)
+                        ? WriteU32((uint)i32) : null;
+                case "uint32":
+                    return uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var u32)
+                        ? WriteU32(u32) : null;
+                case "float32":
+                    return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var f32)
+                        ? WriteU32((uint)BitConverter.SingleToInt32Bits(f32)) : null;
+                default:
+                    return ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var u16)
+                        ? new[] { (byte)(u16 >> 8), (byte)u16 } : null;
+            }
+        }
+
+        private static byte[] WriteU32(uint value) =>
+            new[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value };
+
+        /// <summary>
+        /// 断线清空写队列并逐条发失败回执
+        /// </summary>
+        private void FailPendingWrites(S7DeviceBinding binding, string reason)
+        {
+            while (binding.WriteQueue.TryDequeue(out var request))
+            {
+                _ = PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, false, reason);
+            }
+        }
+
+        /// <summary>
+        /// 发布控制结果消息
+        /// </summary>
+        private async Task PublishControlResultAsync(string commandid, int deviceid, string devicename, bool success, string message)
+        {
+            if (commandid.IsZxxNullOrEmpty()) return;
+            var result = new PluginControlResultMessage
+            {
+                CommandId = commandid,
+                ResultTime = DateTime.Now.ToDateTimeString(),
+                DeviceResults = new List<ControlDeviceResult>
+                {
+                    new ControlDeviceResult
+                    {
+                        DeviceId = deviceid,
+                        DeviceName = devicename,
+                        Success = success,
+                        Message = message,
+                        ResultTime = DateTime.Now.ToDateTimeString()
+                    }
+                }
+            };
+            await SendMessageAsync(new PluginMessage
+            {
+                MessageType = PluginMessageEnum.控制结果,
+                MessageJson = result.ToJson()
+            });
+        }
 
         #endregion
 
@@ -471,7 +609,7 @@ namespace IotPlugin.S7
         #region 接收主程序消息
 
         /// <summary>
-        /// 接收主程序消息入口(心跳;S7写下发待后续实现)
+        /// 接收主程序消息入口(心跳/设备控制)
         /// </summary>
         public async Task ReceiveMessageAsync(PluginMessage mess)
         {
@@ -481,8 +619,67 @@ namespace IotPlugin.S7
                     LogHelper.Info($"{PluginName}：收到心跳。");
                     break;
                 case PluginMessageEnum.设备控制:
-                    LogHelper.Info($"{PluginName}：S7写下发暂未实现，忽略控制消息。");
+                    await HandleDeviceControlAsync(mess.MessageJson);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 处理写点位控制(nets7write:按参数编码定位点表,入每设备写队列由采集循环串行消费——
+        /// Plc实例非线程安全,不可在消息线程直接写)
+        /// </summary>
+        private async Task HandleDeviceControlAsync(string? messagejson)
+        {
+            if (messagejson.IsZxxNullOrEmpty())
+            {
+                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                return;
+            }
+            S7ControlCommand? command;
+            try { command = messagejson.ToObject<S7ControlCommand>(); }
+            catch (Exception ex) { LogHelper.Error(ex); return; }
+            if (command == null || command.ConContent.IsZxxNullOrEmpty())
+            {
+                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                return;
+            }
+            if (!string.Equals(command.ClassName?.Trim(), "nets7write", StringComparison.OrdinalIgnoreCase))
+            {
+                LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                return;
+            }
+            NetS7Write? model;
+            try { model = command.ConContent.ToObject<NetS7Write>(); }
+            catch { LogHelper.Info($"{PluginName}：NetS7Write解析失败。"); return; }
+            if (model == null || model.ParamCode.IsZxxNullOrEmpty()) return;
+
+            foreach (var deviceid in command.DeviceIds.Distinct())
+            {
+                S7DeviceBinding? binding;
+                lock (_bindingLock) { _deviceMap.TryGetValue(deviceid, out binding); }
+                if (binding == null)
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, "", false, "未找到设备绑定信息");
+                    continue;
+                }
+                var point = binding.Points.Find(t => string.Equals(t.ParamCode, model.ParamCode, StringComparison.OrdinalIgnoreCase));
+                if (point == null || !point.CollectWritable)
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, binding.Device.DeviceName, false, "点位不存在或不可写");
+                    continue;
+                }
+                if (!binding.Online)
+                {
+                    await PublishControlResultAsync(command.CommandId, deviceid, binding.Device.DeviceName, false, "PLC离线，写请求未受理");
+                    continue;
+                }
+                binding.WriteQueue.Enqueue(new S7WriteRequest
+                {
+                    CommandId = command.CommandId,
+                    Point = point,
+                    ParamValue = model.ParamValue
+                });
+                LogHelper.Info($"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。");
             }
         }
 
