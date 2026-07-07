@@ -21,6 +21,15 @@ export default {
       }
     },
     {
+      path: "/iot/typeparam",
+      name: "IotTypeParam",
+      component: () => import("@/views/iot/typeparam/index.vue"),
+      meta: {
+        title: "点表配置",
+        showLink: true
+      }
+    },
+    {
       path: "/iot/strategy",
       name: "IotStrategy",
       component: () => import("@/views/iot/strategy/index.vue"),
