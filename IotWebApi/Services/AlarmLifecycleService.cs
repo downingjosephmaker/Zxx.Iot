@@ -26,9 +26,10 @@ namespace IotWebApi.Services
 
         /// <summary>
         /// 告警成立/恢复驱动四态流转(数据入库服务在屏蔽裁决后调用;
-        /// 完全屏蔽的告警不进生命周期,静默告警照常流转仅不推送不通知)
+        /// 完全屏蔽的告警不进生命周期,静默告警照常流转仅不推送不通知;
+        /// 返回活动告警主键供升级链登记,恢复/异常返回0)
         /// </summary>
-        public void Apply(AlarmFireInfo fire, DeviceInfo device, List<BasicunitInfoEntity> unitlist,
+        public long Apply(AlarmFireInfo fire, DeviceInfo device, List<BasicunitInfoEntity> unitlist,
             List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
         {
             try
@@ -38,7 +39,7 @@ namespace IotWebApi.Services
                 if (fire.EventType == "告警恢复")
                 {
                     Restore(key);
-                    return;
+                    return 0;
                 }
 
                 if (_actives.TryGetValue(key, out long existid))
@@ -51,7 +52,7 @@ namespace IotWebApi.Services
                         exist.AlarmValue = fire.Content;
                         if (!fire.AlarmGrade.IsZxxNullOrEmpty()) exist.AlarmGrade = fire.AlarmGrade;
                         EventAlarmDAO.Instance.Update(exist);
-                        return;
+                        return existid;
                     }
                     _actives.TryRemove(key, out _); // 登记项对应行已被人工删除,清脏后按新告警落库
                 }
@@ -79,11 +80,13 @@ namespace IotWebApi.Services
                 DataPointIngestService.FillEventBase(alarm, device, unitlist, buildlist, deptlist, typelist);
                 EventAlarmDAO.Instance.InsertRange(new List<EventAlarmEntity> { alarm });
                 _actives[key] = alarm.SnowId;
+                return alarm.SnowId;
             }
             catch (Exception ex)
             {
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
                     $"设备[{fire.DeviceId}]规则[{fire.RuleId}]生命周期流转失败：{ex}", Service_CATEGORY);
+                return 0;
             }
         }
 

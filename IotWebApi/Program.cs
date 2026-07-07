@@ -267,6 +267,10 @@ builder.Services.AddSingleton<AlarmNotifyService>();
 // 告警生命周期服务(§9.2四态:去重键(设备,规则)唯一活动告警,恢复回写,Ack由处理接口承接)
 builder.Services.AddSingleton<AlarmLifecycleService>();
 
+// 告警升级链服务(§9.5:未Ack未恢复按15/30/60分钟渐进重复升级,Ack或恢复自动中断)
+builder.Services.AddSingleton<AlarmEscalationService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<AlarmEscalationService>());
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

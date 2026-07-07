@@ -57,6 +57,12 @@ namespace IotModel
         [SugarColumn(ColumnName = "grade_filter", IsNullable = true, Length = 50, ColumnDescription = "告警等级过滤(空=全部)", DefaultValue = "", ColumnDataType = "varchar")]
         public string GradeFilter { get; set; }
         /// <summary>
+        /// 升级梯队(§9.5:0=第一梯队,告警产生立即通知;1/2/3=未Ack未恢复按15/30/60分钟渐进升级)
+        ///</summary>
+        [DisplayName("升级梯队(0立即,1-3渐进)")]
+        [SugarColumn(ColumnName = "escalation_level", ColumnDescription = "升级梯队(0立即,1-3渐进)", DefaultValue = "0", ColumnDataType = "int")]
+        public int EscalationLevel { get; set; }
+        /// <summary>
         /// 是否启用(0:否 1:是)
         ///</summary>
         [DisplayName("是否启用(0:否1:是)")]

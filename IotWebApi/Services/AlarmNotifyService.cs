@@ -33,7 +33,8 @@ namespace IotWebApi.Services
         private readonly object _configLock = new();
 
         /// <summary>
-        /// 外发一批告警(仅IsNote的告警调用;渠道逐一异步发送,不阻塞调用方)
+        /// 外发一批告警(仅IsNote的告警调用;只发第一梯队EscalationLevel=0,
+        /// 后续梯队由升级链服务按渐进时刻表驱动;渠道逐一异步发送,不阻塞调用方)
         /// </summary>
         public void Notify(List<EventSignal> signals)
         {
@@ -47,6 +48,7 @@ namespace IotWebApi.Services
                 {
                     foreach (var channel in channels)
                     {
+                        if (channel.EscalationLevel != 0) continue;
                         if (!MatchGrade(channel, signal)) continue;
                         var ch = channel;
                         var sig = signal;
@@ -57,6 +59,32 @@ namespace IotWebApi.Services
             catch (Exception ex)
             {
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"通知调度失败：{ex}", Service_CATEGORY);
+            }
+        }
+
+        /// <summary>
+        /// 升级链外发(§9.5第step步:重复低梯队并升级至EscalationLevel&lt;=step的渠道,
+        /// 由升级链服务在未Ack未恢复到期时调用,内容带升级标记)
+        /// </summary>
+        public void NotifyEscalation(EventSignal signal, int step)
+        {
+            try
+            {
+                if (signal == null) return;
+                EnsureConfig();
+                var channels = _channels;
+                if (!channels.IsZxxAny()) return;
+                foreach (var channel in channels)
+                {
+                    if (channel.EscalationLevel > step) continue;
+                    if (!MatchGrade(channel, signal)) continue;
+                    var ch = channel;
+                    _ = Task.Run(() => SendAsync(ch, signal, $"[升级通知#{step}]"));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"升级通知调度失败：{ex}", Service_CATEGORY);
             }
         }
 
@@ -79,14 +107,14 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 单渠道发送(按类型分发,失败只记日志)
+        /// 单渠道发送(按类型分发,失败只记日志;prefix为升级链的重复标记)
         /// </summary>
-        private async Task SendAsync(NotifyChannel channel, EventSignal signal)
+        private async Task SendAsync(NotifyChannel channel, EventSignal signal, string prefix = "")
         {
             try
             {
                 if (channel.TargetUrl.IsZxxNullOrEmpty()) return;
-                string text = $"{signal.EventTime} [{signal.UnitName}]{signal.DeviceName}：{signal.EventContent}";
+                string text = $"{prefix}{signal.EventTime} [{signal.UnitName}]{signal.DeviceName}：{signal.EventContent}";
                 switch (channel.ChannelType)
                 {
                     case 1:

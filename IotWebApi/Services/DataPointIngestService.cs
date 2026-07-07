@@ -90,11 +90,17 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly AlarmLifecycleService _alarmLifecycleService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService)
+        /// <summary>
+        /// 告警升级链服务(§9.5:未Ack未恢复渐进重复升级)
+        /// </summary>
+        private readonly AlarmEscalationService _alarmEscalationService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService, AlarmEscalationService alarmEscalationService)
         {
             _alarmMaskService = alarmMaskService;
             _alarmNotifyService = alarmNotifyService;
             _alarmLifecycleService = alarmLifecycleService;
+            _alarmEscalationService = alarmEscalationService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -597,7 +603,7 @@ namespace IotWebApi.Services
                     var verdict = _alarmMaskService.Apply(fire, dbdev);
                     if (verdict == AlarmMaskVerdict.完全屏蔽) continue;
                     // 四态生命周期流转(§9.2:EventAlarm去重登记/恢复回写;静默告警照常流转)
-                    _alarmLifecycleService.Apply(fire, dbdev, unitlist, buildlist, deptlist, typelist);
+                    long alarmid = _alarmLifecycleService.Apply(fire, dbdev, unitlist, buildlist, deptlist, typelist);
                     string content = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}";
                     var signal = new EventSignal
                     {
@@ -612,7 +618,12 @@ namespace IotWebApi.Services
                     if (verdict != AlarmMaskVerdict.静默)
                     {
                         pushlist.Add(signal);
-                        if (fire.IsNote) notifylist.Add(signal);
+                        if (fire.IsNote)
+                        {
+                            notifylist.Add(signal);
+                            // 升级链登记(§9.5:第一梯队由Notify立即外发,未Ack未恢复的后续梯队由升级链驱动)
+                            if (fire.EventType == "设备告警" && alarmid > 0) _alarmEscalationService.Track(alarmid, signal);
+                        }
                     }
                 }
                 if (!signallist.IsZxxAny()) return;
