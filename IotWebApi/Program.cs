@@ -275,6 +275,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<AlarmEscalationSer
 builder.Services.AddSingleton<RuleLinkageService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<RuleLinkageService>());
 
+// 北向转发服务(§10.2:MQTT/HTTP目的地,三段式断线续传=内存队列→SQLite落盘→批量重传)
+builder.Services.AddSingleton<NorthboundForwardService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<NorthboundForwardService>());
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

@@ -100,13 +100,19 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly RuleLinkageService _ruleLinkageService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService, AlarmEscalationService alarmEscalationService, RuleLinkageService ruleLinkageService)
+        /// <summary>
+        /// 北向转发服务(§10.2:过闸遥测与未屏蔽告警转发第三方,入队即返回)
+        /// </summary>
+        private readonly NorthboundForwardService _northboundForwardService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService, AlarmEscalationService alarmEscalationService, RuleLinkageService ruleLinkageService, NorthboundForwardService northboundForwardService)
         {
             _alarmMaskService = alarmMaskService;
             _alarmNotifyService = alarmNotifyService;
             _alarmLifecycleService = alarmLifecycleService;
             _alarmEscalationService = alarmEscalationService;
             _ruleLinkageService = ruleLinkageService;
+            _northboundForwardService = northboundForwardService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -307,6 +313,8 @@ namespace IotWebApi.Services
                 var publishpoints = devicepoints.Where(t => _pushGateService.ShouldPublish(data.device.DeviceTypeCode, t)).ToList();
                 if (!publishpoints.IsZxxAny()) continue;
                 telemetrypoints.AddRange(publishpoints);
+                // 北向转发(§10.2:转发面与推送面共用同一过闸结果,入队即返回不阻塞)
+                _northboundForwardService.ForwardTelemetry(data.DeviceId, data.device.DeviceTypeCode, publishpoints);
 
                 // 4.生成历史记录快照(只含本轮对外发布的点位)
                 var pubcodes = publishpoints.Select(t => t.ParamCode).ToHashSet();
@@ -654,6 +662,8 @@ namespace IotWebApi.Services
                 if (notifylist.IsZxxAny()) _alarmNotifyService.Notify(notifylist);
                 foreach (var signal in pushlist)
                 {
+                    // 北向转发(§10.2:静默/完全屏蔽的不外发,与SignalR推送同口径)
+                    _northboundForwardService.ForwardAlarm(signal.DeviceId, signal.DeviceTypeCode, signal);
                     _hubContext.Clients.Group($"alarm:{signal.UnitId}").SendAsync("ReceiveAlarm", signal.ToJson())
                         .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{signal.DeviceId}]告警推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
                 }
