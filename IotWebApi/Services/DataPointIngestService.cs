@@ -595,6 +595,7 @@ namespace IotWebApi.Services
                 var signallist = new List<EventSignal>();
                 var pushlist = new List<EventSignal>();
                 var notifylist = new List<EventSignal>();
+                var alarmflagupdates = new Dictionary<int, DeviceInfoEntity>();
                 foreach (var fire in fires)
                 {
                     var dbdev = devlist.FirstOrDefault(t => t.DeviceId == fire.DeviceId);
@@ -604,6 +605,17 @@ namespace IotWebApi.Services
                     if (verdict == AlarmMaskVerdict.完全屏蔽) continue;
                     // 四态生命周期流转(§9.2:EventAlarm去重登记/恢复回写;静默告警照常流转)
                     long alarmid = _alarmLifecycleService.Apply(fire, dbdev, unitlist, buildlist, deptlist, typelist);
+                    // 设备告警标志:成立置位,恢复且无其他活动告警才清零(Ack清零由处理接口承接)
+                    if (fire.EventType == "设备告警" && dbdev.DeviceAlarm != 1)
+                    {
+                        dbdev.DeviceAlarm = 1;
+                        alarmflagupdates[dbdev.DeviceId] = dbdev;
+                    }
+                    else if (fire.EventType == "告警恢复" && dbdev.DeviceAlarm != 0 && !_alarmLifecycleService.HasActive(fire.DeviceId))
+                    {
+                        dbdev.DeviceAlarm = 0;
+                        alarmflagupdates[dbdev.DeviceId] = dbdev;
+                    }
                     string content = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}";
                     var signal = new EventSignal
                     {
@@ -626,6 +638,7 @@ namespace IotWebApi.Services
                         }
                     }
                 }
+                if (alarmflagupdates.Count > 0) DeviceInfoDAO.Instance.UpdateColumns(alarmflagupdates.Values.ToList(), it => new { it.DeviceAlarm });
                 if (!signallist.IsZxxAny()) return;
                 EventSignalDAO.Instance.InsertRange(signallist);
                 if (notifylist.IsZxxAny()) _alarmNotifyService.Notify(notifylist);

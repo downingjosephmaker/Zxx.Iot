@@ -91,6 +91,15 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
+        /// 设备是否仍有活动告警(告警恢复时据此决定是否清除设备告警标志DeviceAlarm)
+        /// </summary>
+        public bool HasActive(int deviceid)
+        {
+            WarmUp();
+            return _actives.Keys.Any(t => t.DeviceId == deviceid);
+        }
+
+        /// <summary>
         /// 恢复流转(Active→Cleared:回写恢复时间与告警时长,确认维不变;无活动告警的恢复静默)
         /// </summary>
         private void Restore((int DeviceId, long RuleId) key)

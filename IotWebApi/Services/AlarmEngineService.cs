@@ -122,6 +122,9 @@ namespace IotWebApi.Services
         private DateTime _configTime = DateTime.MinValue;
         private readonly object _configLock = new();
 
+        /// <summary>屏蔽型防抖废弃提示已输出(每进程一次防刷屏)</summary>
+        private bool _maskDeprecationLogged;
+
         /// <summary>((设备,规则)→运行时状态)</summary>
         private readonly ConcurrentDictionary<(int DeviceId, long RuleId), AlarmState> _states = new();
 
@@ -211,6 +214,18 @@ namespace IotWebApi.Services
                 {
                     var dict = (AlarmConfigDAO.Instance.GetList() ?? new List<AlarmConfig>())
                         .ToDictionary(t => t.Id, t => t);
+
+                    // DebounceType=3屏蔽型已废弃(§9.4):按等价"永久+完全屏蔽"的alarm_mask规则执行,提示迁移
+                    if (!_maskDeprecationLogged)
+                    {
+                        var deprecated = dict.Values.Where(t => t.IsDebounce && t.DebounceType == DebounceTypeEnum.屏蔽).ToList();
+                        if (deprecated.IsZxxAny())
+                        {
+                            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
+                                $"检测到{deprecated.Count}个告警类型使用已废弃的屏蔽型防抖:[{string.Join(",", deprecated.Select(t => $"{t.Id}:{t.AlarmType}"))}],新配置请迁移到alarm_mask屏蔽规则", Service_CATEGORY);
+                            _maskDeprecationLogged = true;
+                        }
+                    }
                     var typelist = DeviceTypeAlarmConfigDAO.Instance.GetList() ?? new List<DeviceTypeAlarmConfig>();
                     var devlist = DeviceAlarmConfigDAO.Instance.GetList() ?? new List<DeviceAlarmConfig>();
 
@@ -410,7 +425,8 @@ namespace IotWebApi.Services
                 switch (rule.DebounceType)
                 {
                     case DebounceTypeEnum.屏蔽:
-                        // 屏蔽型:直接丢弃(后续由alarm_mask取代,标active防重复评估抖动)
+                        // 屏蔽型(deprecated§9.4):按等价"永久+完全屏蔽"的alarm_mask规则执行——
+                        // 直接丢弃不入库,标active防重复评估抖动;新配置一律使用alarm_mask
                         state.Active = true;
                         return;
                     case DebounceTypeEnum.时长型:
