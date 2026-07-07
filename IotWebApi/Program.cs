@@ -383,6 +383,16 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = provider,//应用新的映射关系
 });
 
+//运行时文件根(附件/导出/点位图)对外服务：物理根=NetLocalfile({BaseDirectory}/files,getter自建目录)，请求路径=/files
+//NetYingShefile作相对路径首部，使各控制器 Path.Combine(NetYingShefile,...) 生成的下载路径与本映射对齐(消费侧须把\归一为/)
+OperatorCommon.NetYingShefile = "files";
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(OperatorCommon.NetLocalfile),
+    RequestPath = "/files",
+    ContentTypeProvider = provider
+});
+
 //cookie
 app.UseCookiePolicy();
 
