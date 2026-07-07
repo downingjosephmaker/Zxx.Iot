@@ -244,6 +244,10 @@ namespace IotWebApi.Services
                         .GroupBy(t => t.DeviceId)
                         .ToDictionary(g => g.Key, g => g.First().DeviceTypeCode ?? "");
 
+                    // 离线告警字典行(§9.6:AlarmType或EventType含"离线"即认定,等级/通知/确认时长由此继承)
+                    _offlineConfig = dict.Values.FirstOrDefault(t =>
+                        t.AlarmType?.Contains("离线") == true || t.EventType?.Contains("离线") == true);
+
                     _typeRules = typerules;
                     _deviceRules = devrules;
                     _overrides = overrides;
@@ -498,6 +502,92 @@ namespace IotWebApi.Services
                 ValueText = valuetext,
                 IsNote = rule.IsNote && eventtype != "告警恢复"
             };
+        }
+
+        #endregion
+
+        #region 离线告警(§9.6:与上下线判定共用同一结果)
+
+        /// <summary>
+        /// 离线告警字典行(AlarmType/EventType含"离线"的告警类型,未配置时按默认等级/不通知处理)
+        /// </summary>
+        private volatile AlarmConfig? _offlineConfig;
+
+        /// <summary>
+        /// 设备离线告警活动状态(边沿检测:已发离线告警的设备恢复时才发恢复事件)
+        /// </summary>
+        private readonly ConcurrentDictionary<int, bool> _offlineActive = new();
+
+        /// <summary>
+        /// 离线确认时长(上下线判定服务经此读离线字典行的AlarmConfirmSeconds——
+        /// 时长型防抖的典型用例;字典缺失或非正数回落判定服务兜底值)
+        /// </summary>
+        public int GetOfflineConfirmSeconds()
+        {
+            EnsureConfig();
+            var cfg = _offlineConfig;
+            return cfg != null && cfg.AlarmConfirmSeconds > 0 ? cfg.AlarmConfirmSeconds : OfflineDebounceService.ConfirmSeconds;
+        }
+
+        /// <summary>
+        /// 设备离线告警(§7.5/§9.6:疑似离线已由上下线判定服务按确认时长完成时长型防抖,
+        /// 此处共用该判定结果直接成告警不重复防抖;经FireHandler走屏蔽/落库/通知同一链路)
+        /// </summary>
+        public void FireOffline(int deviceid, string reason)
+        {
+            try
+            {
+                EnsureConfig();
+                if (_offlineActive.TryGetValue(deviceid, out bool active) && active) return; // 无边沿不重复告警
+                _offlineActive[deviceid] = true;
+                var cfg = _offlineConfig;
+                string content = cfg != null && !cfg.TextTemplate.IsZxxNullOrEmpty() ? cfg.TextTemplate : "设备通信中断离线";
+                Dispatch(new List<AlarmFireInfo>
+                {
+                    new AlarmFireInfo
+                    {
+                        DeviceId = deviceid,
+                        EventType = "设备告警",
+                        AlarmGrade = cfg?.AlarmGrade ?? "",
+                        Content = $"{content}({reason})",
+                        ValueText = "",
+                        IsNote = cfg?.IsNote ?? false
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{deviceid}]离线告警失败：{ex}", Service_CATEGORY);
+            }
+        }
+
+        /// <summary>
+        /// 设备离线告警恢复(上线判定即时生效;仅对已发离线告警的设备发恢复,
+        /// 恢复事件不参与屏蔽也不外发通知)
+        /// </summary>
+        public void FireOfflineRecover(int deviceid)
+        {
+            try
+            {
+                if (!_offlineActive.TryRemove(deviceid, out bool active) || !active) return; // 未发过离线告警
+                var cfg = _offlineConfig;
+                Dispatch(new List<AlarmFireInfo>
+                {
+                    new AlarmFireInfo
+                    {
+                        DeviceId = deviceid,
+                        EventType = "告警恢复",
+                        AlarmGrade = cfg?.AlarmGrade ?? "",
+                        Content = "[恢复]设备通信恢复上线",
+                        ValueText = "",
+                        IsNote = false
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{deviceid}]离线恢复失败：{ex}", Service_CATEGORY);
+            }
         }
 
         #endregion

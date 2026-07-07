@@ -14,10 +14,16 @@ namespace IotWebApi.Services
         private const string Service_CATEGORY = "上下线判定服务";
 
         /// <summary>
-        /// 离线确认时长秒(疑似离线持续超过该时长才正式判离线,默认心跳周期60秒×3;
-        /// M4告警引擎落地后改读AlarmConfirmSeconds配置)
+        /// 离线确认时长秒兜底值(疑似离线持续超过该时长才正式判离线,默认心跳周期60秒×3;
+        /// ConfirmSecondsProvider未注册或取值非正数时回落)
         /// </summary>
         public const int ConfirmSeconds = 180;
+
+        /// <summary>
+        /// 离线确认时长提供者(§9.6:告警引擎注册,读离线告警字典行的AlarmConfirmSeconds;
+        /// 未注册回落ConfirmSeconds兜底)
+        /// </summary>
+        public Func<int> ConfirmSecondsProvider { get; set; }
 
         /// <summary>
         /// 同一设备上线通知最小间隔秒(配合flapping封禁,防抖动设备刷屏)
@@ -110,6 +116,15 @@ namespace IotWebApi.Services
             _suspects.TryAdd(deviceid, new SuspectState { DeviceState = devicestate, SuspectTime = DateTime.Now });
         }
 
+        /// <summary>
+        /// 取消疑似离线(看门狗语义§9:协议数据到达/状态上报在线等任何存活信号都重置判定,
+        /// 不做上线通知限频记账——与OnOnline的区别)
+        /// </summary>
+        public void CancelSuspect(int deviceid)
+        {
+            _suspects.TryRemove(deviceid, out _);
+        }
+
         #endregion
 
         #region 确认扫描
@@ -125,10 +140,12 @@ namespace IotWebApi.Services
                 {
                     await Task.Delay(ScanWindow, token);
                     var now = DateTime.Now;
+                    int confirmseconds = ConfirmSecondsProvider?.Invoke() ?? ConfirmSeconds;
+                    if (confirmseconds <= 0) confirmseconds = ConfirmSeconds;
                     var confirms = new List<(int DeviceId, int DeviceState, string Reason)>();
                     foreach (var pair in _suspects)
                     {
-                        if ((now - pair.Value.SuspectTime).TotalSeconds < ConfirmSeconds) continue;
+                        if ((now - pair.Value.SuspectTime).TotalSeconds < confirmseconds) continue;
                         if (_suspects.TryRemove(pair.Key, out var state))
                         {
                             // 插件上报的状态丢失属原因2=无数据采集(链路在但设备超时无应答)

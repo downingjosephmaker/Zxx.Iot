@@ -99,6 +99,7 @@ namespace IotWebApi.Services
             _offlineDebounceService.ConfirmHandler = ConfirmOffline;  //疑似离线确认后由本服务落库+推送
             _alarmEngineService = alarmEngineService;
             _alarmEngineService.FireHandler = HandleAlarmFired;  //告警成立/恢复由本服务落库+推送
+            _offlineDebounceService.ConfirmSecondsProvider = _alarmEngineService.GetOfflineConfirmSeconds;  //离线确认时长改读告警字典AlarmConfirmSeconds(§9.6)
             _channel = Channel.CreateBounded<PluginEvent>(new BoundedChannelOptions(QueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.DropOldest,
@@ -277,8 +278,10 @@ namespace IotWebApi.Services
                     paramupdates[param.DeviceId] = param;
                 }
 
-                // 2.更新设备在线状态(插件上报的device副本已带最新状态)
+                // 2.更新设备在线状态(插件上报的device副本已带最新状态;
+                // 协议数据到达即存活,看门狗语义重置疑似离线计时)
                 deviceupdates[data.DeviceId] = data.device;
+                _offlineDebounceService.CancelSuspect(data.DeviceId);
 
                 // 3.推送策略判定:通过的点位才对外发布,扣下的由引擎按节流窗口/静默周期补发
                 var devicepoints = BuildTelemetryPoints(data);
@@ -390,17 +393,26 @@ namespace IotWebApi.Services
             foreach (var data in validlist)
             {
                 var dbdev = devlist.FirstOrDefault(t => t.DeviceId == data.DeviceId);
-                if (dbdev == null || dbdev.DeviceState == data.device.DeviceState) continue;
+                if (dbdev == null) continue;
 
                 // 离线不即时落库:进入疑似离线中间态,超过确认时长由回调正式判离线(判定级防抖)
                 if (data.device.DeviceState != 2)
                 {
-                    _offlineDebounceService.OnSuspectOffline(data.DeviceId, data.device.DeviceState);
+                    if (dbdev.DeviceState != data.device.DeviceState)
+                    {
+                        _offlineDebounceService.OnSuspectOffline(data.DeviceId, data.device.DeviceState);
+                    }
                     continue;
                 }
 
-                // 上线即时生效(疑似离线期间恢复则静默取消);上线通知同设备60秒限频
+                // 任何在线上报都取消疑似离线(疑似期间恢复=静默取消不产生事件;
+                // 库内状态未变时也必须取消,否则疑似态残留会在确认时长后误判离线)
+                _offlineDebounceService.CancelSuspect(data.DeviceId);
+                if (dbdev.DeviceState == data.device.DeviceState) continue;
+
+                // 上线即时生效,离线告警共用判定结果即时恢复(§9.6);上线通知同设备60秒限频
                 bool notify = _offlineDebounceService.OnOnline(data.DeviceId);
+                _alarmEngineService.FireOfflineRecover(data.DeviceId);
                 dbdev.DeviceState = data.device.DeviceState;
                 if (!data.device.LastOnlineTime.IsZxxNullOrEmpty()) dbdev.LastOnlineTime = data.device.LastOnlineTime;
                 deviceupdates[dbdev.DeviceId] = dbdev;
@@ -443,12 +455,14 @@ namespace IotWebApi.Services
 
                 var deviceupdates = new List<DeviceInfoEntity>();
                 var runlist = new List<EventRun>();
+                var offlinefires = new List<(int DeviceId, string Reason)>();
                 foreach (var confirm in confirms)
                 {
                     var dbdev = devlist.FirstOrDefault(t => t.DeviceId == confirm.DeviceId);
                     if (dbdev == null || dbdev.DeviceState == confirm.DeviceState) continue;
                     dbdev.DeviceState = confirm.DeviceState;
                     deviceupdates.Add(dbdev);
+                    offlinefires.Add((confirm.DeviceId, confirm.Reason));
 
                     var run = new EventRun
                     {
@@ -465,6 +479,12 @@ namespace IotWebApi.Services
                 {
                     EventRunDAO.Instance.InsertRange(runlist);
                     BroadcastDeviceState(runlist);
+                }
+                // 离线告警与上下线事件共用同一判定结果(§9.6:确认时长即时长型防抖,
+                // 引擎不重复防抖;告警经FireHandler回流本服务走屏蔽/落库/通知链路)
+                foreach (var fire in offlinefires)
+                {
+                    _alarmEngineService.FireOffline(fire.DeviceId, fire.Reason);
                 }
             }
             catch (Exception ex)
