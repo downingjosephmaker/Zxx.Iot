@@ -27,6 +27,22 @@ namespace IotWebApi.Services
 
         /// <summary>是否通知(北向/短信等通知通道)</summary>
         public bool IsNote { get; set; }
+
+        /// <summary>规则ID(§9.2生命周期去重键:同设备同规则同时仅一个活动告警;离线告警恒为0)</summary>
+        public long RuleId { get; set; }
+
+        /// <summary>报警类型(AlarmConfig字典AlarmType,入EventAlarm)</summary>
+        public string AlarmType { get; set; } = "";
+
+        /// <summary>事件类别(AlarmConfig字典EventType,入EventAlarm.EventType;
+        /// 现有统计口径以"离线"排除离线告警,离线告警未配置字典时默认"离线")</summary>
+        public string AlarmEventType { get; set; } = "";
+
+        /// <summary>触发公式(入EventAlarm拓展快照)</summary>
+        public string Formula { get; set; } = "";
+
+        /// <summary>首参数编码(入EventAlarm拓展快照)</summary>
+        public string ParamCode { get; set; } = "";
     }
 
     /// <summary>
@@ -63,6 +79,8 @@ namespace IotWebApi.Services
             public string TextTemplate = "";
             public bool IsNote;
             public string AlarmGrade = "";
+            public string AlarmType = "";      // 报警类型(字典AlarmType,入EventAlarm)
+            public string EventCategory = "";  // 事件类别(字典EventType,入EventAlarm.EventType)
             public DebounceTypeEnum DebounceType = DebounceTypeEnum.次数型;
             public bool IsDebounce;
             public int DebounceSeconds = 60;
@@ -280,6 +298,8 @@ namespace IotWebApi.Services
             if (dict != null)
             {
                 rule.AlarmGrade = dict.AlarmGrade ?? "";
+                rule.AlarmType = dict.AlarmType ?? "";
+                rule.EventCategory = dict.EventType ?? "";
                 rule.IsDebounce = dict.IsDebounce;
                 rule.DebounceType = dict.DebounceType;
                 rule.DebounceSeconds = dict.DebounceSeconds;
@@ -500,7 +520,12 @@ namespace IotWebApi.Services
                 AlarmGrade = rule.AlarmGrade,
                 Content = content,
                 ValueText = valuetext,
-                IsNote = rule.IsNote && eventtype != "告警恢复"
+                IsNote = rule.IsNote && eventtype != "告警恢复",
+                RuleId = rule.RuleId,
+                AlarmType = rule.AlarmType,
+                AlarmEventType = rule.EventCategory,
+                Formula = rule.Formula,
+                ParamCode = rule.ParamCodes.FirstOrDefault() ?? ""
             };
         }
 
@@ -551,7 +576,10 @@ namespace IotWebApi.Services
                         AlarmGrade = cfg?.AlarmGrade ?? "",
                         Content = $"{content}({reason})",
                         ValueText = "",
-                        IsNote = cfg?.IsNote ?? false
+                        IsNote = cfg?.IsNote ?? false,
+                        RuleId = 0,
+                        AlarmType = cfg?.AlarmType ?? "",
+                        AlarmEventType = cfg != null && !cfg.EventType.IsZxxNullOrEmpty() ? cfg.EventType : "离线"
                     }
                 });
             }
@@ -580,7 +608,10 @@ namespace IotWebApi.Services
                         AlarmGrade = cfg?.AlarmGrade ?? "",
                         Content = "[恢复]设备通信恢复上线",
                         ValueText = "",
-                        IsNote = false
+                        IsNote = false,
+                        RuleId = 0,
+                        AlarmType = cfg?.AlarmType ?? "",
+                        AlarmEventType = cfg != null && !cfg.EventType.IsZxxNullOrEmpty() ? cfg.EventType : "离线"
                     }
                 });
             }

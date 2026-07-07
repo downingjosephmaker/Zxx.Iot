@@ -264,6 +264,9 @@ builder.Services.AddSingleton<AlarmMaskService>();
 // 告警通知服务(IsNote告警按渠道外发:邮件/Webhook/钉钉/企微,短信预留)
 builder.Services.AddSingleton<AlarmNotifyService>();
 
+// 告警生命周期服务(§9.2四态:去重键(设备,规则)唯一活动告警,恢复回写,Ack由处理接口承接)
+builder.Services.AddSingleton<AlarmLifecycleService>();
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

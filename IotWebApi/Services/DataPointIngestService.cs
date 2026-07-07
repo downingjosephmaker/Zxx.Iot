@@ -85,10 +85,16 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly AlarmNotifyService _alarmNotifyService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService)
+        /// <summary>
+        /// 告警生命周期服务(§9.2四态流转:去重/恢复回写/Ack映射)
+        /// </summary>
+        private readonly AlarmLifecycleService _alarmLifecycleService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService)
         {
             _alarmMaskService = alarmMaskService;
             _alarmNotifyService = alarmNotifyService;
+            _alarmLifecycleService = alarmLifecycleService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -590,6 +596,8 @@ namespace IotWebApi.Services
                     // 屏蔽裁决(§9.4:完全屏蔽不入库不通知;静默入库打标不通知;降级改写等级)
                     var verdict = _alarmMaskService.Apply(fire, dbdev);
                     if (verdict == AlarmMaskVerdict.完全屏蔽) continue;
+                    // 四态生命周期流转(§9.2:EventAlarm去重登记/恢复回写;静默告警照常流转)
+                    _alarmLifecycleService.Apply(fire, dbdev, unitlist, buildlist, deptlist, typelist);
                     string content = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}";
                     var signal = new EventSignal
                     {
@@ -659,9 +667,10 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 填充记录基础字段(设备归属的单位/建筑/部门/设备类型信息)
+        /// 填充记录基础字段(设备归属的单位/建筑/部门/设备类型信息;
+        /// internal供告警生命周期服务复用同一填充逻辑)
         /// </summary>
-        private static void FillEventBase(EventBase evt, DeviceInfo device, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+        internal static void FillEventBase(EventBase evt, DeviceInfo device, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
         {
             evt.DeviceId = device.DeviceId;
             evt.DeviceName = device.DeviceName;

@@ -29,5 +29,11 @@ namespace IotModel
         ///</summary>
         [DisplayName("计算公式")]
         public string JisuanFormula { get; set; }
+        /// <summary>
+        /// 告警规则ID(§9.2生命周期去重键组成:同设备同规则唯一活动告警;
+        /// 离线告警恒为0,历史数据无此字段反序列化默认0)
+        ///</summary>
+        [DisplayName("告警规则ID")]
+        public long RuleId { get; set; }
     }
 }
