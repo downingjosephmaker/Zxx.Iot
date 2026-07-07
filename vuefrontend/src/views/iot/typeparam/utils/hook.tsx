@@ -1,5 +1,5 @@
 import { message } from "@/utils/message";
-import { addDialog } from "@/components/ReDialog";
+import { addDialog, closeDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, h, ref, reactive, onMounted } from "vue";
 import { ElMessage, ElTag } from "element-plus";
@@ -12,6 +12,7 @@ import type {
 } from "./types";
 import { getListByPage, saveBatch, deleteByPk } from "@/api/iot/typeparam";
 import editForm from "../form.vue";
+import jsonImport from "../json-import.vue";
 
 /** Modbus采集功能码显示映射(0=不采集) */
 const FUNC_CODE_LABELS: Record<number, string> = {
@@ -302,6 +303,43 @@ export function useDeviceTypeParam(tableRef: Ref) {
     });
   }
 
+  const importRef = ref();
+
+  /** 打开点表JSON导入弹窗（组态ZtTypeJson格式,产品编码预填搜索栏值） */
+  function openImportDialog() {
+    addDialog({
+      title: "JSON导入点表",
+      width: "560px",
+      draggable: true,
+      closeOnClickModal: false,
+      contentRenderer: () =>
+        h(jsonImport, { ref: importRef, typecode: form.typecode }),
+      footerButtons: [
+        {
+          label: "关闭",
+          text: true,
+          bg: true,
+          btnClick: ({ dialog: { options, index } }) => {
+            closeDialog(options, index);
+          }
+        },
+        {
+          label: "导入",
+          type: "primary",
+          text: true,
+          bg: true,
+          btnClick: async ({ dialog: { options, index } }) => {
+            const ok = await importRef.value?.onImport();
+            if (ok) {
+              closeDialog(options, index);
+              onSearch();
+            }
+          }
+        }
+      ]
+    });
+  }
+
   async function handleDelete(row: DeviceTypeParamItem) {
     const data = await deleteByPk(row.SnowId.toString());
     if (data.Status) {
@@ -347,6 +385,7 @@ export function useDeviceTypeParam(tableRef: Ref) {
     onSearch,
     resetForm,
     openDialog,
+    openImportDialog,
     handleDelete,
     onbatchDel,
     onSelectionCancel

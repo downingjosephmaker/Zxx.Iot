@@ -17,6 +17,7 @@ import {
 } from "@/api/iot/devicetype";
 import editForm from "../form.vue";
 import commandSend from "../command-send.vue";
+import importForm from "../import-form.vue";
 
 /** 设备状态显示映射(2在线/1掉电/0离线) */
 const STATE_TAGS: Record<number, { type: "success" | "warning" | "info"; label: string }> = {
@@ -436,6 +437,42 @@ export function useDeviceInfo(tableRef: Ref) {
     });
   }
 
+  const importRef = ref();
+
+  /** 打开Excel导入弹窗（模板下载+文件上传） */
+  function openImportDialog() {
+    addDialog({
+      title: "Excel导入设备",
+      width: "560px",
+      draggable: true,
+      closeOnClickModal: false,
+      contentRenderer: () => h(importForm, { ref: importRef }),
+      footerButtons: [
+        {
+          label: "关闭",
+          text: true,
+          bg: true,
+          btnClick: ({ dialog: { options, index } }) => {
+            closeDialog(options, index);
+          }
+        },
+        {
+          label: "导入",
+          type: "primary",
+          text: true,
+          bg: true,
+          btnClick: async ({ dialog: { options, index } }) => {
+            const ok = await importRef.value?.onImport();
+            if (ok) {
+              closeDialog(options, index);
+              onSearch();
+            }
+          }
+        }
+      ]
+    });
+  }
+
   async function handleDelete(row: DeviceInfoItem) {
     const data = await deleteByPk(row.DeviceId);
     if (data.Status) {
@@ -483,6 +520,7 @@ export function useDeviceInfo(tableRef: Ref) {
     resetForm,
     openDialog,
     openCommandDialog,
+    openImportDialog,
     handleDelete,
     onbatchDel,
     onSelectionCancel

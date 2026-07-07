@@ -10,6 +10,7 @@ import Refresh from "~icons/ep/refresh";
 import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
 import Promotion from "~icons/ep/promotion";
+import Upload from "~icons/ep/upload";
 
 defineOptions({
   name: "IotDevice"
@@ -33,6 +34,7 @@ const {
   resetForm,
   openDialog,
   openCommandDialog,
+  openImportDialog,
   handleDelete,
   onbatchDel,
   onSelectionCancel
@@ -92,6 +94,14 @@ const {
             @click="openDialog()"
           >
             新增{{ title }}
+          </el-button>
+          <el-button
+            type="primary"
+            plain
+            :icon="useRenderIcon(Upload)"
+            @click="openImportDialog()"
+          >
+            Excel导入
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">

@@ -107,8 +107,21 @@ export const deleteByPk = (_SnowId: number | string) => {
   });
 };
 
+/** 点表JSON导入(组态ZtTypeJson格式;该产品类型已有点表时服务端拒绝,需先删除) */
+export const paramAddByType = (file: File, typecode: string) => {
+  storage.setItem("button", "导入" + button);
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.request<Result>("post", "/DeviceTypeParam/ParamAddByType", {
+    params: { typecode },
+    data: formData,
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
+
 export default {
   getListByPage,
   saveBatch,
-  deleteByPk
+  deleteByPk,
+  paramAddByType
 };

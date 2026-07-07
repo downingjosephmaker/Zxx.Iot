@@ -116,9 +116,28 @@ export const deleteByPk = (id: number) => {
   });
 };
 
+/** 下载导入模板(服务端刷新"设备类型"页签后返回静态相对路径,Result为纯字符串) */
+export const downloadDeviceTemplate = () => {
+  storage.setItem("button", "下载" + button + "导入模板");
+  return http.request<Result>("post", "/DeviceInfo/DownloadDeviceTemplate");
+};
+
+/** Excel批量导入设备(单次上限100000行) */
+export const deviceImport = (file: File) => {
+  storage.setItem("button", "导入" + button);
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.request<Result>("post", "/DeviceInfo/DeviceImport", {
+    data: formData,
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
+
 export default {
   getListByPage,
   insert,
   update,
-  deleteByPk
+  deleteByPk,
+  downloadDeviceTemplate,
+  deviceImport
 };

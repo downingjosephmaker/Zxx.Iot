@@ -345,20 +345,22 @@ namespace IotWebApi.Controllers
         /// <summary>
         /// 设备信息导入模板下载
         /// </summary>
+        /// <param name="env">Web宿主环境(定位wwwroot下模板实体)</param>
         /// <returns></returns>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Device)]
-        public MetaData DownloadDeviceTemplate()
+        public MetaData DownloadDeviceTemplate([FromServices] IWebHostEnvironment env)
         {
             MetaData data = new()
             {
                 Status = false,
                 Message = "设备信息导入模板不存在"
             };
-            string serverparh = Path.Combine(OperatorCommon.NetYingShefile, "Templates", "DeviceInTemplate.xlsx");
-            string templatePath = Path.Combine(OperatorCommon.NetLocalfile, serverparh);
+            // 模板实体位于wwwroot下由静态文件中间件对外服务，返回正斜杠相对路径供前端拼下载URL
+            string serverparh = "Templates/DeviceInTemplate.xlsx";
+            string templatePath = Path.Combine(env.WebRootPath, "Templates", "DeviceInTemplate.xlsx");
             if (System.IO.File.Exists(templatePath))
             {
                 // 读取设备类型数据
