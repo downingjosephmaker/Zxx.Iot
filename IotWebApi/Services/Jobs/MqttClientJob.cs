@@ -1,4 +1,5 @@
-﻿using CenBoCommon.Zxx;
+﻿using CenboEventBus;
+using CenBoCommon.Zxx;
 using IotLog;
 using MQTTnet;
 using MQTTnet.Protocol;
@@ -145,32 +146,65 @@ namespace IotWebApi.Services.Jobs
         }
 
         /// <summary>
-        /// 接收消息事件处理
+        /// 接收消息事件处理(M0遗留重写:MQTT上行统一并入插件上行管道——
+        /// 载荷契约①PluginMessage{MessageType,MessageJson}原样路由,
+        /// 契约②裸List&lt;DeviceData&gt;默认按协议解析包装;
+        /// 经PluginEvent总线进DataPointIngestService,与插件链路同构)
         /// </summary>
-        private async Task MessageReceivedHandler(MqttApplicationMessageReceivedEventArgs args)
+        private Task MessageReceivedHandler(MqttApplicationMessageReceivedEventArgs args)
         {
-            if (!args.ApplicationMessage.Topic.Contains(mainTopic)) return;
+            if (!args.ApplicationMessage.Topic.Contains(mainTopic)) return Task.CompletedTask;
             var buffer = args.ApplicationMessage.Payload.ToArray();
-            if (buffer != null && buffer.Length > 0)
-            {
-                string strdata = Encoding.UTF8.GetString(buffer);
-                if (AppSetting.GetConfig("MqttConfig:LogOpen").ToLower() == "true")
-                    LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", $"Mqtt接收数据：{strdata}", mqttname);
+            if (buffer == null || buffer.Length == 0) return Task.CompletedTask;
 
+            string strdata = Encoding.UTF8.GetString(buffer);
+            if (AppSetting.GetConfig("MqttConfig:LogOpen").ToLower() == "true")
+                LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", $"Mqtt接收数据：{strdata}", mqttname);
+
+            try
+            {
+                var bus = MqttClientService.EventBus;
+                if (bus == null)
+                {
+                    LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", "事件总线未就绪，MQTT上行消息已丢弃。", mqttname);
+                    return Task.CompletedTask;
+                }
+                PluginMessage? message = null;
                 try
                 {
-                    await Task.Delay(1000);
-                    //var mqttdata = strdata.ToObject<MqttDataModel>();
-                    //if (mqttdata != null)
-                    //{
-
-                    //}
+                    var wrapped = strdata.ToObject<PluginMessage>();
+                    if (wrapped != null && !wrapped.MessageJson.IsZxxNullOrEmpty()) message = wrapped;
                 }
-                catch (Exception ex)
+                catch { }
+                if (message == null)
                 {
-                    LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", ex.ToString(), mqttname);
+                    try
+                    {
+                        var datalist = strdata.ToObject<List<DeviceData>>();
+                        if (datalist.IsZxxAny() && datalist.Exists(t => t.DeviceId > 0))
+                        {
+                            message = new PluginMessage
+                            {
+                                MessageType = PluginMessageEnum.协议解析,
+                                MessageJson = strdata
+                            };
+                        }
+                    }
+                    catch { }
                 }
+                if (message == null)
+                {
+                    LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler",
+                        $"无法识别的MQTT上行载荷，已忽略：{strdata[..Math.Min(200, strdata.Length)]}", mqttname);
+                    return Task.CompletedTask;
+                }
+                bus.Publish(new PluginEvent(MqttClientService.MqttPluginGuid, message));
             }
+            catch (Exception ex)
+            {
+                LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", ex.ToString(), mqttname);
+            }
+            return Task.CompletedTask;
         }
 
         #endregion

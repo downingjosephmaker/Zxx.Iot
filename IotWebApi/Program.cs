@@ -402,6 +402,9 @@ app.MapControllers();
 //SignalR信号中心端点，路径须与前端配置 VITE_BASE_URL_WIRHURL 保持一致
 app.MapHub<IotWebApi.Services.Jobs.ChatServer>("/signalr/chatHub");
 
+// MQTT客户端上行消息并入插件上行管道的静态桥(Quartz任务无构造注入,M0遗留重写)
+IotWebApi.Services.Mqtt.MqttClientService.EventBus = app.Services.GetService<CenboEventBus.IEventBus<CenboEventBus.PluginEvent>>();
+
 // 监听应用启动完成事件，执行初始化逻辑
 app.Lifetime.ApplicationStarted.Register(() =>
 {
