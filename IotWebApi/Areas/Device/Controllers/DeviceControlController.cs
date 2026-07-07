@@ -2,6 +2,7 @@ using CenboEventBus;
 using CenBoCommon.Zxx;
 using IotLog;
 using IotModel;
+using IotWebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IotWebApi.Controllers
@@ -109,6 +110,25 @@ namespace IotWebApi.Controllers
             Status = true;
             Message = $"命令[{command.CommandName}]已下发至{deviceids.Count}台设备。";
             return Message;
+        }
+
+        /// <summary>
+        /// 查询一台设备的全部点位最新值(实时监控页首屏铺底,后续增量走SignalR ReceiveDeviceData;
+        /// 走内存最新值缓存不扫时序表)
+        /// </summary>
+        /// <param name="deviceid">设备ID</param>
+        /// <param name="latestService">最新值缓存服务(DI注入)</param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
+        public List<TelemetryPoint> GetDeviceLatest(long deviceid,
+            [FromServices] TelemetryLatestService latestService)
+        {
+            var list = latestService.GetLatest(deviceid);
+            TotalCount = list.IsZxxAny() ? list.Count : 0;
+            return list;
         }
     }
 

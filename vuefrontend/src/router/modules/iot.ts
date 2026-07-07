@@ -39,6 +39,15 @@ export default {
       }
     },
     {
+      path: "/iot/monitor",
+      name: "IotMonitor",
+      component: () => import("@/views/iot/monitor/index.vue"),
+      meta: {
+        title: "实时监控",
+        showLink: true
+      }
+    },
+    {
       path: "/iot/strategy",
       name: "IotStrategy",
       component: () => import("@/views/iot/strategy/index.vue"),
