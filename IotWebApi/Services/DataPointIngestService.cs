@@ -95,12 +95,18 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly AlarmEscalationService _alarmEscalationService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService, AlarmEscalationService alarmEscalationService)
+        /// <summary>
+        /// 规则联动引擎(§10.1:触发-条件-动作)
+        /// </summary>
+        private readonly RuleLinkageService _ruleLinkageService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService, AlarmLifecycleService alarmLifecycleService, AlarmEscalationService alarmEscalationService, RuleLinkageService ruleLinkageService)
         {
             _alarmMaskService = alarmMaskService;
             _alarmNotifyService = alarmNotifyService;
             _alarmLifecycleService = alarmLifecycleService;
             _alarmEscalationService = alarmEscalationService;
+            _ruleLinkageService = ruleLinkageService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -327,10 +333,12 @@ namespace IotWebApi.Services
             if (latestpoints.IsZxxAny())
             {
                 _latestService.Update(latestpoints);  //最新值缓存不受推送策略约束,永远即时更新
-                // 告警评估基于最新值缓存,走独立事件通道不受推送节流影响(§7.3硬规则)
+                // 告警评估与规则联动基于最新值缓存,走独立事件通道不受推送节流影响(§7.3硬规则)
                 foreach (var group in latestpoints.GroupBy(t => (int)t.DeviceId))
                 {
-                    _alarmEngineService.Evaluate(group.Key, group.Select(t => t.ParamCode).ToHashSet());
+                    var changedcodes = group.Select(t => t.ParamCode).ToHashSet();
+                    _alarmEngineService.Evaluate(group.Key, changedcodes);
+                    _ruleLinkageService.OnPointChanged(group.Key, changedcodes);
                 }
             }
             if (telemetrypoints.IsZxxAny())
@@ -425,6 +433,7 @@ namespace IotWebApi.Services
                 // 上线即时生效,离线告警共用判定结果即时恢复(§9.6);上线通知同设备60秒限频
                 bool notify = _offlineDebounceService.OnOnline(data.DeviceId);
                 _alarmEngineService.FireOfflineRecover(data.DeviceId);
+                _ruleLinkageService.OnDeviceState(data.DeviceId, true);  //规则联动:设备上线触发(§10.1)
                 dbdev.DeviceState = data.device.DeviceState;
                 if (!data.device.LastOnlineTime.IsZxxNullOrEmpty()) dbdev.LastOnlineTime = data.device.LastOnlineTime;
                 deviceupdates[dbdev.DeviceId] = dbdev;
@@ -497,6 +506,7 @@ namespace IotWebApi.Services
                 foreach (var fire in offlinefires)
                 {
                     _alarmEngineService.FireOffline(fire.DeviceId, fire.Reason);
+                    _ruleLinkageService.OnDeviceState(fire.DeviceId, false);  //规则联动:设备离线触发(§10.1)
                 }
             }
             catch (Exception ex)

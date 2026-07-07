@@ -107,14 +107,47 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 单渠道发送(按类型分发,失败只记日志;prefix为升级链的重复标记)
+        /// 外发纯文本通知(规则联动等平台内部动作复用渠道;只发第一梯队,不过等级过滤)
+        /// </summary>
+        public void NotifyText(string content)
+        {
+            try
+            {
+                if (content.IsZxxNullOrEmpty()) return;
+                EnsureConfig();
+                var channels = _channels;
+                if (!channels.IsZxxAny()) return;
+                string text = $"{DateTime.Now.ToDateTimeString()} {content}";
+                foreach (var channel in channels)
+                {
+                    if (channel.EscalationLevel != 0) continue;
+                    var ch = channel;
+                    _ = Task.Run(() => SendTextAsync(ch, "规则联动通知", text, new { content = text }.ToJson()));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"文本通知调度失败：{ex}", Service_CATEGORY);
+            }
+        }
+
+        /// <summary>
+        /// 单渠道发送告警(组装文本后走通用文本发送;prefix为升级链的重复标记)
         /// </summary>
         private async Task SendAsync(NotifyChannel channel, EventSignal signal, string prefix = "")
+        {
+            string text = $"{prefix}{signal.EventTime} [{signal.UnitName}]{signal.DeviceName}：{signal.EventContent}";
+            await SendTextAsync(channel, $"设备告警通知-{signal.DeviceName}", text, signal.ToJson());
+        }
+
+        /// <summary>
+        /// 单渠道发送文本(按类型分发,失败只记日志;webhookjson为默认Webhook渠道的请求体原文)
+        /// </summary>
+        private async Task SendTextAsync(NotifyChannel channel, string subject, string text, string webhookjson)
         {
             try
             {
                 if (channel.TargetUrl.IsZxxNullOrEmpty()) return;
-                string text = $"{prefix}{signal.EventTime} [{signal.UnitName}]{signal.DeviceName}：{signal.EventContent}";
                 switch (channel.ChannelType)
                 {
                     case 1:
@@ -122,7 +155,7 @@ namespace IotWebApi.Services
                         await PostJsonAsync(channel.TargetUrl, new
                         {
                             receivers = channel.Receivers ?? "",
-                            subject = $"设备告警通知-{signal.DeviceName}",
+                            subject,
                             content = text
                         }.ToJson());
                         break;
@@ -143,18 +176,18 @@ namespace IotWebApi.Services
                         break;
                     case 5:
                         // 短信预留
-                        LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"短信渠道[{channel.ChannelName}]预留未实现,告警[{signal.SnowId}]未外发", Service_CATEGORY);
+                        LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"短信渠道[{channel.ChannelName}]预留未实现,[{subject}]未外发", Service_CATEGORY);
                         break;
                     default:
-                        // Webhook:告警原文JSON直发
-                        await PostJsonAsync(channel.TargetUrl, signal.ToJson());
+                        // Webhook:原文JSON直发
+                        await PostJsonAsync(channel.TargetUrl, webhookjson);
                         break;
                 }
             }
             catch (Exception ex)
             {
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
-                    $"渠道[{channel.ChannelName}]发送告警[{signal.SnowId}]失败：{ex.Message}", Service_CATEGORY);
+                    $"渠道[{channel.ChannelName}]发送[{subject}]失败：{ex.Message}", Service_CATEGORY);
             }
         }
 
