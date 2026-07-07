@@ -279,6 +279,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<RuleLinkageService
 builder.Services.AddSingleton<NorthboundForwardService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NorthboundForwardService>());
 
+// JS协议脚本管理服务(§6.4:Jint沙箱缓存按版本热切换,试运行干跑;脚本默认禁用)
+builder.Services.AddSingleton<ProtocolScriptService>();
+
 // 数据入库服务(消费插件上行事件,攒批写入数据库)
 builder.Services.AddSingleton<DataPointIngestService>();  //单例注册,供PluginEventHandler入队使用
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPointIngestService>());  //后台注册依赖项,应用启动时自动启动消费循环

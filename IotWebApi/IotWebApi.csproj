@@ -126,6 +126,7 @@
 	  <ProjectReference Include="..\CenboEventBus\CenboEventBus.csproj" />
 	  <ProjectReference Include="..\IotLog\IotLog.csproj" />
 	  <ProjectReference Include="..\IotModel\IotModel.csproj" />
+	  <ProjectReference Include="..\IotDriverCore\IotDriverCore.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
