@@ -80,9 +80,15 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly AlarmMaskService _alarmMaskService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService)
+        /// <summary>
+        /// 告警通知服务(IsNote告警按渠道外发)
+        /// </summary>
+        private readonly AlarmNotifyService _alarmNotifyService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService, AlarmNotifyService alarmNotifyService)
         {
             _alarmMaskService = alarmMaskService;
+            _alarmNotifyService = alarmNotifyService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -556,6 +562,7 @@ namespace IotWebApi.Services
 
                 var signallist = new List<EventSignal>();
                 var pushlist = new List<EventSignal>();
+                var notifylist = new List<EventSignal>();
                 foreach (var fire in fires)
                 {
                     var dbdev = devlist.FirstOrDefault(t => t.DeviceId == fire.DeviceId);
@@ -574,10 +581,15 @@ namespace IotWebApi.Services
                     };
                     FillEventBase(signal, dbdev, unitlist, buildlist, deptlist, typelist);
                     signallist.Add(signal);
-                    if (verdict != AlarmMaskVerdict.静默) pushlist.Add(signal);
+                    if (verdict != AlarmMaskVerdict.静默)
+                    {
+                        pushlist.Add(signal);
+                        if (fire.IsNote) notifylist.Add(signal);
+                    }
                 }
                 if (!signallist.IsZxxAny()) return;
                 EventSignalDAO.Instance.InsertRange(signallist);
+                if (notifylist.IsZxxAny()) _alarmNotifyService.Notify(notifylist);
                 foreach (var signal in pushlist)
                 {
                     _hubContext.Clients.Group($"alarm:{signal.UnitId}").SendAsync("ReceiveAlarm", signal.ToJson())
