@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CenBoCommon.Zxx", "CenBoCom
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IotPlugin.Air.VRF.GuoXiang", "IotPlugin.Air.VRF.GuoXiang\IotPlugin.Air.VRF.GuoXiang.csproj", "{4A9F576C-12F9-1212-162D-40311C88C52B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IotDriverCore", "IotDriverCore\IotDriverCore.csproj", "{57F50C20-3BD1-482B-8AAF-C86DB08563F7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{4A9F576C-12F9-1212-162D-40311C88C52B}.Release|x64.Build.0 = Release|Any CPU
 		{4A9F576C-12F9-1212-162D-40311C88C52B}.Release|x86.ActiveCfg = Release|Any CPU
 		{4A9F576C-12F9-1212-162D-40311C88C52B}.Release|x86.Build.0 = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|x64.Build.0 = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Debug|x86.Build.0 = Debug|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|x64.ActiveCfg = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|x64.Build.0 = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|x86.ActiveCfg = Release|Any CPU
+		{57F50C20-3BD1-482B-8AAF-C86DB08563F7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
