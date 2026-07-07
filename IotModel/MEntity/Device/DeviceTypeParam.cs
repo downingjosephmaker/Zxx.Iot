@@ -223,5 +223,11 @@ namespace IotModel
         [DisplayName("是否可写(0:否1:是)")]
         [SugarColumn(ColumnName = "collect_writable", Length = 1, ColumnDescription = "是否可写(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
         public bool CollectWritable { get; set; }
+        /// <summary>
+        /// 采集节点标识(OPC UA NodeId如"ns=2;s=Demo.Tag",字符串寻址协议专用)
+        ///</summary>
+        [DisplayName("采集节点标识(OPC UA NodeId)")]
+        [SugarColumn(ColumnName = "collect_node_id", IsNullable = true, Length = 200, ColumnDescription = "采集节点标识(OPC UA NodeId)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string CollectNodeId { get; set; }
     }
 }

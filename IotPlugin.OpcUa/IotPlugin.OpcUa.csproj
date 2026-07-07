@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SatelliteResourceLanguages>en;de;pt</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Client" Version="1.5.376.244" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CenBoCommon.Zxx\CenBoCommon.Zxx.csproj" />
+    <ProjectReference Include="..\CenboEventBus\CenboEventBus.csproj" />
+    <ProjectReference Include="..\IotDriverCore\IotDriverCore.csproj" />
+    <ProjectReference Include="..\IotLog\IotLog.csproj" />
+    <ProjectReference Include="..\IotModel\IotModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NewLife.Core">
+      <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="XCode">
+      <HintPath>..\ZhjngkLib\XCode.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
