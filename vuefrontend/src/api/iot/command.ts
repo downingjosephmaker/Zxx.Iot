@@ -62,9 +62,28 @@ export const getListByTypeCode = (typecode: string) => {
   });
 };
 
+/** 指令下发参数 */
+export interface DeviceCommandSendPara {
+  /** 产品命令主键 */
+  CommandId: number | string;
+  /** 目标设备ID集合 */
+  DeviceIds: number[];
+  /** 下行内容(按ConTemplate占位填充后的最终JSON串) */
+  ConContent: string;
+}
+
+/** 手动下发设备命令（白名单校验+广播全部插件） */
+export const sendCommand = (data: DeviceCommandSendPara) => {
+  storage.setItem("button", "下发" + button);
+  return http.request<Result>("post", "/DeviceControl/SendCommand", {
+    data
+  });
+};
+
 export default {
   getListByPage,
   saveBatch,
   deleteByPk,
-  getListByTypeCode
+  getListByTypeCode,
+  sendCommand
 };

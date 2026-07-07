@@ -9,6 +9,7 @@ import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
 import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
+import Promotion from "~icons/ep/promotion";
 
 defineOptions({
   name: "IotDevice"
@@ -31,6 +32,7 @@ const {
   onSearch,
   resetForm,
   openDialog,
+  openCommandDialog,
   handleDelete,
   onbatchDel,
   onSelectionCancel
@@ -142,6 +144,16 @@ const {
             @page-current-change="handleCurrentChange"
           >
             <template #operation="{ row }">
+              <el-button
+                class="reset-margin"
+                link
+                type="success"
+                :size="size"
+                :icon="useRenderIcon(Promotion)"
+                @click="openCommandDialog(row)"
+              >
+                指令
+              </el-button>
               <el-button
                 class="reset-margin"
                 link

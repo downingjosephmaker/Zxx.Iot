@@ -1,5 +1,5 @@
 import { message } from "@/utils/message";
-import { addDialog } from "@/components/ReDialog";
+import { addDialog, closeDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, h, ref, reactive, onMounted } from "vue";
 import { ElMessage, ElTag } from "element-plus";
@@ -16,6 +16,7 @@ import {
   type DeviceTypeItem
 } from "@/api/iot/devicetype";
 import editForm from "../form.vue";
+import commandSend from "../command-send.vue";
 
 /** 设备状态显示映射(2在线/1掉电/0离线) */
 const STATE_TAGS: Record<number, { type: "success" | "warning" | "info"; label: string }> = {
@@ -161,7 +162,7 @@ export function useDeviceInfo(tableRef: Ref) {
     {
       label: "操作",
       fixed: "right",
-      width: 160,
+      width: 220,
       slot: "operation"
     }
   ];
@@ -393,6 +394,48 @@ export function useDeviceInfo(tableRef: Ref) {
     });
   }
 
+  const commandRef = ref();
+
+  /** 打开指令下发弹窗（消费产品命令白名单 + ParamSchema 动态表单） */
+  function openCommandDialog(row: DeviceInfoItem) {
+    if (!row.DeviceTypeCode) {
+      message("该设备未设置产品类型，无法下发命令", { type: "warning" });
+      return;
+    }
+    addDialog({
+      title: `指令下发 - ${row.DeviceName}`,
+      width: "620px",
+      draggable: true,
+      closeOnClickModal: false,
+      contentRenderer: () =>
+        h(commandSend, {
+          ref: commandRef,
+          deviceId: row.DeviceId,
+          deviceName: row.DeviceName ?? "",
+          deviceTypeCode: row.DeviceTypeCode ?? ""
+        }),
+      footerButtons: [
+        {
+          label: "关闭",
+          text: true,
+          bg: true,
+          btnClick: ({ dialog: { options, index } }) => {
+            closeDialog(options, index);
+          }
+        },
+        {
+          label: "下发",
+          type: "primary",
+          text: true,
+          bg: true,
+          btnClick: () => {
+            commandRef.value?.onSend();
+          }
+        }
+      ]
+    });
+  }
+
   async function handleDelete(row: DeviceInfoItem) {
     const data = await deleteByPk(row.DeviceId);
     if (data.Status) {
@@ -439,6 +482,7 @@ export function useDeviceInfo(tableRef: Ref) {
     onSearch,
     resetForm,
     openDialog,
+    openCommandDialog,
     handleDelete,
     onbatchDel,
     onSelectionCancel
