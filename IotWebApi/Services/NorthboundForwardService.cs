@@ -166,6 +166,84 @@ namespace IotWebApi.Services
 
         #endregion
 
+        #region 测试连接与样例报文
+
+        /// <summary>
+        /// 测试结果("测试连接/发送样例报文"返回体,含将发出的JSON预览)
+        /// </summary>
+        public class SinkTestResult
+        {
+            /// <summary>是否成功</summary>
+            public bool Success { get; set; }
+            /// <summary>结果说明</summary>
+            public string Message { get; set; }
+            /// <summary>样例主题(仅MQTT)</summary>
+            public string SampleTopic { get; set; }
+            /// <summary>样例报文JSON预览</summary>
+            public string SamplePayload { get; set; }
+        }
+
+        /// <summary>
+        /// 构建样例报文预览(§10.2向导④:干跑不发送,展示将发出的JSON)
+        /// </summary>
+        public SinkTestResult BuildSample(long sinksnowid)
+        {
+            var sink = NorthboundSinkDAO.Instance.GetOneBy(t => t.SnowId == sinksnowid);
+            if (sink == null) return new SinkTestResult { Success = false, Message = "目的地不存在" };
+            var item = BuildSampleItem(sink);
+            return new SinkTestResult { Success = true, Message = "样例预览", SampleTopic = item.Topic, SamplePayload = item.Payload };
+        }
+
+        /// <summary>
+        /// 测试连接并实际发送一条样例报文(临时发送器即用即弃,不影响工作器状态)
+        /// </summary>
+        public async Task<SinkTestResult> TestSendAsync(long sinksnowid)
+        {
+            var sink = NorthboundSinkDAO.Instance.GetOneBy(t => t.SnowId == sinksnowid);
+            if (sink == null) return new SinkTestResult { Success = false, Message = "目的地不存在" };
+            var item = BuildSampleItem(sink);
+            ISinkSender sender = sink.SinkType == 1
+                ? new MqttSinkSender(sink.ConnConfig?.ToObject<SinkMqttConfig>() ?? new SinkMqttConfig())
+                : new HttpSinkSender(sink.ConnConfig?.ToObject<SinkHttpConfig>() ?? new SinkHttpConfig());
+            try
+            {
+                bool ok = await sender.SendAsync(new List<ForwardItem> { item }, CancellationToken.None);
+                return new SinkTestResult
+                {
+                    Success = ok,
+                    Message = ok ? "样例报文发送成功" : "连接或发送失败,请检查地址与认证配置",
+                    SampleTopic = item.Topic,
+                    SamplePayload = item.Payload
+                };
+            }
+            finally { sender.Dispose(); }
+        }
+
+        /// <summary>
+        /// 构建样例遥测消息(deviceId=0占位)
+        /// </summary>
+        private static ForwardItem BuildSampleItem(NorthboundSink sink)
+        {
+            var mqttcfg = sink.SinkType == 1 ? sink.ConnConfig?.ToObject<SinkMqttConfig>() : null;
+            string datatopic = mqttcfg?.DataTopic.IsZxxNullOrEmpty() == false ? mqttcfg.DataTopic : "iot/data/{deviceId}";
+            return new ForwardItem
+            {
+                Topic = datatopic.Replace("{deviceId}", "0"),
+                Payload = new
+                {
+                    msgType = "telemetry",
+                    deviceId = 0,
+                    paramCode = "sample",
+                    ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    value = 1.0,
+                    valueStr = "",
+                    quality = 0
+                }.ToJson()
+            };
+        }
+
+        #endregion
+
         #region 状态模型
 
         /// <summary>
