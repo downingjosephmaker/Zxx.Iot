@@ -31,7 +31,9 @@ const props = withDefaults(defineProps<DeviceFormProps>(), {
     CurrentTransformer: 1,
     VoltageTransformer: 1
   }),
-  typeOptions: () => []
+  typeOptions: () => [],
+  buildOptions: () => [],
+  deptOptions: () => []
 });
 
 const ruleFormRef = ref();
@@ -137,15 +139,33 @@ defineExpose({ getRef });
         </el-form-item>
       </el-col>
       <el-col :span="12">
-        <el-form-item label="建筑ID" prop="BuildId">
-          <el-input-number v-model="formValue.BuildId" :min="0" :step="1" />
-          <span class="form-tip">0=未挂靠</span>
+        <el-form-item label="所属建筑" prop="BuildId">
+          <el-tree-select
+            v-model="formValue.BuildId"
+            :data="buildOptions"
+            check-strictly
+            :render-after-expand="false"
+            default-expand-all
+            filterable
+            clearable
+            placeholder="选择所属建筑，留空=未挂靠"
+            class="w-full"
+          />
         </el-form-item>
       </el-col>
       <el-col :span="12">
-        <el-form-item label="组织ID" prop="DeptId">
-          <el-input-number v-model="formValue.DeptId" :min="0" :step="1" />
-          <span class="form-tip">0=未挂靠</span>
+        <el-form-item label="所属组织" prop="DeptId">
+          <el-tree-select
+            v-model="formValue.DeptId"
+            :data="deptOptions"
+            check-strictly
+            :render-after-expand="false"
+            default-expand-all
+            filterable
+            clearable
+            placeholder="选择所属组织，留空=未挂靠"
+            class="w-full"
+          />
         </el-form-item>
       </el-col>
     </el-row>

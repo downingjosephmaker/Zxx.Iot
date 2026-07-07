@@ -10,6 +10,13 @@ export interface TreeSelectOption {
   children?: TreeSelectOption[];
 }
 
+/** 数字主键树节点(建筑/组织挂靠下拉，value=BuildId/DeptId) */
+export interface TreeNumberOption {
+  value: number;
+  label: string;
+  children?: TreeNumberOption[];
+}
+
 export interface DeviceFormItemProps {
   title?: string;
   DeviceId: number;
@@ -41,4 +48,6 @@ export interface DeviceFormItemProps {
 export interface DeviceFormProps {
   formInline: DeviceFormItemProps;
   typeOptions?: TreeSelectOption[];
+  buildOptions?: TreeNumberOption[];
+  deptOptions?: TreeNumberOption[];
 }

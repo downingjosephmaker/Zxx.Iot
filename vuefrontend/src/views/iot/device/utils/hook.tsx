@@ -8,13 +8,20 @@ import type {
   DeviceInfoItem,
   ExpandDeviceInfo,
   DeviceFormItemProps,
-  TreeSelectOption
+  TreeSelectOption,
+  TreeNumberOption
 } from "./types";
 import { getListByPage, insert, update, deleteByPk } from "@/api/iot/device";
 import {
   getListByPage as getTypeList,
   type DeviceTypeItem
 } from "@/api/iot/devicetype";
+import {
+  getBuildListByPage,
+  getDeptListByPage,
+  type BuildInfoItem,
+  type DeptInfoItem
+} from "@/api/iot/basic";
 import editForm from "../form.vue";
 import commandSend from "../command-send.vue";
 import importForm from "../import-form.vue";
@@ -52,6 +59,9 @@ export function useDeviceInfo(tableRef: Ref) {
   const selectedRows = ref<DeviceInfoItem[]>([]);
   /** 产品类型平铺表，供表单树下拉与FullCode回填 */
   const typeList = ref<DeviceTypeItem[]>([]);
+  /** 建筑/组织平铺表，供设备挂靠树下拉 */
+  const buildList = ref<BuildInfoItem[]>([]);
+  const deptList = ref<DeptInfoItem[]>([]);
   const pagination = reactive<PaginationProps>({
     total: 0,
     pageSize: 10,
@@ -182,6 +192,59 @@ export function useDeviceInfo(tableRef: Ref) {
   async function loadTypeList() {
     const data = await getTypeList({ page: 1, pagesize: 10000, sconlist: [] });
     if (data.Status) typeList.value = JSON.parse(data.Result);
+  }
+
+  async function loadBuildList() {
+    const data = await getBuildListByPage({
+      page: 1,
+      pagesize: 10000,
+      sconlist: []
+    });
+    if (data.Status) buildList.value = JSON.parse(data.Result);
+  }
+
+  async function loadDeptList() {
+    const data = await getDeptListByPage({
+      page: 1,
+      pagesize: 10000,
+      sconlist: []
+    });
+    if (data.Status) deptList.value = JSON.parse(data.Result);
+  }
+
+  /** 数字主键平铺表→树选项(ParentId=0/无匹配父即为根) */
+  function buildNumberTree<T>(
+    list: T[],
+    idKey: keyof T,
+    nameKey: keyof T,
+    parentKey: keyof T
+  ): TreeNumberOption[] {
+    const map = new Map<number, TreeNumberOption & { parent: number }>();
+    list.forEach(t =>
+      map.set(Number(t[idKey]), {
+        value: Number(t[idKey]),
+        label: String(t[nameKey] ?? ""),
+        parent: Number(t[parentKey] ?? 0),
+        children: []
+      })
+    );
+    const roots: TreeNumberOption[] = [];
+    map.forEach(node => {
+      if (node.parent && map.has(node.parent)) {
+        map.get(node.parent)!.children!.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+    const prune = (nodes: TreeNumberOption[]) => {
+      nodes.forEach(n => {
+        delete (n as any).parent;
+        if (n.children!.length) prune(n.children!);
+        else delete n.children;
+      });
+    };
+    prune(roots);
+    return roots;
   }
 
   /** 产品类型树下拉选项 */
@@ -317,6 +380,18 @@ export function useDeviceInfo(tableRef: Ref) {
       }
     };
     const typeOptions = buildTypeOptions();
+    const buildOptions = buildNumberTree(
+      buildList.value,
+      "BuildId",
+      "BuildName",
+      "ParentId"
+    );
+    const deptOptions = buildNumberTree(
+      deptList.value,
+      "DeptId",
+      "DeptName",
+      "ParentId"
+    );
 
     addDialog({
       title: `${title}${ModuleTitle}`,
@@ -328,7 +403,13 @@ export function useDeviceInfo(tableRef: Ref) {
       fullscreenIcon: true,
       closeOnClickModal: false,
       contentRenderer: () =>
-        h(editForm, { formInline: formData, typeOptions, ref: formRef }),
+        h(editForm, {
+          formInline: formData,
+          typeOptions,
+          buildOptions,
+          deptOptions,
+          ref: formRef
+        }),
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = { ...options.props.formInline };
@@ -503,6 +584,8 @@ export function useDeviceInfo(tableRef: Ref) {
 
   onMounted(() => {
     loadTypeList();
+    loadBuildList();
+    loadDeptList();
     onSearch();
   });
 
