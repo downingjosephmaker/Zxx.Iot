@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IotPlugin.Dlt645", "IotPlug
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IotPlugin.Cjt188", "IotPlugin.Cjt188\IotPlugin.Cjt188.csproj", "{8CCC2208-2696-4765-886E-E031E0241BDB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IotPlugin.S7", "IotPlugin.S7\IotPlugin.S7.csproj", "{81C5D1DE-73B5-4BA9-843B-DF04901701BF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -167,6 +169,18 @@ Global
 		{8CCC2208-2696-4765-886E-E031E0241BDB}.Release|x64.Build.0 = Release|Any CPU
 		{8CCC2208-2696-4765-886E-E031E0241BDB}.Release|x86.ActiveCfg = Release|Any CPU
 		{8CCC2208-2696-4765-886E-E031E0241BDB}.Release|x86.Build.0 = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|x64.Build.0 = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Debug|x86.Build.0 = Debug|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|x64.ActiveCfg = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|x64.Build.0 = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|x86.ActiveCfg = Release|Any CPU
+		{81C5D1DE-73B5-4BA9-843B-DF04901701BF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
