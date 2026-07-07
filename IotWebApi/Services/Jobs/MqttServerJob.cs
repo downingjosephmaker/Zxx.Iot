@@ -174,10 +174,17 @@ namespace IotWebApi.Services.Jobs
         /// <returns></returns>
         private Task _mqttServer_ValidatingConnectionAsync(ValidatingConnectionEventArgs arg)
         {
+            // 抖动/爆破封禁期内直接拒绝(§6.5 flapping_detect)
+            if (Mqtt.MqttFlappingGuard.IsBanned(arg.ClientId))
+            {
+                arg.ReasonCode = MqttConnectReasonCode.Banned;
+                return Task.CompletedTask;
+            }
             arg.ReasonCode = MqttConnectReasonCode.Success;
             if ((arg.UserName ?? string.Empty) != MqttParam.MqttUser || (arg.Password ?? string.Empty) != MqttParam.MqttPass)
             {
                 arg.ReasonCode = MqttConnectReasonCode.Banned;
+                Mqtt.MqttFlappingGuard.OnAuthFailed(arg.ClientId);
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ValidatingConnectionAsync：客户端ID=【{arg.ClientId}】用户名或密码验证错误 ", "MQTT服务端");
 
             }
@@ -191,7 +198,9 @@ namespace IotWebApi.Services.Jobs
         /// <returns></returns>
         private Task _mqttServer_InterceptingPublishAsync(InterceptingPublishEventArgs arg)
         {
-            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"InterceptingPublishAsync：客户端ID=【{arg.ClientId}】 Topic主题=【{arg.ApplicationMessage.Topic}】 消息=【{Encoding.UTF8.GetString(arg.ApplicationMessage.Payload.ToArray())}】 qos等级=【{arg.ApplicationMessage.QualityOfServiceLevel}】", "MQTT服务端");
+            // 每条消息载荷日志挂开关,防高频遥测刷盘
+            if (AppSetting.GetConfig("MqttConfig:LogOpen").ToLower() == "true")
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"InterceptingPublishAsync：客户端ID=【{arg.ClientId}】 Topic主题=【{arg.ApplicationMessage.Topic}】 消息=【{Encoding.UTF8.GetString(arg.ApplicationMessage.Payload.ToArray())}】 qos等级=【{arg.ApplicationMessage.QualityOfServiceLevel}】", "MQTT服务端");
             return Task.CompletedTask;
 
         }
@@ -220,7 +229,9 @@ namespace IotWebApi.Services.Jobs
 
         private Task _mqttServer_ApplicationMessageNotConsumedAsync(ApplicationMessageNotConsumedEventArgs arg)
         {
-            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ApplicationMessageNotConsumedAsync：发送端ID=【{arg.SenderId}】 Topic主题=【{arg.ApplicationMessage.Topic}】 消息=【{Encoding.UTF8.GetString(arg.ApplicationMessage.Payload.ToArray())}】 qos等级=【{arg.ApplicationMessage.QualityOfServiceLevel}】", "MQTT服务端");
+            // 每条消息载荷日志挂开关,防高频遥测刷盘
+            if (AppSetting.GetConfig("MqttConfig:LogOpen").ToLower() == "true")
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ApplicationMessageNotConsumedAsync：发送端ID=【{arg.SenderId}】 Topic主题=【{arg.ApplicationMessage.Topic}】 消息=【{Encoding.UTF8.GetString(arg.ApplicationMessage.Payload.ToArray())}】 qos等级=【{arg.ApplicationMessage.QualityOfServiceLevel}】", "MQTT服务端");
             return Task.CompletedTask;
 
         }
@@ -233,6 +244,8 @@ namespace IotWebApi.Services.Jobs
         /// <exception cref="NotImplementedException"></exception>
         private Task _mqttServer_ClientDisconnectedAsync(ClientDisconnectedEventArgs arg)
         {
+            // 抖动计数(§6.5:1分钟窗口断连超阈值封禁,防重连风暴)
+            Mqtt.MqttFlappingGuard.OnDisconnected(arg.ClientId);
             LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ClientDisconnectedAsync：客户端ID=【{arg.ClientId}】已断开, 地址=【{arg.RemoteEndPoint}】", "MQTT服务端");
             return Task.CompletedTask;
         }
