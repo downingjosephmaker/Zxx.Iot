@@ -194,6 +194,21 @@ namespace IotWebApi.Services.Jobs
                 }
                 if (message == null)
                 {
+                    // 契约③兜底:非JSON载荷按产品挂JS脚本解码(§6.5,deviceKey=topic末段)
+                    var segments = args.ApplicationMessage.Topic.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    string devicekey = segments.Length > 0 ? segments[^1] : "";
+                    var scriptdata = MqttClientService.ScriptService?.DecodeMqttPayload(devicekey, buffer);
+                    if (scriptdata.IsZxxAny())
+                    {
+                        message = new PluginMessage
+                        {
+                            MessageType = PluginMessageEnum.协议解析,
+                            MessageJson = scriptdata.ToJson()
+                        };
+                    }
+                }
+                if (message == null)
+                {
                     LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler",
                         $"无法识别的MQTT上行载荷，已忽略：{strdata[..Math.Min(200, strdata.Length)]}", mqttname);
                     return Task.CompletedTask;

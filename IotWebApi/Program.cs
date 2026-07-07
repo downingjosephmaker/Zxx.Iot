@@ -407,6 +407,8 @@ app.MapHub<IotWebApi.Services.Jobs.ChatServer>("/signalr/chatHub");
 
 // MQTT客户端上行消息并入插件上行管道的静态桥(Quartz任务无构造注入,M0遗留重写)
 IotWebApi.Services.Mqtt.MqttClientService.EventBus = app.Services.GetService<CenboEventBus.IEventBus<CenboEventBus.PluginEvent>>();
+// 非JSON载荷按产品挂JS脚本解码(§6.5)
+IotWebApi.Services.Mqtt.MqttClientService.ScriptService = app.Services.GetService<IotWebApi.Services.ProtocolScriptService>();
 
 // 监听应用启动完成事件，执行初始化逻辑
 app.Lifetime.ApplicationStarted.Register(() =>

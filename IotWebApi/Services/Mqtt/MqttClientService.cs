@@ -21,6 +21,12 @@ namespace IotWebApi.Services.Mqtt
         /// </summary>
         public const string MqttPluginGuid = "0af3b6c9d2e5081b4a7c0d3e6f9a2b5c";
 
+        /// <summary>
+        /// 协议脚本服务静态桥(应用启动后由Program赋值;
+        /// 非JSON载荷按产品挂JS脚本解码,§6.5)
+        /// </summary>
+        public static ProtocolScriptService ScriptService { get; set; }
+
         public static bool MqttPublish(string publishtopic, string data)
         {
             bool isresult = false;
