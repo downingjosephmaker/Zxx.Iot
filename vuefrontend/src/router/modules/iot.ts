@@ -30,6 +30,15 @@ export default {
       }
     },
     {
+      path: "/iot/device",
+      name: "IotDevice",
+      component: () => import("@/views/iot/device/index.vue"),
+      meta: {
+        title: "设备管理",
+        showLink: true
+      }
+    },
+    {
       path: "/iot/strategy",
       name: "IotStrategy",
       component: () => import("@/views/iot/strategy/index.vue"),
