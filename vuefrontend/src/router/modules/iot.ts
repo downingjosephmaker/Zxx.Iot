@@ -57,6 +57,15 @@ export default {
       }
     },
     {
+      path: "/iot/alarm",
+      name: "IotAlarm",
+      component: () => import("@/views/iot/alarm/index.vue"),
+      meta: {
+        title: "告警中心",
+        showLink: true
+      }
+    },
+    {
       path: "/iot/alarmmask",
       name: "IotAlarmMask",
       component: () => import("@/views/iot/alarmmask/index.vue"),
