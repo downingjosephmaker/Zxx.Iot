@@ -31,6 +31,9 @@ namespace IotPlugin.Dlt645
         private ChannelCommandEngine? _serverEngine;
         private ChannelCommandEngine? _clientEngine;
 
+        /// <summary>645拆帧定界器(双68定界+长度域,服务端/客户端两路共用,断连清缓冲)</summary>
+        private readonly FrameAccumulator _accumulator = new(FrameAccumulator.ExtractDlt645);
+
         private readonly object _bindingLock = new();
 
         /// <summary>设备ID→绑定</summary>
@@ -111,9 +114,20 @@ namespace IotPlugin.Dlt645
                         _serverChannel = new TcpServerChannel(_config.NetPort)
                         {
                             EndpointResolver = ResolveServerEndpoint,
-                            FrameReceived = (ep, frame) => OnFrame(_serverEngine, ep, frame),
+                            // 645按双68定界拆帧重组(§6.4:粘包拆多帧/半包留缓冲等待)
+                            FrameReceived = (ep, data) =>
+                            {
+                                foreach (var frame in _accumulator.Push(ep, data))
+                                {
+                                    OnFrame(_serverEngine, ep, frame);
+                                }
+                            },
                             SessionOpened = ep => PublishRunStateByEndpoint(ep, 2),
-                            SessionClosed = ep => PublishRunStateByEndpoint(ep, 0)
+                            SessionClosed = ep =>
+                            {
+                                _accumulator.Reset(ep);  //断连清缓冲,防旧数据串入新连接
+                                PublishRunStateByEndpoint(ep, 0);
+                            }
                         };
                         _serverEngine = new ChannelCommandEngine(_serverChannel, _config.SendIntervalMs)
                         {
@@ -127,9 +141,19 @@ namespace IotPlugin.Dlt645
                 {
                     _clientPool = new TcpClientChannelPool
                     {
-                        FrameReceived = (ep, frame) => OnFrame(_clientEngine, ep, frame),
+                        FrameReceived = (ep, data) =>
+                        {
+                            foreach (var frame in _accumulator.Push(ep, data))
+                            {
+                                OnFrame(_clientEngine, ep, frame);
+                            }
+                        },
                         SessionOpened = ep => PublishRunStateByEndpoint(ep, 2),
-                        SessionClosed = ep => PublishRunStateByEndpoint(ep, 0)
+                        SessionClosed = ep =>
+                        {
+                            _accumulator.Reset(ep);
+                            PublishRunStateByEndpoint(ep, 0);
+                        }
                     };
                     lock (_bindingLock)
                     {

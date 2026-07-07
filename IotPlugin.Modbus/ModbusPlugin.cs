@@ -30,6 +30,10 @@ namespace IotPlugin.Modbus
         private ChannelCommandEngine? _serverEngine;
         private ChannelCommandEngine? _clientEngine;
 
+        /// <summary>MBAP拆帧定界器(仅TCP客户端路径;RTU over TCP无长度域不可靠拆帧,
+        /// 服务端依赖DTU按串口空闲间隙切包保持一包一帧)</summary>
+        private readonly FrameAccumulator _mbapAccumulator = new(FrameAccumulator.ExtractMbap);
+
         private readonly object _bindingLock = new();
 
         /// <summary>设备ID→绑定</summary>
@@ -113,6 +117,7 @@ namespace IotPlugin.Modbus
                         _serverChannel = new TcpServerChannel(_config.NetPort)
                         {
                             EndpointResolver = ResolveServerEndpoint,
+                            // RTU over TCP无长度域不可靠拆帧,依赖DTU按串口空闲间隙切包(一包一帧)
                             FrameReceived = (ep, frame) => OnFrame(_serverEngine, ep, frame, false),
                             SessionOpened = ep => PublishRunStateByEndpoint(ep, 2),
                             SessionClosed = ep => PublishRunStateByEndpoint(ep, 0)
@@ -130,9 +135,20 @@ namespace IotPlugin.Modbus
                 {
                     _clientPool = new TcpClientChannelPool
                     {
-                        FrameReceived = (ep, frame) => OnFrame(_clientEngine, ep, frame, true),
+                        // MBAP按长度域拆帧重组(§6.4:粘包拆多帧/半包留缓冲等待)
+                        FrameReceived = (ep, data) =>
+                        {
+                            foreach (var frame in _mbapAccumulator.Push(ep, data))
+                            {
+                                OnFrame(_clientEngine, ep, frame, true);
+                            }
+                        },
                         SessionOpened = ep => PublishRunStateByEndpoint(ep, 2),
-                        SessionClosed = ep => PublishRunStateByEndpoint(ep, 0)
+                        SessionClosed = ep =>
+                        {
+                            _mbapAccumulator.Reset(ep);  //断连清缓冲,防旧数据串入新连接
+                            PublishRunStateByEndpoint(ep, 0);
+                        }
                     };
                     lock (_bindingLock)
                     {
