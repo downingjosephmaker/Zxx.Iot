@@ -75,8 +75,14 @@ namespace IotWebApi.Services
         /// </summary>
         private readonly AlarmEngineService _alarmEngineService;
 
-        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService)
+        /// <summary>
+        /// 告警屏蔽引擎(告警产生之后、入库通知之前裁决)
+        /// </summary>
+        private readonly AlarmMaskService _alarmMaskService;
+
+        public DataPointIngestService(TelemetryWriteService telemetryService, TelemetryLatestService latestService, IHubContext<ChatServer> hubContext, ValueFilterService valueFilterService, PushGateService pushGateService, OfflineDebounceService offlineDebounceService, AlarmEngineService alarmEngineService, AlarmMaskService alarmMaskService)
         {
+            _alarmMaskService = alarmMaskService;
             _telemetryService = telemetryService;
             _latestService = latestService;
             _hubContext = hubContext;
@@ -549,24 +555,30 @@ namespace IotWebApi.Services
                 var typelist = DeviceTypeDAO.Instance.GetList();
 
                 var signallist = new List<EventSignal>();
+                var pushlist = new List<EventSignal>();
                 foreach (var fire in fires)
                 {
                     var dbdev = devlist.FirstOrDefault(t => t.DeviceId == fire.DeviceId);
                     if (dbdev == null) continue;
+                    // 屏蔽裁决(§9.4:完全屏蔽不入库不通知;静默入库打标不通知;降级改写等级)
+                    var verdict = _alarmMaskService.Apply(fire, dbdev);
+                    if (verdict == AlarmMaskVerdict.完全屏蔽) continue;
+                    string content = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}";
                     var signal = new EventSignal
                     {
                         SnowId = SnowModel.Instance.NewId(),
                         EventTime = DateTime.Now.ToDateTimeString(),
                         EventType = fire.EventType,
                         EventValue = fire.ValueText,
-                        EventContent = fire.AlarmGrade.IsZxxNullOrEmpty() ? fire.Content : $"[{fire.AlarmGrade}]{fire.Content}"
+                        EventContent = verdict == AlarmMaskVerdict.静默 ? $"[已屏蔽]{content}" : content
                     };
                     FillEventBase(signal, dbdev, unitlist, buildlist, deptlist, typelist);
                     signallist.Add(signal);
+                    if (verdict != AlarmMaskVerdict.静默) pushlist.Add(signal);
                 }
                 if (!signallist.IsZxxAny()) return;
                 EventSignalDAO.Instance.InsertRange(signallist);
-                foreach (var signal in signallist)
+                foreach (var signal in pushlist)
                 {
                     _hubContext.Clients.Group($"alarm:{signal.UnitId}").SendAsync("ReceiveAlarm", signal.ToJson())
                         .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{signal.DeviceId}]告警推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
