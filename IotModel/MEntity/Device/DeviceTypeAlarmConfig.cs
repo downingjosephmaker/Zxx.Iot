@@ -90,5 +90,17 @@ namespace IotModel
         [DisplayName("报警配置ID")]
         [SugarColumn(ColumnName = "alarm_config_id", ColumnDescription = "报警配置ID", DefaultValue = "0", ColumnDataType = "int")]
         public int AlarmConfigId { get; set; }
+        /// <summary>
+        /// 恢复公式(§9.3高低水位滞回:触发a>80恢复a<60防临界震荡;空=触发公式取反)
+        ///</summary>
+        [DisplayName("恢复公式(空=触发公式取反)")]
+        [SugarColumn(ColumnName = "recover_formula", IsNullable = true, Length = 100, ColumnDescription = "恢复公式(空=触发公式取反)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string RecoverFormula { get; set; }
+        /// <summary>
+        /// 抑制公式(§9.3联锁抑制:告警命中后再评估,可引用同设备其他点位,false则抑制;空=不抑制)
+        ///</summary>
+        [DisplayName("抑制公式(false则抑制,空=不抑制)")]
+        [SugarColumn(ColumnName = "restrain_formula", IsNullable = true, Length = 100, ColumnDescription = "抑制公式(false则抑制,空=不抑制)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string RestrainFormula { get; set; }
     }
 }

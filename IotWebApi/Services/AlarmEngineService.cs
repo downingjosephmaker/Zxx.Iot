@@ -58,6 +58,8 @@ namespace IotWebApi.Services
             public long RuleId;
             public List<string> ParamCodes = new();
             public string Formula = "";
+            public string RecoverFormula = "";   // 恢复公式(高低水位滞回,空=触发公式取反)
+            public string RestrainFormula = "";  // 抑制公式(联锁抑制,false则抑制,空=不抑制)
             public string TextTemplate = "";
             public bool IsNote;
             public string AlarmGrade = "";
@@ -200,6 +202,8 @@ namespace IotWebApi.Services
                         var rule = BuildRule(item.SnowId, item.ParamCode, item.JisuanFormula, item.TextTemplate,
                             item.IsNote, dict.TryGetValue(item.AlarmConfigId, out var d1) ? d1 : null);
                         if (rule == null) continue;
+                        rule.RecoverFormula = item.RecoverFormula ?? "";
+                        rule.RestrainFormula = item.RestrainFormula ?? "";
                         if (!typerules.TryGetValue(item.DeviceTypeCode ?? "", out var list))
                         {
                             list = new List<EffectiveRule>();
@@ -215,6 +219,8 @@ namespace IotWebApi.Services
                         var rule = BuildRule(item.SnowId, item.ParamCode, item.JisuanFormula, item.TextTemplate,
                             item.IsNote, dict.TryGetValue(item.AlarmConfigId, out var d2) ? d2 : null);
                         if (rule == null) continue;
+                        rule.RecoverFormula = item.RecoverFormula ?? "";
+                        rule.RestrainFormula = item.RestrainFormula ?? "";
                         if (!devrules.TryGetValue(item.DeviceId, out var list))
                         {
                             list = new List<EffectiveRule>();
@@ -324,11 +330,23 @@ namespace IotWebApi.Services
                 valuetexts.Add($"{code}={point.Value.Value}");
             }
             // 经IotModel的公式引擎求值(规避DynamicExpresso.Core与本地项目的程序集重名冲突;公式异常返回false不触发)
-            bool active = ExpressoFormula.CalculateMultiple(rule.Formula, variables);
+            bool triggered = ExpressoFormula.CalculateMultiple(rule.Formula, variables);
 
             var state = _states.GetOrAdd((deviceid, rule.RuleId), _ => new AlarmState());
             lock (state)
             {
+                // 高低水位滞回(§9.3):恢复公式非空时,已告警态的解除以"恢复公式为真"为准,
+                // 触发/恢复阈值成对配置(80触发/60恢复)防临界值震荡;空则退化为触发公式取反
+                bool active;
+                if (state.Active && !rule.RecoverFormula.IsZxxNullOrEmpty())
+                {
+                    active = !ExpressoFormula.CalculateMultiple(rule.RecoverFormula, variables);
+                }
+                else
+                {
+                    active = triggered;
+                }
+
                 if (active == state.Active) return; // 无边沿不动作
                 if (!active)
                 {
@@ -342,6 +360,19 @@ namespace IotWebApi.Services
                         fires.Add(BuildFire(deviceid, rule, "告警恢复", valuetexts));
                     }
                     return;
+                }
+
+                // 联锁抑制(§9.3):告警命中后再评估抑制公式(可引用同设备其他点位,
+                // 如"设备运行中才允许低温告警"),false则抑制本次触发且不置告警态
+                if (!rule.RestrainFormula.IsZxxNullOrEmpty())
+                {
+                    var restrainvars = new Dictionary<string, double>(variables);
+                    foreach (var code in ExtractRestrainCodes(rule.RestrainFormula, deviceid))
+                    {
+                        if (restrainvars.ContainsKey(code.Key)) continue;
+                        restrainvars[code.Key] = code.Value;
+                    }
+                    if (!ExpressoFormula.CalculateMultiple(rule.RestrainFormula, restrainvars)) return;
                 }
 
                 // 上升沿:进防抖流水线
@@ -414,6 +445,26 @@ namespace IotWebApi.Services
             // 最后一次:缓冲末条,窗口末由扫描循环补发
             state.Buffered = info;
             state.BufferDue = state.WindowStart.AddSeconds(rule.DebounceSeconds);
+        }
+
+        /// <summary>
+        /// 抽取抑制公式引用的同设备其他点位当前值(标识符正则解析,true/false字面量排除;
+        /// 取不到值的标识符跳过——公式对缺失变量求值异常返回false即抑制,语义安全)
+        /// </summary>
+        private Dictionary<string, double> ExtractRestrainCodes(string formula, int deviceid)
+        {
+            var result = new Dictionary<string, double>();
+            foreach (System.Text.RegularExpressions.Match match in
+                System.Text.RegularExpressions.Regex.Matches(formula, @"[A-Za-z_][A-Za-z0-9_]*"))
+            {
+                var code = match.Value;
+                if (string.Equals(code, "true", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(code, "false", StringComparison.OrdinalIgnoreCase)) continue;
+                if (result.ContainsKey(code)) continue;
+                var point = _latestService.GetLatest(deviceid, code);
+                if (point != null && point.Value.HasValue) result[code] = point.Value.Value;
+            }
+            return result;
         }
 
         /// <summary>
