@@ -131,6 +131,57 @@ namespace IotWebApi.Services
             return _metrics.ToDictionary(t => t.Key, t => t.Value);
         }
 
+        /// <summary>
+        /// 试运行结果(§10.1工程化:干跑无副作用——不计指标/不记冷却/不执行动作)
+        /// </summary>
+        public class LinkageDryRunResult
+        {
+            /// <summary>规则是否存在且启用</summary>
+            public bool Found { get; set; }
+            /// <summary>规则名称</summary>
+            public string RuleName { get; set; } = "";
+            /// <summary>当前是否在生效时间窗内</summary>
+            public bool InWindow { get; set; }
+            /// <summary>条件变量取值快照(最新值缓存缺失的变量不出现)</summary>
+            public Dictionary<string, double> Variables { get; set; } = new();
+            /// <summary>条件表达式当前求值结果(空条件=恒真)</summary>
+            public bool ConditionPass { get; set; }
+            /// <summary>冷却剩余秒数(0=可执行)</summary>
+            public int CooldownRemainSeconds { get; set; }
+            /// <summary>动作类型(1命令2虚拟点位3通知4Webhook)</summary>
+            public int ActionType { get; set; }
+        }
+
+        /// <summary>
+        /// 规则试运行(按当前最新值评估时间窗/条件/冷却并返回变量快照,
+        /// 不执行动作不计指标不记冷却——前端保存前预览命中情况)
+        /// </summary>
+        public LinkageDryRunResult DryRun(long rulesnowid, int triggerdeviceid)
+        {
+            var result = new LinkageDryRunResult();
+            var rule = GetRules().FirstOrDefault(t => t.SnowId == rulesnowid);
+            if (rule == null) return result;
+            result.Found = true;
+            result.RuleName = rule.RuleName ?? "";
+            result.ActionType = rule.ActionType;
+            result.InWindow = InTimeWindow(rule);
+            if (rule.ConditionFormula.IsZxxNullOrEmpty())
+            {
+                result.ConditionPass = true;
+            }
+            else
+            {
+                result.Variables = BuildVariables(rule.ConditionFormula, triggerdeviceid);
+                result.ConditionPass = ExpressoFormula.CalculateMultiple(rule.ConditionFormula, result.Variables);
+            }
+            if (_lastRun.TryGetValue(rule.SnowId, out var last))
+            {
+                double remain = Math.Max(1, rule.CooldownSeconds) - (DateTime.Now - last).TotalSeconds;
+                result.CooldownRemainSeconds = remain > 0 ? (int)Math.Ceiling(remain) : 0;
+            }
+            return result;
+        }
+
         #endregion
 
         #region 触发入口
