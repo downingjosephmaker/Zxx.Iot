@@ -23,7 +23,7 @@ export const GetAlarmAnalysisOne = data => {
   localStorage.setItem("button", "查询" + button + "变电所报警排名");
   return http.request<Result>(
     "get",
-    "/EventAlarm/GetAlarmAnalysisOne" + getQuery(data)
+    "/EventAlarmDb/GetAlarmAnalysisOne" + getQuery(data)
   );
 };
 export const GetAlarmAnalysisTwo = data => {
@@ -33,19 +33,19 @@ export const GetAlarmAnalysisTwo = data => {
   );
   return http.request<Result>(
     "get",
-    "/EventAlarm/GetAlarmAnalysisTwo" + getQuery(data)
+    "/EventAlarmDb/GetAlarmAnalysisTwo" + getQuery(data)
   );
 };
 export const GetAlarmAnalysisThree = data => {
   localStorage.setItem("button", "查询" + button + "变电所月报警统计");
   return http.request<Result>(
     "get",
-    "/EventAlarm/GetAlarmAnalysisThree" + getQuery(data)
+    "/EventAlarmDb/GetAlarmAnalysisThree" + getQuery(data)
   );
 };
 export const GetAlarmAnalysisTop = () => {
   localStorage.setItem("button", "查询" + button + "页面顶部");
-  return http.request<Result>("get", "/EventAlarm/GetAlarmAnalysisTop");
+  return http.request<Result>("get", "/EventAlarmDb/GetAlarmAnalysisTop");
 };
 export default {
   GetAlarmAnalysisTop,

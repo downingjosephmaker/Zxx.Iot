@@ -6,14 +6,14 @@ const button = "告警";
 /** 分页查询 */
 export const getListByPage = (data?: any) => {
   localStorage.setItem("button", "查询" + button + "");
-  return http.request<ResultTable>("post", "/EventAlarm/GetListByPage", {
+  return http.request<ResultTable>("post", "/EventAlarmDb/GetListByPage", {
     data
   });
 };
 /** 告警确认 */
 export const saveRoleBatch = (data?: QueryTableParams) => {
   localStorage.setItem("button", "确认" + button + "");
-  return http.request<ResultTable>("post", "/EventAlarm/PostHandleAlarm", {
+  return http.request<ResultTable>("post", "/EventAlarmDb/PostHandleAlarm", {
     data
   });
 };
@@ -23,7 +23,7 @@ export const deleteAlarm = (snowid: string) => {
   localStorage.setItem("button", "删除" + button + "");
   return http.request<ResultTable>(
     "post",
-    `/EventAlarm/Delete?snowid=${snowid}`
+    `/EventAlarmDb/Delete?snowid=${snowid}`
   );
 };
 
