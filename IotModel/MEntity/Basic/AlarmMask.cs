@@ -8,7 +8,7 @@ namespace IotModel
     /// <summary>
     /// 告警屏蔽规则(§9.4:运行时在"告警产生之后、入库通知之前"过滤;
     /// 取代AlarmConfig.DebounceType=3的一刀切屏蔽;
-    /// 注意:引擎为后台组件且规则全局加载,故不挂IUnitEntity(与collect_strategy同类决策),
+    /// 注意:引擎为后台组件且规则全局加载,故不挂ITenantEntity(与collect_strategy同类决策),
     /// 单位维度屏蔽经MaskScopeType=2+ScopeId表达)
     ///</summary>
     [DisplayName("告警屏蔽规则")]

@@ -51,8 +51,8 @@ namespace IotWebApi
                             }
                         }
 
-                        // 认证通过后写入单位上下文（AsyncLocal 随请求异步流转），供 DbContext 对 IUnitEntity 实体自动追加 UnitId 隔离
-                        if (context.Result == null) UnitScope.CurrentUnitId = model.UnitId;
+                        // 认证通过后写入租户上下文（AsyncLocal 随请求异步流转），供 DbContext 对 ITenantEntity 实体自动追加 TenantId 隔离
+                        if (context.Result == null) TenantScope.CurrentTenantId = model.UnitId;
                     }
                 }
                 catch (Exception)

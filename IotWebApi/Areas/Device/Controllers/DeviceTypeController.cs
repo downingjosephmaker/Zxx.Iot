@@ -128,7 +128,7 @@ namespace IotWebApi.Controllers
         public List<DeviceTypeRun> GetMasterTypeList(string menucode)
         {
             var optmdl = Request.GetToken();
-            var dtrlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && t.MenuCode.Contains(menucode));
+            var dtrlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && t.MenuCode.Contains(menucode));
             //if (dtrlist.Count == 0)
             //{
             //    var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
@@ -162,7 +162,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
+            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId);
             var realtypes = devices.Select(t => t.DeviceTypeCode).Distinct().ToList();
             if (!realtypes.IsZxxAny()) return list;
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
@@ -194,7 +194,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
+            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId);
             var realtypes = devices.Select(t => t.DeviceTypeCode).Distinct().ToList();
             if (!realtypes.IsZxxAny()) return list;
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
@@ -233,7 +233,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var mtplist = DeviceTypeRunDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && !t.MenuCode.Contains("otherCollect"));
+            var mtplist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && !t.MenuCode.Contains("otherCollect"));
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
             var typeparamlist = DeviceTypeParamDAO.Instance.GetListBy(t => t.IsPeak);
             var typeparams = typeparamlist.Select(t => t.DeviceTypeCode).Distinct().ToList();

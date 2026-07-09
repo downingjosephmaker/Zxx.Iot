@@ -36,7 +36,7 @@ namespace IotWebApi.Areas.Scada.Controllers
                     item.UpdateId = optmdl.UserID;
                     item.UpdateTime = time.ToDateTimeString();
                     item.UpdateName = optmdl.UserName;
-                    item.UnitId = optmdl.UnitId;
+                    item.TenantId = optmdl.UnitId;
                     if (item.SnowId == 0)
                     {
                         item.SnowId = SnowModel.Instance.NewId();

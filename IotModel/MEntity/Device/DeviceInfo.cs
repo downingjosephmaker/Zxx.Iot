@@ -8,7 +8,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("设备表")]
     [SugarTable(TableName = "device_info", TableDescription = "设备表", IsDisabledUpdateAll = true)]
-    public class DeviceInfo : BaseEntity, IUnitEntity
+    public class DeviceInfo : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 设备主键
@@ -160,6 +160,6 @@ namespace IotModel
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
     }
 }

@@ -10,7 +10,7 @@ namespace IotModel
     /// 触发:点位变化/告警产生或恢复/定时cron/设备上下线;
     /// 条件:DynamicExpresso表达式(裸参数编码=触发设备点位,d{设备ID}_{参数编码}=跨设备)+时间窗;
     /// 动作:下发命令(白名单)/写虚拟点位/发通知/Webhook;
-    /// 引擎为后台组件全局加载,不挂IUnitEntity)
+    /// 引擎为后台组件全局加载,不挂ITenantEntity)
     ///</summary>
     [DisplayName("规则联动")]
     [EntityCache]

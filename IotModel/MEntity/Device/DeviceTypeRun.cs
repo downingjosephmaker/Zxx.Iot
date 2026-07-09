@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("现有设备大类")]
     [EntityCache]
     [SugarTable(TableName = "device_type_run", TableDescription = "现有设备大类", IsDisabledUpdateAll = true)]
-    public class DeviceTypeRun : IUnitEntity
+    public class DeviceTypeRun : ITenantEntity
     {
         /// <summary>
         /// 雪花主键
@@ -24,7 +24,7 @@ namespace IotModel
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
 
         /// <summary>
         /// 设备大类编码

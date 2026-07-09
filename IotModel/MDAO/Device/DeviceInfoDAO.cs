@@ -187,7 +187,7 @@ namespace IotModel
                 }
                 if (upinfo.SortBorder.IsZxxNullOrEmpty())
                 {
-                    var list = GetListBy(t => t.UnitId == upinfo.UnitId);
+                    var list = GetListBy(t => t.TenantId == upinfo.TenantId);
                     if (list.IsZxxAny())
                     {
                         string first = ObjLevel[upinfo.TreeLevel];
@@ -237,7 +237,7 @@ namespace IotModel
                     }
 
                     //判断现有设备大类
-                    var trlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.UnitId == upinfo.UnitId);
+                    var trlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == upinfo.TenantId);
                     Match match = Regex.Match(upinfo.DeviceTypeFullCode, @"\|([^|]+)\|");
                     string firstDeviceTypeCode = match.Groups[1].Value; // 匹配第一个 `|...|` 之间的内容
                     var tp = DeviceTypeDAO.Instance.GetOneBy(t => t.TypeCode == firstDeviceTypeCode);
@@ -245,7 +245,7 @@ namespace IotModel
                     {
                         DeviceTypeRunDAO.Instance.Insert(new DeviceTypeRun()
                         {
-                            UnitId = upinfo.UnitId,
+                            TenantId = upinfo.TenantId,
                             DeviceTypeCode = tp.TypeCode,
                             DeviceTypeName = tp.TypeName,
                             MenuCode = "otherCollect"
@@ -356,7 +356,7 @@ namespace IotModel
                 }
                 if (upinfo.SortBorder.IsZxxNullOrEmpty())
                 {
-                    var list = GetListBy(t => t.UnitId == upinfo.UnitId);
+                    var list = GetListBy(t => t.TenantId == upinfo.TenantId);
                     if (list.IsZxxAny())
                     {
                         string first = ObjLevel[upinfo.TreeLevel];
@@ -406,7 +406,7 @@ namespace IotModel
                     }
 
                     //判断现有设备大类
-                    var trlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.UnitId == upinfo.UnitId);
+                    var trlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == upinfo.TenantId);
                     Match match = Regex.Match(upinfo.DeviceTypeFullCode, @"\|([^|]+)\|");
                     string firstDeviceTypeCode = match.Groups[1].Value; // 匹配第一个 `|...|` 之间的内容
                     var tp = DeviceTypeDAO.Instance.GetOneBy(t => t.TypeCode == firstDeviceTypeCode);
@@ -414,7 +414,7 @@ namespace IotModel
                     {
                         DeviceTypeRunDAO.Instance.Insert(new DeviceTypeRun()
                         {
-                            UnitId = upinfo.UnitId,
+                            TenantId = upinfo.TenantId,
                             DeviceTypeCode = tp.TypeCode,
                             DeviceTypeName = tp.TypeName,
                             MenuCode = "otherCollect"

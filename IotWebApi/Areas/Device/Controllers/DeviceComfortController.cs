@@ -40,7 +40,7 @@ namespace IotWebApi.Controllers
                         item.CreateId = optmdl.UserID;
                         item.CreateTime = time.ToDateTimeString();
                         item.CreateName = optmdl.UserName;
-                        item.UnitId = optmdl.UnitId;
+                        item.TenantId = optmdl.UnitId;
                         insertlist.Add(item);
                     }
                     else

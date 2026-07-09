@@ -656,7 +656,7 @@ namespace IotWebApi.Services
                 {
                     // 北向转发(§10.2:静默/完全屏蔽的不外发,与SignalR推送同口径)
                     _northboundForwardService.ForwardAlarm(signal.DeviceId, signal.DeviceTypeCode, signal);
-                    _hubContext.Clients.Group($"alarm:{signal.UnitId}").SendAsync("ReceiveAlarm", signal.ToJson())
+                    _hubContext.Clients.Group($"alarm:{signal.TenantId}").SendAsync("ReceiveAlarm", signal.ToJson())
                         .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"设备[{signal.DeviceId}]告警推送失败：{t.Exception}", Service_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
                 }
             }
@@ -711,8 +711,8 @@ namespace IotWebApi.Services
             evt.DeviceId = device.DeviceId;
             evt.DeviceName = device.DeviceName;
             evt.DeviceTypeCode = device.DeviceTypeCode;
-            evt.UnitId = device.UnitId;
-            var unit = unitlist.FirstOrDefault(t => t.UnitId == device.UnitId);
+            evt.TenantId = device.TenantId;
+            var unit = unitlist.FirstOrDefault(t => t.UnitId == device.TenantId);
             if (unit != null) evt.UnitName = unit.UnitName;
             var devtype = typelist.FirstOrDefault(t => t.TypeCode == device.DeviceTypeCode);
             if (devtype != null) evt.DeviceTypeName = devtype.TypeName;

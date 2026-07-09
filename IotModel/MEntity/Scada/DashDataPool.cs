@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("通用数据池")]
     [EntityCache]
     [SugarTable(TableName = "dash_data_pool", TableDescription = "通用数据池", IsDisabledUpdateAll = true)]
-    public class DashDataPool : BaseEntity, IUnitEntity
+    public class DashDataPool : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 雪花主键
@@ -92,7 +92,7 @@ namespace IotModel
         /// </summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
 
         /// <summary>
         /// 是否启用

@@ -58,7 +58,7 @@ namespace IotWebApi
                 {
                     foreach (var item in _SysrelList)
                     {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.UnitId);
+                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.TenantId);
                         if (unit != null)
                         {
                             if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);
@@ -112,7 +112,7 @@ namespace IotWebApi
                 {
                     foreach (var item in _SysrelList)
                     {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.UnitId);
+                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.TenantId);
                         if (unit != null)
                         {
                             if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);

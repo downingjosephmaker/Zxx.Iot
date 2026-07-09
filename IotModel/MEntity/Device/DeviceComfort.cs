@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("空调舒适度")]
     [EntityCache]
     [SugarTable(TableName = "device_comfort", TableDescription = "空调舒适度", IsDisabledUpdateAll = true)]
-    public class DeviceComfort : BaseEntity, IUnitEntity
+    public class DeviceComfort : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 雪花主键
@@ -48,6 +48,6 @@ namespace IotModel
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
     }
 }

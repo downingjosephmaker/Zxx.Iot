@@ -39,7 +39,7 @@ namespace IotWebApi.Controllers
                     if (item.SnowId == 0)
                     {
                         item.SnowId = SnowModel.Instance.NewId();
-                        item.UnitId = optmdl.UnitId;
+                        item.TenantId = optmdl.UnitId;
                         item.CreateId = optmdl.UserID;
                         item.CreateTime = time.ToDateTimeString();
                         item.CreateName = optmdl.UserName;

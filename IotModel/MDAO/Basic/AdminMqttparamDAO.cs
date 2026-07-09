@@ -23,13 +23,13 @@ namespace IotModel
             {
                 AdminMqttparam mqttparam = new AdminMqttparam
                 {
-                    SystemTitle = "mqtt·þÎñ",
+                    SystemTitle = "mqttï¿½ï¿½ï¿½ï¿½",
                     MqttServer = "192.168.0.76",
                     MqttClientPort = 1883,
                     MqttServerPort = 13386,
                     MqttUser = "cenbo",
                     MqttPass = "veITwUIjDR",
-                    UnitId = 1,
+                    TenantId = 1,
                     MqttSubTopicWebApi = "zhjngk/receive/webapi",
                     MqttSubTopicWebReal = "zhjngk/receive/webreal",
                     MqttSubTopicWebAlarm = "zhjngk/receive/webalarm"

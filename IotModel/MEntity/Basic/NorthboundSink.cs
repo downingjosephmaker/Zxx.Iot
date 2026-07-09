@@ -7,7 +7,7 @@ namespace IotModel
 {
     /// <summary>
     /// 北向转发目的地(§10.2:MQTT/HTTP Webhook,Kafka预留;
-    /// 三段式断线续传由NorthboundForwardService承载;转发器为后台组件全局加载,不挂IUnitEntity)
+    /// 三段式断线续传由NorthboundForwardService承载;转发器为后台组件全局加载,不挂ITenantEntity)
     ///</summary>
     [DisplayName("北向转发目的地")]
     [EntityCache]

@@ -1105,7 +1105,7 @@ namespace IotWebApi.Controllers
         private List<DeviceInfoEntity> GetDevicesBy(int unitid, string devicetype)
         {
             List<DeviceInfoEntity> list = new List<DeviceInfoEntity>();
-            var devicecList = DeviceInfoDAO.Instance.GetListBy(t => t.UnitId == unitid && t.DeviceTypeFullCode.Contains(devicetype));
+            var devicecList = DeviceInfoDAO.Instance.GetListBy(t => t.TenantId == unitid && t.DeviceTypeFullCode.Contains(devicetype));
             if (devicecList.IsZxxAny())
             {
                 var minTreeLevel = devicecList.Min(t => t.TreeLevel);

@@ -10,7 +10,7 @@ namespace IotModel
     [DisplayName("组态项目表")]
     [EntityCache]
     [SugarTable(TableName = "scada_project", TableDescription = "组态项目表", IsDisabledUpdateAll = true)]
-    public class ScadaProject : BaseEntity, IUnitEntity
+    public class ScadaProject : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 雪花主键
@@ -69,7 +69,7 @@ namespace IotModel
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
 
         /// <summary>
         /// 拓展属性(json)

@@ -29,7 +29,7 @@ namespace IotWebApi.Areas.Scada.Controllers
 
             var optmdl = Request.GetToken();
             info.SnowId = SnowModel.Instance.NewId();
-            info.UnitId = optmdl.UnitId;
+            info.TenantId = optmdl.UnitId;
             info.CreateId = optmdl.UserID;
             info.CreateTime = DateTime.Now.ToDateTimeString();
             info.CreateName = optmdl.UserName;

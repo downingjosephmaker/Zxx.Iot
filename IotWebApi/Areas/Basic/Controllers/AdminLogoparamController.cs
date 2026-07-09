@@ -38,7 +38,7 @@ namespace IotWebApi.Controllers
             Status = false;
             Message = "系统Logo保存失败。";
             var optmdl = Request.GetToken();
-            info.UnitId = optmdl.UnitId;
+            info.TenantId = optmdl.UnitId;
             if (info.Id == 0)
                 Status = AdminLogoparamDAO.Instance.Insert(info);
             else Status = AdminLogoparamDAO.Instance.Update(info);

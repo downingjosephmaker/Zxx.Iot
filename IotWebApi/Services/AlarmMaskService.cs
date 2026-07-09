@@ -107,7 +107,7 @@ namespace IotWebApi.Services
             var scopeid = mask.ScopeId ?? "";
             return mask.MaskScopeType switch
             {
-                2 => scopeid == device.UnitId.ToString(),
+                2 => scopeid == device.TenantId.ToString(),
                 4 => string.Equals(scopeid, device.DeviceTypeCode, StringComparison.OrdinalIgnoreCase),
                 5 => scopeid == device.DeviceId.ToString(),
                 6 => string.Equals(scopeid, fire.AlarmGrade, StringComparison.OrdinalIgnoreCase),

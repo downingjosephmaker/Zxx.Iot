@@ -76,7 +76,7 @@ namespace IotWebApi.Controllers
 
             foreach (var zklog in list)
             {
-                var unit = unitlist.FirstOrDefault(t => t.UnitId == zklog.UnitId);
+                var unit = unitlist.FirstOrDefault(t => t.UnitId == zklog.TenantId);
                 if (unit != null) zklog.UnitName = unit.UnitName;
                 var devtype = typelist.FirstOrDefault(t => t.TypeCode == zklog.DeviceTypeCode);
                 if (devtype != null) zklog.DeviceTypeName = devtype.TypeName;

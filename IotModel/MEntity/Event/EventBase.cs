@@ -6,14 +6,14 @@ namespace IotModel
     /// <summary>
     /// 记录基础表
     /// </summary>
-    public class EventBase : IUnitEntity
+    public class EventBase : ITenantEntity
     {
         /// <summary>
         /// 单位ID
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
         /// <summary>
         /// 单位名称
         ///</summary>

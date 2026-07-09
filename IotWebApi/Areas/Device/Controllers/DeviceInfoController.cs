@@ -45,7 +45,7 @@ namespace IotWebApi.Controllers
             info.UpdateId = optmdl.UserID;
             info.UpdateTime = DateTime.Now.ToDateTimeString();
             info.UpdateName = optmdl.UserName;
-            info.UnitId = optmdl.UnitId;
+            info.TenantId = optmdl.UnitId;
             Status = DeviceInfoDAO.Instance.Insert(info);
             if (Status) Message = "设备信息新增成功。";
 
@@ -69,7 +69,7 @@ namespace IotWebApi.Controllers
             {
                 var optmdl = Request.GetToken();
                 List<DeviceInfoEntity> insertlist = new();
-                var wjlist = DeviceInfoDAO.Instance.GetListBy(it => it.UnitId == 4 && it.DeviceTypeCode == "vrvwj");
+                var wjlist = DeviceInfoDAO.Instance.GetListBy(it => it.TenantId == 4 && it.DeviceTypeCode == "vrvwj");
                 if (wjlist.IsZxxAny())
                 {
                     foreach (var wj in wjlist)
@@ -90,7 +90,7 @@ namespace IotWebApi.Controllers
                                     ParentId = wj.DeviceId,
                                     DeviceName = $"{i}号内机",
                                     DeviceAdr = i,
-                                    UnitId = wj.UnitId,
+                                    TenantId = wj.TenantId,
                                     DeviceTypeCode = "vrvpt",
                                     DeviceTypeFullCode = "|zhkt|vrvpt|",
                                     CreateId = optmdl.UserID,
@@ -135,7 +135,7 @@ namespace IotWebApi.Controllers
             info.UpdateId = optmdl.UserID;
             info.UpdateTime = DateTime.Now.ToDateTimeString();
             info.UpdateName = optmdl.UserName;
-            info.UnitId = optmdl.UnitId;
+            info.TenantId = optmdl.UnitId;
             Status = DeviceInfoDAO.Instance.Update(info);
             if (Status) Message = "设备信息更新成功。";
 
@@ -203,7 +203,7 @@ namespace IotWebApi.Controllers
                     DeviceFullInfo info = new DeviceFullInfo();
                     dev.CopyTypeValue(info);
                     info.ExpandObject = dev.ExpandObject;
-                    var unit = unitlist.FirstOrDefault(t => t.UnitId == info.UnitId);
+                    var unit = unitlist.FirstOrDefault(t => t.UnitId == info.TenantId);
                     if (unit != null) info.UnitName = unit.UnitName;
                     var devtype = typelist.FirstOrDefault(t => t.TypeCode == info.DeviceTypeCode);
                     if (devtype != null) info.DeviceTypeName = devtype.TypeName;
@@ -346,7 +346,7 @@ namespace IotWebApi.Controllers
             Dictionary<string, string> typelist = new();
             DateTime time = DateTime.Now;
 
-            var oldequiplist = DeviceInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId);
+            var oldequiplist = DeviceInfoDAO.Instance.GetListBy(it => it.TenantId == unit.UnitId);
             if (oldequiplist != null && oldequiplist.Count > 0)
                 oldequiplist = oldequiplist.OrderBy(it => it.DeviceId).ToList();
             List<DeviceInfoEntity> equipist = new List<DeviceInfoEntity>();
@@ -404,7 +404,7 @@ namespace IotWebApi.Controllers
                                 DevicePort = port,
                                 DeviceCom = comm,
                                 DeviceAdr = switchadr,
-                                UnitId = unit.UnitId,
+                                TenantId = unit.UnitId,
                                 DeviceTypeCode = actualTypeCode,
                                 DeviceTypeFullCode = devtype.FullCode,
                                 CreateId = optmdl.UserID,
@@ -421,7 +421,7 @@ namespace IotWebApi.Controllers
                                 {
                                     typelist.Add(actualTypeCode, actualTypeCode);
                                 }
-                                oldequiplist = DeviceInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId);
+                                oldequiplist = DeviceInfoDAO.Instance.GetListBy(it => it.TenantId == unit.UnitId);
                             }
                             idx++;
                         }
@@ -462,7 +462,7 @@ namespace IotWebApi.Controllers
         {
             var result = new List<dynamic>();
             var optmdl = Request.GetToken();
-            var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && t.DeviceTypeFullCode.Contains(mastertypecode));
+            var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && t.DeviceTypeFullCode.Contains(mastertypecode));
             var devtypelist = DeviceTypeDAO.Instance.GetListBy(t => t.ParentId == mastertypecode);
             var grps = devlist.GroupBy(t => t.DeviceTypeCode);
             foreach (var grp in grps)
@@ -494,9 +494,9 @@ namespace IotWebApi.Controllers
             Message = "参数公式刷新失败。";
             var result = new List<dynamic>();
             var optmdl = Request.GetToken();
-            var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && t.DeviceTypeCode == typecode);
+            var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && t.DeviceTypeCode == typecode);
             if (!devlist.IsZxxAny()) return Message;
-            var devparamlist = DeviceParamDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && t.DeviceTypeCode == typecode);
+            var devparamlist = DeviceParamDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && t.DeviceTypeCode == typecode);
             if (!devlist.IsZxxAny()) return Message;
             List<DeviceParamEntity> updatelist = new List<DeviceParamEntity>();
             foreach (var dev in devlist)

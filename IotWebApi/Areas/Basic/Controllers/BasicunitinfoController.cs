@@ -74,7 +74,7 @@ namespace IotWebApi.Controllers
                                     bool isnew = true;
                                     if (!comfortAlllist.IsZxxAny())
                                     {
-                                        if (comfortAlllist.Any(t => t.UnitId == item.UnitId)) isnew = false;
+                                        if (comfortAlllist.Any(t => t.TenantId == item.UnitId)) isnew = false;
                                     }
                                     if (isnew)
                                     {
@@ -91,7 +91,7 @@ namespace IotWebApi.Controllers
                                             UpdateId = optmdl.UserID,
                                             UpdateTime = time.ToDateTimeString(),
                                             UpdateName = optmdl.UserName,
-                                            UnitId = item.UnitId
+                                            TenantId = item.UnitId
                                         };
                                         comfortlist.Add(xiaji);
                                         DeviceComfort dongxiaji = new DeviceComfort
@@ -107,7 +107,7 @@ namespace IotWebApi.Controllers
                                             UpdateId = optmdl.UserID,
                                             UpdateTime = time.ToDateTimeString(),
                                             UpdateName = optmdl.UserName,
-                                            UnitId = item.UnitId
+                                            TenantId = item.UnitId
                                         };
                                         comfortlist.Add(dongxiaji);
                                     }
@@ -190,7 +190,7 @@ namespace IotWebApi.Controllers
             var redlist = SysRelatedDAO.Instance.GetListBy(t => t.UserId == optmdl.UserID);
             if (redlist.IsZxxAny())
             {
-                string unitids = string.Join(",", redlist.Select(t => t.UnitId));
+                string unitids = string.Join(",", redlist.Select(t => t.TenantId));
                 model.sconlist.Add(new SelectCondition
                 {
                     ParamName = "UnitId",
@@ -258,9 +258,9 @@ namespace IotWebApi.Controllers
             }
             if (types.Count == 0) return list;
             var optmdl = Request.GetToken();
-            var deviceList = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.UnitId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
+            var deviceList = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
             if (!deviceList.IsZxxAny()) return list;
-            var reportDayList = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= minday && t.SnowId < maxday && t.UnitId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
+            var reportDayList = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= minday && t.SnowId < maxday && t.TenantId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
             List<BalanceTree> balancelist = new List<BalanceTree>();
             balancelist.AddRange(GetBalances(deviceList, reportDayList, 0, 1, typeunit));
             var maxLevel = balancelist.Max(t => t.treeLevel);

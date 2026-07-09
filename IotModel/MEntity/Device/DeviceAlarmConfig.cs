@@ -9,7 +9,7 @@ namespace IotModel
     ///</summary>
     [DisplayName("设备告警配置")]
     [SugarTable(TableName = "device_alarm_config", TableDescription = "设备告警配置", IsDisabledUpdateAll = true)]
-    public class DeviceAlarmConfig : BaseEntity, IUnitEntity
+    public class DeviceAlarmConfig : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 雪花主键
@@ -41,7 +41,7 @@ namespace IotModel
         ///</summary>
         [DisplayName("单位ID")]
         [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
         /// <summary>
         /// 配置类型(1:组合;0:单个)
         ///</summary>

@@ -6,7 +6,7 @@ namespace IotModel
 {
     /// <summary>
     /// 通知渠道(§9.5:邮件/Webhook/钉钉/企微/短信预留;
-    /// 告警IsNote=1时按启用渠道逐一外发;引擎为后台组件全局加载,不挂IUnitEntity)
+    /// 告警IsNote=1时按启用渠道逐一外发;引擎为后台组件全局加载,不挂ITenantEntity)
     ///</summary>
     [DisplayName("通知渠道")]
     [EntityCache]

@@ -141,8 +141,8 @@ namespace IotWebApi.Controllers
             AlarmTypeList.AddRange(alarmconfiglist.Select(t => t.AlarmType).Distinct());
             AlarmGradeList.AddRange(alarmconfiglist.Select(t => t.AlarmGrade).Distinct());
 
-            Expression<Func<EventAlarm, bool>> expression = t => t.UnitId == optmdl.UnitId;
-            if (alarmselecttype == 1) expression = t => t.UnitId == optmdl.UnitId && t.CheckResult == "未处理";
+            Expression<Func<EventAlarm, bool>> expression = t => t.TenantId == optmdl.UnitId;
+            if (alarmselecttype == 1) expression = t => t.TenantId == optmdl.UnitId && t.CheckResult == "未处理";
             var datavalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(expression);
             if (datavalue > 0)
             {
@@ -155,8 +155,8 @@ namespace IotWebApi.Controllers
                     ChartTuLi = key,
                     ChartTuLiId = key.ToString(),
                 };
-                Expression<Func<EventAlarm, bool>> typeExpression = t => t.UnitId == optmdl.UnitId && t.AlarmType == key;
-                if (alarmselecttype == 1) expression = t => t.UnitId == optmdl.UnitId && t.AlarmType == key && t.CheckResult == "未处理";
+                Expression<Func<EventAlarm, bool>> typeExpression = t => t.TenantId == optmdl.UnitId && t.AlarmType == key;
+                if (alarmselecttype == 1) expression = t => t.TenantId == optmdl.UnitId && t.AlarmType == key && t.CheckResult == "未处理";
                 var datavaluetype = SysCommonDAO<EventAlarm>.Instance.GetListCount(typeExpression);
                 if (datavaluetype > 0)
                 {
@@ -175,8 +175,8 @@ namespace IotWebApi.Controllers
                     ChartTuLi = key,
                     ChartTuLiId = key.ToString(),
                 };
-                Expression<Func<EventAlarm, bool>> typeExpression = t => t.UnitId == optmdl.UnitId && t.AlarmGrade == key;
-                if (alarmselecttype == 1) expression = t => t.UnitId == optmdl.UnitId && t.AlarmGrade == key && t.CheckResult == "未处理";
+                Expression<Func<EventAlarm, bool>> typeExpression = t => t.TenantId == optmdl.UnitId && t.AlarmGrade == key;
+                if (alarmselecttype == 1) expression = t => t.TenantId == optmdl.UnitId && t.AlarmGrade == key && t.CheckResult == "未处理";
                 var datavaluetype = SysCommonDAO<EventAlarm>.Instance.GetListCount(typeExpression);
                 if (datavaluetype > 0)
                 {
@@ -217,7 +217,7 @@ namespace IotWebApi.Controllers
             var optmdl = Request.GetToken();
             long dayva = 0;
             long daysnowid = SnowModel.Instance.GetId(DateTime.Now.Date);
-            var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= daysnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= daysnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (dayvalue > 0)
             {
                 dayva = dayvalue;
@@ -226,7 +226,7 @@ namespace IotWebApi.Controllers
 
             long yesva = 0;
             long yessnowid = SnowModel.Instance.GetId(DateTime.Now.AddDays(-1).Date);
-            var yesvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yessnowid && t.SnowId < daysnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var yesvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yessnowid && t.SnowId < daysnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (yesvalue > 0)
             {
                 yesva = yesvalue;
@@ -236,7 +236,7 @@ namespace IotWebApi.Controllers
 
             long daymonth = 0;
             long daymonthsnowid = SnowModel.Instance.GetId(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1));
-            var daymonthvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= daymonthsnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var daymonthvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= daymonthsnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (daymonthvalue > 0)
             {
                 daymonth = daymonthvalue;
@@ -245,7 +245,7 @@ namespace IotWebApi.Controllers
 
             long yesmonthva = 0;
             long yesmonthsnowid = SnowModel.Instance.GetId(new DateTime(DateTime.Now.AddMonths(-1).Year, DateTime.Now.AddMonths(-1).Month, 1));
-            var yesmonthvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yesmonthsnowid && t.SnowId < daymonthsnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var yesmonthvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yesmonthsnowid && t.SnowId < daymonthsnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (yesmonthvalue > 0)
             {
                 yesmonthva = yesmonthvalue;
@@ -255,7 +255,7 @@ namespace IotWebApi.Controllers
 
             long dayyearva = 0;
             long dayyearsnowid = SnowModel.Instance.GetId(new DateTime(DateTime.Now.Year, 1, 1));
-            var dayyearvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= dayyearsnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var dayyearvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= dayyearsnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (dayyearvalue > 0)
             {
                 dayyearva = dayyearvalue;
@@ -264,7 +264,7 @@ namespace IotWebApi.Controllers
 
             long yesyearva = 0;
             long yesyearsnowid = SnowModel.Instance.GetId(new DateTime(DateTime.Now.AddYears(-1).Year, 1, 1));
-            var yesyearvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yesyearsnowid && t.SnowId < dayyearsnowid && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+            var yesyearvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= yesyearsnowid && t.SnowId < dayyearsnowid && t.TenantId == optmdl.UnitId && t.EventType != "离线");
             if (yesyearvalue > 0)
             {
                 yesyearva = yesyearvalue;
@@ -311,7 +311,7 @@ namespace IotWebApi.Controllers
                         TypeId = index,
                         TypeName = key,
                     };
-                    var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.UnitId == optmdl.UnitId && t.AlarmType == key && t.EventType != "离线");
+                    var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.TenantId == optmdl.UnitId && t.AlarmType == key && t.EventType != "离线");
                     if (dayvalue > 0)
                     {
                         one.AlarmAllCount = dayvalue;
@@ -331,7 +331,7 @@ namespace IotWebApi.Controllers
                         TypeId = index,
                         TypeName = key,
                     };
-                    var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.UnitId == optmdl.UnitId && t.AlarmGrade == key && t.EventType != "离线");
+                    var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.TenantId == optmdl.UnitId && t.AlarmGrade == key && t.EventType != "离线");
                     if (dayvalue > 0)
                     {
                         one.AlarmAllCount = dayvalue;
@@ -373,7 +373,7 @@ namespace IotWebApi.Controllers
                 long max = SnowModel.Instance.GetId(end);
                 chart.ChartX.Add(start.ToString("yyyy-MM-dd"));
 
-                var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.UnitId == optmdl.UnitId && t.EventType != "离线");
+                var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && t.TenantId == optmdl.UnitId && t.EventType != "离线");
                 if (dayvalue > 0)
                 {
                     chartChild.ChartY.Add(dayvalue.ToString());

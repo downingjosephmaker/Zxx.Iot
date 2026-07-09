@@ -38,7 +38,7 @@ namespace IotModel
                     UpdateId = 1,
                     UpdateTime = time.ToDateTimeString(),
                     UpdateName = "开发管理员",
-                    UnitId = 1
+                    TenantId = 1
                 };
                 comfortlist.Add(xiaji);
                 DeviceComfort dongxiaji = new DeviceComfort
@@ -54,7 +54,7 @@ namespace IotModel
                     UpdateId = 1,
                     UpdateTime = time.ToDateTimeString(),
                     UpdateName = "开发管理员",
-                    UnitId = 1
+                    TenantId = 1
                 };
                 comfortlist.Add(dongxiaji);
                 InsertRange(comfortlist);
