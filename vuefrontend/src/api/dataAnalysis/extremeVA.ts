@@ -38,15 +38,6 @@ export const GetParamReportSelect = (typecode?: any) => {
   );
 };
 
-// 获取报表类型统计数据
-export const GetParamReportSelectByBuild = (typecode?: any) => {
-  localStorage.setItem("button", "根据条件表格查询");
-  return http.request<Result>(
-    "get",
-    "/DeviceTypeParam/GetParamReportSelectByBuild?buildid=" + typecode
-  );
-};
-
 // GetParamTypeSelectBy;
 
 export default {
@@ -54,6 +45,5 @@ export default {
   GetDataTableBy,
   GetPeakDayReport,
   GetParamPeakSelect,
-  GetParamReportSelect,
-  GetParamReportSelectByBuild
+  GetParamReportSelect
 };

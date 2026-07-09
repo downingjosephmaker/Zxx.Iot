@@ -3,7 +3,6 @@ import { ref, onMounted, onUnmounted, nextTick, reactive, watch } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useMenu } from "./utils/hook";
 import { useRouter } from "vue-router";
-import { useMapBackground } from "./utils/mapHook";
 import dayjs from "dayjs";
 // 导入图标
 import boltIcon from "~icons/material-symbols/bolt";
@@ -68,7 +67,6 @@ const {
   demoModeStore
 } = useMenu();
 
-const { mapContainer, showParams, toggleParamsDisplay } = useMapBackground();
 // 响应式数据
 const currentTime = ref("");
 const timeInterval = ref(null);
@@ -372,8 +370,8 @@ const goToYearEnergyReport = () => {
     </nav>
     <div class="content">
       <div class="dashboard-container">
-        <!-- 地图背景层 -->
-        <div :id="mapContainer" class="map-background" />
+        <!-- 深色渐变背景层 -->
+        <div class="map-background" />
         <!-- 侧边栏和底部模块容器 -->
         <div class="dashboard-layout">
           <!-- 左侧边栏 -->
@@ -3003,36 +3001,6 @@ body,
     color: #409eff;
     border-color: #c6e2ff;
   }
-}
-
-/* 自定义 leaflet 地图样式 */
-:deep(.leaflet-container) {
-  background: transparent !important;
-}
-
-:deep(.leaflet-control-attribution) {
-  display: none;
-}
-
-:deep(.leaflet-popup-content-wrapper) {
-  border-radius: 8px;
-  padding: 0;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
-}
-
-:deep(.leaflet-popup-content) {
-  margin: 0;
-  width: auto !important;
-}
-
-:deep(.leaflet-popup-tip) {
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
-}
-
-:deep(.leaflet-popup-close-button) {
-  color: #666 !important;
-  font-size: 18px !important;
-  padding: 5px 5px 0 0 !important;
 }
 
 /* 过渡动画 */

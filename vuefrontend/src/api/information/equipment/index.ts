@@ -10,18 +10,6 @@ export const GetListByPage = (data?: QueryTableParams) => {
   });
 };
 
-export const GetRunListByBuild = (param?: any) => {
-  localStorage.setItem("button", "查询" + button + "");
-  return http.request<ResultTable>(
-    "post",
-    "/DeviceInfo/GetRunListByBuild",
-    {},
-    {
-      params: param
-    }
-  );
-};
-
 /** 一级分页查询 */
 export const GetAllByPage = (data?: QueryTableParams) => {
   localStorage.setItem("button", "查询" + button + "");
@@ -248,39 +236,8 @@ export const GetParamAlarmConfigList = (id?: any) => {
   );
 };
 
-export const GetReprotList = (params?: any) => {
-  localStorage.setItem("button", "查询能耗分析设备" + button);
-  return http.request<ResultTable>("post", "/DeviceInfo/GetReprotList", {
-    params
-  });
-};
-
-export const GetPeakList = (params?: any) => {
-  localStorage.setItem("button", "查询极值分析设备" + button);
-  return http.request<ResultTable>("post", "/DeviceInfo/GetPeakList", {
-    params
-  });
-};
-
-export const GetSubList = (id?: any) => {
-  localStorage.setItem("button", "查询分项能耗分析设备" + button);
-  return http.request<ResultTable>(
-    "post",
-    "/DeviceInfo/GetSubList?buildid=" + id
-  );
-};
-
-export const GetDeviceStrategy = (id?: any) => {
-  localStorage.setItem("button", "查询设备策略" + button);
-  return http.request<ResultTable>(
-    "get",
-    "/DeviceStrategy/GetInfoByPk?_DeviceId=" + id
-  );
-};
-
 export default {
   GetListByPage,
-  GetRunListByBuild,
   deleteByPk,
   deleteByPk2,
   GetInfoByPk,
@@ -304,9 +261,5 @@ export default {
   GetAlarmConfigDeviceList,
   GetMoreAlarmConfigList,
   GetAlarmConfigParamList,
-  DelYuZhiBatch,
-  GetDeviceStrategy,
-  GetReprotList,
-  GetPeakList,
-  GetSubList
+  DelYuZhiBatch
 };

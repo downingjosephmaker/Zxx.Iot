@@ -39,19 +39,11 @@ export const update = (data?: object) => {
     data
   });
 };
-/** 建筑查询 */
-export const getListByPageCL = (data?: QueryTableParams) => {
-  localStorage.setItem("button", "查询" + button + "");
-  return http.request<ResultTable>("post", "/Buildinfo/GetListByPage", {
-    data
-  });
-};
 export default {
   getListByPage,
   deleteByPk,
   GetInfoByPk,
   saveBatch,
   insert,
-  update,
-  getListByPageCL
+  update
 };

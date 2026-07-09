@@ -33,14 +33,6 @@ export const update = (data?: object) => {
     data
   });
 };
-/** 建筑查询 */
-export const getListByPageCL = (data?: QueryTableParams) => {
-  localStorage.setItem("button", "查询" + button + "");
-  return http.request<ResultTable>("post", "/Buildinfo/GetListByPage", {
-    data
-  });
-};
-
 /** 设备类型查询 */
 export const GetMasterTypeList = (data: any) => {
   localStorage.setItem("button", "查询" + button + "");
@@ -70,7 +62,6 @@ export default {
   GetInfoByPk,
   insert,
   update,
-  getListByPageCL,
   GetMasterTypeList,
   GetHistoryTypes,
   GetReportTypes

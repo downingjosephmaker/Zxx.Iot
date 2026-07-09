@@ -15,8 +15,6 @@ const props = withDefaults(defineProps<DeviceFormProps>(), {
     DeviceGuid: "",
     DeviceGateway: "",
     ParentId: 0,
-    BuildId: 0,
-    DeptId: 0,
     SortBorder: "",
     DeviceIp: "",
     DevicePort: 0,
@@ -31,9 +29,7 @@ const props = withDefaults(defineProps<DeviceFormProps>(), {
     CurrentTransformer: 1,
     VoltageTransformer: 1
   }),
-  typeOptions: () => [],
-  buildOptions: () => [],
-  deptOptions: () => []
+  typeOptions: () => []
 });
 
 const ruleFormRef = ref();
@@ -135,36 +131,6 @@ defineExpose({ getRef });
             placeholder="留空自动生成"
             maxlength="10"
             clearable
-          />
-        </el-form-item>
-      </el-col>
-      <el-col :span="12">
-        <el-form-item label="所属建筑" prop="BuildId">
-          <el-tree-select
-            v-model="formValue.BuildId"
-            :data="buildOptions"
-            check-strictly
-            :render-after-expand="false"
-            default-expand-all
-            filterable
-            clearable
-            placeholder="选择所属建筑，留空=未挂靠"
-            class="w-full"
-          />
-        </el-form-item>
-      </el-col>
-      <el-col :span="12">
-        <el-form-item label="所属组织" prop="DeptId">
-          <el-tree-select
-            v-model="formValue.DeptId"
-            :data="deptOptions"
-            check-strictly
-            :render-after-expand="false"
-            default-expand-all
-            filterable
-            clearable
-            placeholder="选择所属组织，留空=未挂靠"
-            class="w-full"
           />
         </el-form-item>
       </el-col>

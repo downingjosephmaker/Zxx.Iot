@@ -134,37 +134,6 @@ export const DxKzqControlFtpUpdate = (data?: object) => {
   });
 };
 
-// 关联设备
-export const DeviceRelevance = (data?: object) => {
-  localStorage.setItem("button", "设备关联");
-  return http.request<Result>("post", "/DeviceRelevance/SaveBatch", {
-    data
-  });
-};
-//查询关联设备
-export const DeviceRelevanceList = (data?: object) => {
-  localStorage.setItem("button", "设备关联");
-  return http.request<ResultTable>("post", "/DeviceRelevance/GetListByPage", {
-    data
-  });
-};
-
-//删除关联设备
-export const DeviceRelevanceDelete = (SnowId: string) => {
-  localStorage.setItem("button", "删除设备关联");
-  return http.request<Result>("post", "/DeviceRelevance/DeleteByPk", {
-    params: { _SnowId: SnowId }
-  });
-};
-
-//根据主键查询单条关联设备数据
-export const DeviceRelevanceGetInfo = (SnowId: string) => {
-  localStorage.setItem("button", "查询设备关联");
-  return http.request<Result>("get", "/DeviceRelevance/GetInfoByPk", {
-    params: { _SnowId: SnowId }
-  });
-};
-
 //智慧插座
 export const DevControlSocketRun = (data?: object) => {
   localStorage.setItem("button", "插座设备控制");
@@ -219,10 +188,6 @@ export default {
   DevNetParam,
   DevNetRun,
 
-  DeviceRelevance,
-  DeviceRelevanceList,
-  DeviceRelevanceDelete,
-  DeviceRelevanceGetInfo,
 
   DevControlHumanConfig,
   DevVRFParam,
