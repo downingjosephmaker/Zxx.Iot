@@ -64,16 +64,6 @@ namespace IotWebApi.Areas.Event.Models
         [DisplayName("设备ID集合")]
         public List<int> DeviceIds { get; set; } = new List<int>();
         /// <summary>
-        /// 建筑ID
-        /// </summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 部门D
-        /// </summary>
-        [DisplayName("部门D")]
-        public int DeptId { get; set; }
-        /// <summary>
         /// 单位ID
         /// </summary>
         [DisplayName("单位ID")]

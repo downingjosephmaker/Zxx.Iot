@@ -44,8 +44,6 @@ namespace IotWebApi.Controllers
             {
                 list.ForEach(t =>
                 {
-                    t.BuildName = t.BuildName.BeautifyFullName();
-                    t.DeptName = t.DeptName.BeautifyFullName();
                     t.DeviceName = t.DeviceName.BeautifyFullName();
                 });
             }

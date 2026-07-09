@@ -17,16 +17,6 @@ namespace IotWebApi
         [DisplayName("单位ID")]
         public int UnitId { get; set; }
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 部门ID
-        ///</summary>
-        [DisplayName("部门ID")]
-        public int DeptId { get; set; }
-        /// <summary>
         /// 设备类型编码
         ///</summary>
         [DisplayName("设备类型编码")]

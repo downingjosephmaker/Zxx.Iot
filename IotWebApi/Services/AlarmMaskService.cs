@@ -100,7 +100,7 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 屏蔽对象匹配(1全局/2单位/3建筑/4设备类型/5单设备/6告警等级)
+        /// 屏蔽对象匹配(1全局/2单位/4设备类型/5单设备/6告警等级)
         /// </summary>
         private static bool MatchScope(AlarmMask mask, AlarmFireInfo fire, DeviceInfo device)
         {
@@ -108,7 +108,6 @@ namespace IotWebApi.Services
             return mask.MaskScopeType switch
             {
                 2 => scopeid == device.UnitId.ToString(),
-                3 => scopeid == device.BuildId.ToString(),
                 4 => string.Equals(scopeid, device.DeviceTypeCode, StringComparison.OrdinalIgnoreCase),
                 5 => scopeid == device.DeviceId.ToString(),
                 6 => string.Equals(scopeid, fire.AlarmGrade, StringComparison.OrdinalIgnoreCase),

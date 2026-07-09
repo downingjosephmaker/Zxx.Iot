@@ -38,18 +38,6 @@ namespace IotWebApi.Areas.Device.Models
         public string DevName { get; set; }
 
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-
-        /// <summary>
-        /// 部门ID
-        ///</summary>
-        [DisplayName("部门ID")]
-        public int DeptId { get; set; }
-
-        /// <summary>
         /// 设备状态(-1:全部 2:在线 1:掉电 0:离线)
         ///</summary>
         [DisplayName("设备状态")]

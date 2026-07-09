@@ -81,19 +81,6 @@ namespace IotWebApi.Controllers
             var optmdl = Request.GetToken();
             List<DeviceInfo> devlist = new List<DeviceInfo>();
             List<DeviceAlarmConfig> alarmconfiglist = new List<DeviceAlarmConfig>();
-            if (model.buildid > 0)
-            {
-                var buildlist = BuildInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
-                if (!buildlist.IsZxxAny()) return entitylist;
-                var _buildlist = buildlist.FindAll(t => t.FullCode.Contains($"|{model.buildid}|"));
-                if (!_buildlist.IsZxxAny()) return entitylist;
-                var buildids = _buildlist.Select(t => t.BuildId).ToList();
-                var _devlist = DeviceInfoDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && buildids.Contains(t.BuildId));
-                if (_devlist.IsZxxAny()) devlist.AddRange(_devlist);
-                var _alarmconfiglist = DeviceAlarmConfigDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && buildids.Contains(t.BuildId));
-                if (_alarmconfiglist.IsZxxAny()) alarmconfiglist.AddRange(_alarmconfiglist);
-            }
-            else
             {
                 var _devlist = DeviceInfoDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && t.UnitId == optmdl.UnitId);
                 if (_devlist.IsZxxAny()) devlist.AddRange(_devlist);

@@ -13,21 +13,6 @@ namespace IotWebApi.Areas.Device.Models
         [DisplayName("单位名称")]
         public string UnitName { get; set; }
         /// <summary>
-        /// 建筑名称
-        ///</summary>
-        [DisplayName("建筑名称")]
-        public string BuildName { get; set; }
-        /// <summary>
-        /// 建筑全称
-        ///</summary>
-        [DisplayName("建筑名称")]
-        public string BuildFullName { get; set; }
-        /// <summary>
-        /// 部门名称
-        ///</summary>
-        [DisplayName("部门名称")]
-        public string DeptName { get; set; }
-        /// <summary>
         /// 设备类型名称
         ///</summary>
         [DisplayName("设备类型名称")]
@@ -64,16 +49,6 @@ namespace IotWebApi.Areas.Device.Models
         ///</summary>
         [DisplayName("单位ID")]
         public int UnitId { get; set; }
-        /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 部门ID
-        ///</summary>
-        [DisplayName("部门ID")]
-        public int DeptId { get; set; }
         /// <summary>
         /// 设备名称
         /// </summary>

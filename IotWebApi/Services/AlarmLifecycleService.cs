@@ -30,7 +30,7 @@ namespace IotWebApi.Services
         /// 返回活动告警主键供升级链登记,恢复/异常返回0)
         /// </summary>
         public long Apply(AlarmFireInfo fire, DeviceInfo device, List<BasicunitInfoEntity> unitlist,
-            List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+            List<DeviceTypeEntity> typelist)
         {
             try
             {
@@ -77,7 +77,7 @@ namespace IotWebApi.Services
                         }
                     }
                 };
-                DataPointIngestService.FillEventBase(alarm, device, unitlist, buildlist, deptlist, typelist);
+                DataPointIngestService.FillEventBase(alarm, device, unitlist, typelist);
                 EventAlarmDAO.Instance.InsertRange(new List<EventAlarmEntity> { alarm });
                 _actives[key] = alarm.SnowId;
                 return alarm.SnowId;

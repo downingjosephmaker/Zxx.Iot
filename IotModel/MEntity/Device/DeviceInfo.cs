@@ -47,18 +47,6 @@ namespace IotModel
         [SugarColumn(ColumnName = "device_gateway", IsNullable = true, Length = 30, ColumnDescription = "设备网关编号", DefaultValue = "", ColumnDataType = "varchar")]
         public string DeviceGateway { get; set; }
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        [SugarColumn(ColumnName = "build_id", ColumnDescription = "建筑ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 组织ID
-        ///</summary>
-        [DisplayName("组织ID")]
-        [SugarColumn(ColumnName = "dept_id", ColumnDescription = "组织ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int DeptId { get; set; }
-        /// <summary>
         /// 设备IP地址
         ///</summary>
         [DisplayName("设备IP地址")]

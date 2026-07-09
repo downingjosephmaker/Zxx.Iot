@@ -50,8 +50,6 @@ namespace IotWebApi.Controllers
             {
                 list.ForEach(t =>
                 {
-                    t.BuildName = t.BuildName.BeautifyFullName();
-                    t.DeptName = t.DeptName.BeautifyFullName();
                     t.DeviceName = t.DeviceName.BeautifyFullName();
                 });
             }
@@ -74,18 +72,12 @@ namespace IotWebApi.Controllers
             Message = "设备控制日志保存失败。";
 
             var unitlist = BasicunitInfoDAO.Instance.GetList();
-            var buildlist = BuildInfoDAO.Instance.GetList();
-            var deptlist = DeptInfoDAO.Instance.GetList();
             var typelist = DeviceTypeDAO.Instance.GetList();
 
             foreach (var zklog in list)
             {
                 var unit = unitlist.FirstOrDefault(t => t.UnitId == zklog.UnitId);
                 if (unit != null) zklog.UnitName = unit.UnitName;
-                var dept = deptlist.FirstOrDefault(t => t.DeptId == zklog.DeptId);
-                if (dept != null) zklog.DeptName = dept.FullName.BeautifyFullName();
-                var build = buildlist.FirstOrDefault(t => t.BuildId == zklog.BuildId);
-                if (build != null) zklog.BuildName = build.FullName.BeautifyFullName();
                 var devtype = typelist.FirstOrDefault(t => t.TypeCode == zklog.DeviceTypeCode);
                 if (devtype != null) zklog.DeviceTypeName = devtype.TypeName;
             }

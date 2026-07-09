@@ -61,34 +61,6 @@ namespace IotWebApi.Areas.Event.Data
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                if (builds.IsZxxAny())
-                {
-                    var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "in",
-                        ParamValue = buildids.ListIntZdToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                if (depts.IsZxxAny())
-                {
-                    var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "in",
-                        ParamValue = deptsids.ListIntZdToString()
-                    });
-                }
-            }
 
             #endregion
 
@@ -184,34 +156,6 @@ namespace IotWebApi.Areas.Event.Data
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                if (builds.IsZxxAny())
-                {
-                    var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "in",
-                        ParamValue = buildids.ListIntZdToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                if (depts.IsZxxAny())
-                {
-                    var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "in",
-                        ParamValue = deptsids.ListIntZdToString()
-                    });
-                }
-            }
 
             #endregion
 
@@ -302,34 +246,6 @@ namespace IotWebApi.Areas.Event.Data
                     ParamType = "in",
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
-            }
-            else if (model.BuildId > 0)
-            {
-                var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                if (builds.IsZxxAny())
-                {
-                    var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "in",
-                        ParamValue = buildids.ListIntZdToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                if (depts.IsZxxAny())
-                {
-                    var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "in",
-                        ParamValue = deptsids.ListIntZdToString()
-                    });
-                }
             }
 
             #endregion

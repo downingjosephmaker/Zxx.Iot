@@ -90,8 +90,6 @@ namespace IotWebApi.Controllers
                                     ParentId = wj.DeviceId,
                                     DeviceName = $"{i}号内机",
                                     DeviceAdr = i,
-                                    BuildId = wj.BuildId,
-                                    DeptId = wj.DeptId,
                                     UnitId = wj.UnitId,
                                     DeviceTypeCode = "vrvpt",
                                     DeviceTypeFullCode = "|zhkt|vrvpt|",
@@ -199,8 +197,6 @@ namespace IotWebApi.Controllers
             if (list.IsZxxAny())
             {
                 var unitlist = BasicunitInfoDAO.Instance.GetList();
-                var buildlist = BuildInfoDAO.Instance.GetList();
-                var deptlist = DeptInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
                 foreach (var dev in list)
                 {
@@ -209,10 +205,6 @@ namespace IotWebApi.Controllers
                     info.ExpandObject = dev.ExpandObject;
                     var unit = unitlist.FirstOrDefault(t => t.UnitId == info.UnitId);
                     if (unit != null) info.UnitName = unit.UnitName;
-                    var dept = deptlist.FirstOrDefault(t => t.DeptId == info.DeptId);
-                    if (dept != null) info.DeptName = dept.FullName.BeautifyFullName();
-                    var build = buildlist.FirstOrDefault(t => t.BuildId == info.BuildId);
-                    if (build != null) info.BuildName = build.FullName.BeautifyFullName();
                     var devtype = typelist.FirstOrDefault(t => t.TypeCode == info.DeviceTypeCode);
                     if (devtype != null) info.DeviceTypeName = devtype.TypeName;
                     alllist.Add(info);
@@ -220,126 +212,6 @@ namespace IotWebApi.Controllers
             }
             TotalCount = totalNumber;
             return alllist;
-        }
-
-        /// <summary>
-        /// 根据建筑ID获取网络拓扑图数据
-        /// </summary>
-        /// <param name="buildid">建筑ID</param>
-        /// <returns></returns>
-        [HttpGet]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Device)]
-        public List<TuopuAutoInfo> GetAutoMapDataByBuild(int buildid)
-        {
-            List<TuopuAutoInfo> list = new List<TuopuAutoInfo>();
-            var optmdl = Request.GetToken();
-            var buildlist = BuildInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
-            if (!buildlist.IsZxxAny()) return list;
-            var _buildlist = buildlist.FindAll(t => t.FullCode.Contains($"|{buildid}|"));
-            if (!_buildlist.IsZxxAny()) return list;
-            var bids = _buildlist.Select(t => t.BuildId).Distinct().ToList();
-            var devicelist = DeviceInfoDAO.Instance.GetListBy(t => bids.Contains(t.BuildId));
-            if (!devicelist.IsZxxAny()) return list;
-            //var paramlist = DeviceParamDAO.Instance.GetListBy(t => bids.Contains(t.BuildId));
-            //if (!paramlist.IsZxxAny()) return list;
-
-            foreach (var device in devicelist)
-            {
-                TuopuAutoInfo info = new TuopuAutoInfo
-                {
-                    DeviceId = device.DeviceId,
-                    DeviceName = device.DeviceName,
-                    ParentId = device.ParentId,
-                    DeviceState = device.DeviceState,
-                };
-                if (device.DeviceAlarm == 1) info.DeviceState = 3;
-                //if (info.DeviceState == 2)
-                //{
-                //    var _paramlist = paramlist.FindAll(t => t.DeviceId == info.DeviceId);
-                //    if (_paramlist.IsZxxAny() && _paramlist.Any(t => t.ExpandObjects.Any(k => k.IsAlarm == 1))) info.DeviceState = 2;
-                //}
-                list.Add(info);
-            }
-
-            return list;
-        }
-
-        /// <summary>
-        /// 根据建筑ID查询统计分析设备列表
-        /// </summary>
-        /// <param name="buildid">建筑ID</param>
-        /// <param name="devicetype">设备类型</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Device)]
-        public List<DeviceInfo> GetReprotList(int buildid, string devicetype)
-        {
-            var typeList = SysCommonDAO<DeviceType>.Instance.GetListBy(t => t.FullCode.Contains($"|{devicetype}|"));
-            if (!typeList.IsZxxAny()) return new List<DeviceInfo>();
-            var _typecodes = typeList.Select(t => t.TypeCode).Distinct().ToList();
-            //var typeparamlist = DeviceTypeParamDAO.Instance.GetListBy(t => t.IsReport && _typecodes.Contains(t.DeviceTypeCode));
-            //if (!typeparamlist.IsZxxAny()) return new List<DeviceInfo>();
-            //var typecodes = typeparamlist.Select(t => t.DeviceTypeCode).Distinct().ToList();
-            var buildlist = BuildInfoDAO.Instance.GetListBy(t => t.FullCode.Contains($"|{buildid}|"));
-            if (!buildlist.IsZxxAny()) return new List<DeviceInfo>();
-            var buildids = buildlist.Select(t => t.BuildId).Distinct().ToList();
-            var list = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => buildids.Contains(t.BuildId) && _typecodes.Contains(t.DeviceTypeCode));
-            return list;
-        }
-
-        /// <summary>
-        /// 根据建筑ID查询极值分析设备列表
-        /// </summary>
-        /// <param name="buildid">建筑ID</param>
-        /// <param name="devicetype">设备类型</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Device)]
-        public List<DeviceInfo> GetPeakList(int buildid, string devicetype)
-        {
-            var typeList = SysCommonDAO<DeviceType>.Instance.GetListBy(t => t.FullCode.Contains($"|{devicetype}|"));
-            if (!typeList.IsZxxAny()) return new List<DeviceInfo>();
-            var _typecodes = typeList.Select(t => t.TypeCode).Distinct().ToList();
-            var typeparamlist = DeviceTypeParamDAO.Instance.GetListBy(t => t.IsPeak && _typecodes.Contains(t.DeviceTypeCode));
-            if (!typeparamlist.IsZxxAny()) return new List<DeviceInfo>();
-            var typecodes = typeparamlist.Select(t => t.DeviceTypeCode).Distinct().ToList();
-            var buildlist = BuildInfoDAO.Instance.GetListBy(t => t.FullCode.Contains($"|{buildid}|"));
-            if (!buildlist.IsZxxAny()) return new List<DeviceInfo>();
-            var buildids = buildlist.Select(t => t.BuildId).Distinct().ToList();
-            var list = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => buildids.Contains(t.BuildId) && typecodes.Contains(t.DeviceTypeCode));
-            return list;
-        }
-
-        /// <summary>
-        /// 根据建筑ID查询运行数据设备列表
-        /// </summary>
-        /// <param name="buildid">建筑ID</param>
-        /// <param name="devicetype">设备类型</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Device)]
-        public List<DeviceInfo> GetRunListByBuild(int buildid, string devicetype)
-        {
-            var typeList = SysCommonDAO<DeviceType>.Instance.GetListBy(t => t.FullCode.Contains($"|{devicetype}|"));
-            if (!typeList.IsZxxAny()) return new List<DeviceInfo>();
-            typeList.RemoveAll(t => t.FullCode.Contains($"|zhwg|"));
-            var _typecodes = typeList.Select(t => t.TypeCode).Distinct().ToList();
-            //var typeparamlist = DeviceTypeParamDAO.Instance.GetListBy(t => t.IsReport && _typecodes.Contains(t.DeviceTypeCode));
-            //if (!typeparamlist.IsZxxAny()) return new List<DeviceInfo>();
-            //var typecodes = typeparamlist.Select(t => t.DeviceTypeCode).Distinct().ToList();
-            var buildlist = BuildInfoDAO.Instance.GetListBy(t => t.FullCode.Contains($"|{buildid}|"));
-            if (!buildlist.IsZxxAny()) return new List<DeviceInfo>();
-            var buildids = buildlist.Select(t => t.BuildId).Distinct().ToList();
-            var list = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => buildids.Contains(t.BuildId) && _typecodes.Contains(t.DeviceTypeCode));
-            return list;
         }
 
         /// <summary>
@@ -469,267 +341,6 @@ namespace IotWebApi.Controllers
 
             #endregion
 
-            #region 建筑
-
-            int index = 1;
-            List<BuildInfo> buildlist = new List<BuildInfo>();
-            var oldbuildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-            List<BuildInfo> _buildlist = new List<BuildInfo>();
-            foreach (var row in importRes.Data)
-            {
-                bool iscontue = false;
-                if (!string.IsNullOrEmpty(row.BuildId1))
-                {
-                    if (oldbuildlist.Count > 0)
-                    {
-                        if (oldbuildlist.Find(t => t.BuildName == row.BuildId1) == null)
-                        {
-                            iscontue = true;
-                        }
-                    }
-                    else
-                    {
-                        iscontue = true;
-                    }
-                    if (!iscontue) continue;
-
-                    if (_buildlist.Find(t => t.BuildName == row.BuildId1) == null)
-                    {
-                        BuildInfo buildinginfo = new BuildInfo();
-                        buildinginfo.BuildName = row.BuildId1;
-                        buildinginfo.ParentId = 0;
-                        buildinginfo.UnitId = unit.UnitId;
-                        buildinginfo.CreateId = optmdl.UserID;
-                        buildinginfo.CreateTime = DateTime.Now.ToDateTimeString();
-                        buildinginfo.CreateName = optmdl.UserName;
-                        buildinginfo.UpdateId = optmdl.UserID;
-                        buildinginfo.UpdateTime = DateTime.Now.ToDateTimeString();
-                        buildinginfo.UpdateName = optmdl.UserName;
-                        Status = BuildInfoDAO.Instance.Insert(buildinginfo);
-                        _buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                        index++;
-                    }
-                }
-            }
-
-            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-            index = 1;
-            foreach (var row in importRes.Data)
-            {
-                var pbuild = buildlist.Find(t => t.BuildName == row.BuildId1);
-                if (pbuild != null)
-                {
-                    if (!string.IsNullOrEmpty(row.BuildId2))
-                    {
-                        if (buildlist.Count > 0)
-                        {
-                            string str = $"{row.BuildId1}|{row.BuildId2}";
-                            if (buildlist.Find(t => t.FullName == str) == null)
-                            {
-                                BuildInfo buildinginfo = new BuildInfo();
-                                buildinginfo.BuildName = row.BuildId2;
-                                buildinginfo.ParentId = pbuild.BuildId;
-                                buildinginfo.UnitId = unit.UnitId;
-                                buildinginfo.CreateId = optmdl.UserID;
-                                buildinginfo.CreateTime = DateTime.Now.ToDateTimeString();
-                                buildinginfo.CreateName = optmdl.UserName;
-                                buildinginfo.UpdateId = optmdl.UserID;
-                                buildinginfo.UpdateTime = DateTime.Now.ToDateTimeString();
-                                buildinginfo.UpdateName = optmdl.UserName;
-                                Status = BuildInfoDAO.Instance.Insert(buildinginfo);
-                                buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                                index++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            buildlist = null;
-            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-
-            index = 1;
-            foreach (var row in importRes.Data)
-            {
-                string str = $"{row.BuildId1}|{row.BuildId2}";
-                var pbuild = buildlist.Find(t => t.FullName == str);
-                if (pbuild != null)
-                {
-                    if (!string.IsNullOrEmpty(row.BuildId3))
-                    {
-                        str = $"{row.BuildId1}|{row.BuildId2}|{row.BuildId3}";
-                        if (buildlist.Find(t => t.FullName == str) == null)
-                        {
-                            BuildInfo buildinginfo = new BuildInfo();
-                            buildinginfo.BuildName = row.BuildId3;
-                            buildinginfo.ParentId = pbuild.BuildId;
-                            buildinginfo.UnitId = unit.UnitId;
-                            buildinginfo.CreateId = optmdl.UserID;
-                            buildinginfo.CreateTime = DateTime.Now.ToDateTimeString();
-                            buildinginfo.CreateName = optmdl.UserName;
-                            buildinginfo.UpdateId = optmdl.UserID;
-                            buildinginfo.UpdateTime = DateTime.Now.ToDateTimeString();
-                            buildinginfo.UpdateName = optmdl.UserName;
-                            Status = BuildInfoDAO.Instance.Insert(buildinginfo);
-                            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                            index++;
-                        }
-                    }
-                }
-            }
-
-            buildlist = null;
-            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-
-            index = 1;
-            foreach (var row in importRes.Data)
-            {
-                string str = $"{row.BuildId1}|{row.BuildId2}|{row.BuildId3}";
-                var pbuild = buildlist.Find(t => t.FullName == str);
-                if (pbuild != null)
-                {
-                    if (!string.IsNullOrEmpty(row.BuildId4))
-                    {
-                        str = $"{row.BuildId1}|{row.BuildId2}|{row.BuildId3}|{row.BuildId4}";
-                        if (buildlist.Find(t => t.FullName == str) == null)
-                        {
-                            BuildInfo buildinginfo = new BuildInfo();
-                            buildinginfo.BuildName = row.BuildId4;
-                            buildinginfo.ParentId = pbuild.BuildId;
-                            buildinginfo.UnitId = unit.UnitId;
-                            buildinginfo.CreateId = optmdl.UserID;
-                            buildinginfo.CreateTime = DateTime.Now.ToDateTimeString();
-                            buildinginfo.CreateName = optmdl.UserName;
-                            buildinginfo.UpdateId = optmdl.UserID;
-                            buildinginfo.UpdateTime = DateTime.Now.ToDateTimeString();
-                            buildinginfo.UpdateName = optmdl.UserName;
-                            Status = BuildInfoDAO.Instance.Insert(buildinginfo);
-                            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                            index++;
-                        }
-                    }
-                }
-            }
-
-            buildlist = null;
-            buildlist = BuildInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-
-            #endregion
-
-            #region 部门
-
-            index = 1;
-            List<DeptInfo> departlist = new List<DeptInfo>();
-            var olddepartlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-            List<DeptInfo> _departlist = new List<DeptInfo>();
-            foreach (var row in importRes.Data)
-            {
-                bool iscontue = false;
-                if (!string.IsNullOrEmpty(row.DeptId1))
-                {
-                    if (olddepartlist.Count > 0)
-                    {
-                        if (olddepartlist.Find(t => t.DeptName == row.DeptId1) == null)
-                        {
-                            iscontue = true;
-                        }
-                    }
-                    else
-                    {
-                        iscontue = true;
-                    }
-                    if (!iscontue) continue;
-
-                    if (_departlist.Find(t => t.DeptName == row.DeptId1) == null)
-                    {
-                        DeptInfo depart = new DeptInfo();
-                        depart.DeptName = row.DeptId1;
-                        depart.ParentId = 0;
-                        depart.UnitId = unit.UnitId;
-                        depart.CreateId = optmdl.UserID;
-                        depart.CreateTime = DateTime.Now.ToDateTimeString();
-                        depart.CreateName = optmdl.UserName;
-                        depart.UpdateId = optmdl.UserID;
-                        depart.UpdateTime = DateTime.Now.ToDateTimeString();
-                        depart.UpdateName = optmdl.UserName;
-                        Status = DeptInfoDAO.Instance.Insert(depart);
-                        _departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                        index++;
-                    }
-                }
-            }
-
-            departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-            index = 1;
-            foreach (var row in importRes.Data)
-            {
-                var pbuild = departlist.Find(t => t.DeptName == row.DeptId1);
-                if (pbuild != null)
-                {
-                    if (!string.IsNullOrEmpty(row.DeptId2))
-                    {
-                        if (departlist.Count > 0)
-                        {
-                            string str = $"{row.DeptId1}|{row.DeptId2}";
-                            if (departlist.Find(t => t.FullName == str) == null)
-                            {
-                                DeptInfo depart = new DeptInfo();
-                                depart.DeptName = row.DeptId2;
-                                depart.ParentId = pbuild.DeptId;
-                                depart.UnitId = unit.UnitId;
-                                depart.CreateId = optmdl.UserID;
-                                depart.CreateTime = DateTime.Now.ToDateTimeString();
-                                depart.CreateName = optmdl.UserName;
-                                depart.UpdateId = optmdl.UserID;
-                                depart.UpdateTime = DateTime.Now.ToDateTimeString();
-                                depart.UpdateName = optmdl.UserName;
-                                Status = DeptInfoDAO.Instance.Insert(depart);
-                                departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                                index++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            departlist = null;
-            departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-
-            index = 1;
-            foreach (var row in importRes.Data)
-            {
-                string str = $"{row.DeptId1}|{row.DeptId2}";
-                var pbuild = departlist.Find(t => t.FullName == str);
-                if (pbuild != null)
-                {
-                    if (!string.IsNullOrEmpty(row.DeptId3))
-                    {
-                        str = $"{row.DeptId1}|{row.DeptId2}|{row.DeptId3}";
-                        if (departlist.Find(t => t.FullName == str) == null)
-                        {
-                            DeptInfo depart = new DeptInfo();
-                            depart.DeptName = row.DeptId3;
-                            depart.ParentId = pbuild.DeptId;
-                            depart.UnitId = unit.UnitId;
-                            depart.CreateId = optmdl.UserID;
-                            depart.CreateTime = DateTime.Now.ToDateTimeString();
-                            depart.CreateName = optmdl.UserName;
-                            depart.UpdateId = optmdl.UserID;
-                            depart.UpdateTime = DateTime.Now.ToDateTimeString();
-                            depart.UpdateName = optmdl.UserName;
-                            Status = DeptInfoDAO.Instance.Insert(depart);
-                            departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-                            index++;
-                        }
-                    }
-                }
-            }
-
-            departlist = null;
-            departlist = DeptInfoDAO.Instance.GetListBy(it => it.UnitId == unit.UnitId).ToList();
-
-            #endregion
-
             #region 设备
 
             Dictionary<string, string> typelist = new();
@@ -748,26 +359,6 @@ namespace IotWebApi.Controllers
             {
                 if (!string.IsNullOrEmpty(row.DeviceName))
                 {
-                    var build = GetBuild(row.BuildId1, row.BuildId2, row.BuildId3, row.BuildId4, buildlist);
-                    var depart = GetDepart(row.DeptId1, row.DeptId2, null, departlist);
-                    int buildID = 0;
-                    int departID = 0;
-                    if (build == null || build.BuildId <= 0)
-                    {
-                        errorstr += $"{row.DeviceName}建筑不存在{Environment.NewLine}";
-                    }
-                    else
-                    {
-                        buildID = build.BuildId;
-                    }
-                    if (depart == null || depart.DeptId <= 0)
-                    {
-                        errorstr += $"{row.DeviceName}部门不存在{Environment.NewLine}";
-                    }
-                    else
-                    {
-                        departID = depart.DeptId;
-                    }
                     var port = 0;
                     if (!int.TryParse(row.DevicePort, out port))
                         port = 0;
@@ -780,7 +371,7 @@ namespace IotWebApi.Controllers
                     var parentid = 0;
                     if (!string.IsNullOrEmpty(row.ParentName))
                     {
-                        var pdev = oldequiplist.Find(t => t.DeviceName == row.ParentName && t.BuildId == buildID);
+                        var pdev = oldequiplist.Find(t => t.DeviceName == row.ParentName);
                         if (pdev != null)
                             parentid = pdev.DeviceId;
                     }
@@ -794,7 +385,7 @@ namespace IotWebApi.Controllers
                             errorstr += $"{row.DeviceName}设备类型不存在{Environment.NewLine}";
                             continue;
                         }
-                        if (oldequiplist.Find(t => t.DeviceName == row.DeviceName && t.BuildId == buildID) == null)
+                        if (oldequiplist.Find(t => t.DeviceName == row.DeviceName) == null)
                         {
                             string _DeviceGuid = row.DeviceGuid;
                             if (_DeviceGuid.IsZxxNullOrEmpty() && !row.DeviceIp.IsZxxNullOrEmpty())
@@ -813,8 +404,6 @@ namespace IotWebApi.Controllers
                                 DevicePort = port,
                                 DeviceCom = comm,
                                 DeviceAdr = switchadr,
-                                BuildId = buildID,
-                                DeptId = departID,
                                 UnitId = unit.UnitId,
                                 DeviceTypeCode = actualTypeCode,
                                 DeviceTypeFullCode = devtype.FullCode,
@@ -849,71 +438,6 @@ namespace IotWebApi.Controllers
             #endregion
 
             return data;
-        }
-
-        private BuildInfo GetBuild(string a1, string a2, string a3, string a4, List<BuildInfo> list)
-        {
-            BuildInfo result = null;
-
-            string buildname = "";
-            if (!string.IsNullOrEmpty(a1))
-            {
-                buildname = a1;
-                if (!string.IsNullOrEmpty(a2))
-                {
-                    buildname += $"|{a2}";
-                    if (!string.IsNullOrEmpty(a3))
-                    {
-                        buildname += $"|{a3}";
-                        if (!string.IsNullOrEmpty(a4))
-                        {
-                            buildname += $"|{a4}";
-                        }
-                    }
-                }
-            }
-            var build = list.Find(t => t.FullName == buildname);
-            if (build != null)
-            {
-                result = build;
-            }
-
-            return result;
-        }
-
-        private DeptInfo GetDepart(string a1, string a2, string a3, List<DeptInfo> list)
-        {
-            DeptInfo depart = null;
-
-            var parent = list.Find(t => t.DeptName == a1);
-            if (parent != null)
-            {
-                if (!string.IsNullOrEmpty(a2))
-                {
-                    var child = list.Find(t => t.DeptName == a2 && t.ParentId == parent.DeptId);
-                    if (child != null)
-                    {
-                        if (!string.IsNullOrEmpty(a3))
-                        {
-                            depart = list.Find(t => t.DeptName == a3 && t.ParentId == child.DeptId);
-                            if (depart == null)
-                            {
-                                depart = child;
-                            }
-                        }
-                        else
-                        {
-                            depart = child;
-                        }
-                    }
-                }
-                else
-                {
-                    depart = parent;
-                }
-            }
-
-            return depart;
         }
 
         private string ExtractTypeCode(string input)

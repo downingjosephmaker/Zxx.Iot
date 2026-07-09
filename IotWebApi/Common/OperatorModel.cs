@@ -29,36 +29,6 @@ namespace IotWebApi
         public List<int> _UnitIdList = new List<int>();
 
         /// <summary>
-        /// 权限建筑
-        /// </summary>
-        public List<BuildInfo> _BuildAllList = new List<BuildInfo>();
-
-        /// <summary>
-        /// 单位ID和建筑信息集合
-        /// </summary>
-        public Dictionary<int, List<BuildInfo>> _BuildInfoDic { get; set; } = new Dictionary<int, List<BuildInfo>>();
-
-        /// <summary>
-        /// 权限建筑ID
-        /// </summary>
-        public List<int> _BuildIdList = new List<int>();
-
-        /// <summary>
-        /// 权限部门
-        /// </summary>
-        public List<DeptInfo> _DeptAllList = new List<DeptInfo>();
-
-        /// <summary>
-        /// 单位ID和部门信息集合
-        /// </summary>
-        public Dictionary<int, List<DeptInfo>> _DeptInfoDic { get; set; } = new Dictionary<int, List<DeptInfo>>();
-
-        /// <summary>
-        /// 权限部门ID
-        /// </summary>
-        public List<int> _DeptIdList = new List<int>();
-
-        /// <summary>
         /// 组织查询级别(1:多公司 2：公司 3：部门)
         /// </summary>
         public int DepartSelectLevel { get; set; } = 3;
@@ -175,11 +145,6 @@ namespace IotWebApi
         /// 权限单位
         /// </summary>
         public BasicunitInfo unit = null;
-
-        /// <summary>
-        /// 权限部门
-        /// </summary>
-        public DeptInfo dept = null;
     }
 
 }

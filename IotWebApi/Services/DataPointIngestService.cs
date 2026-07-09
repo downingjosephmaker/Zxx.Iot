@@ -249,13 +249,11 @@ namespace IotWebApi.Services
             if (protocoldatas.IsZxxAny() || runstatedatas.IsZxxAny() || controlresults.IsZxxAny())
             {
                 var unitlist = BasicunitInfoDAO.Instance.GetList();
-                var buildlist = BuildInfoDAO.Instance.GetList();
-                var deptlist = DeptInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
 
-                if (protocoldatas.IsZxxAny()) SaveProtocolData(protocoldatas, unitlist, buildlist, deptlist, typelist);
-                if (runstatedatas.IsZxxAny()) SaveRunState(runstatedatas, unitlist, buildlist, deptlist, typelist);
-                if (controlresults.IsZxxAny()) SaveControlResult(controlresults, unitlist, buildlist, deptlist, typelist);
+                if (protocoldatas.IsZxxAny()) SaveProtocolData(protocoldatas, unitlist, typelist);
+                if (runstatedatas.IsZxxAny()) SaveRunState(runstatedatas, unitlist, typelist);
+                if (controlresults.IsZxxAny()) SaveControlResult(controlresults, unitlist, typelist);
             }
         }
 
@@ -266,7 +264,7 @@ namespace IotWebApi.Services
         /// <summary>
         /// 协议解析数据入库(合并更新设备参数最新值与设备在线状态,写入历史记录快照)
         /// </summary>
-        private void SaveProtocolData(List<DeviceData> datas, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+        private void SaveProtocolData(List<DeviceData> datas, List<BasicunitInfoEntity> unitlist, List<DeviceTypeEntity> typelist)
         {
             var validlist = datas.Where(t => t.device != null && t.deviceparam.IsZxxAny()).ToList();
             if (!validlist.IsZxxAny()) return;
@@ -331,7 +329,7 @@ namespace IotWebApi.Services
                         IsAlarm = t.IsAlarm
                     }).ToList()
                 };
-                FillEventBase(history, data.device, unitlist, buildlist, deptlist, typelist);
+                FillEventBase(history, data.device, unitlist, typelist);
                 historylist.Add(history);
             }
 
@@ -372,8 +370,6 @@ namespace IotWebApi.Services
                 var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
                 if (!devlist.IsZxxAny()) return;
                 var unitlist = BasicunitInfoDAO.Instance.GetList();
-                var buildlist = BuildInfoDAO.Instance.GetList();
-                var deptlist = DeptInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
 
                 var historylist = new List<EventHistoryEntity>();
@@ -392,7 +388,7 @@ namespace IotWebApi.Services
                             ParamValue = t.Value.HasValue ? t.Value.Value.ToString() : t.ValueStr
                         }).ToList()
                     };
-                    FillEventBase(history, dbdev, unitlist, buildlist, deptlist, typelist);
+                    FillEventBase(history, dbdev, unitlist, typelist);
                     historylist.Add(history);
                 }
                 if (historylist.IsZxxAny()) EventHistoryDAO.Instance.InsertRange(historylist);
@@ -406,7 +402,7 @@ namespace IotWebApi.Services
         /// <summary>
         /// 运行状态入库(设备上下线状态变化时更新设备状态并写入运行日志)
         /// </summary>
-        private void SaveRunState(List<DeviceData> datas, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+        private void SaveRunState(List<DeviceData> datas, List<BasicunitInfoEntity> unitlist, List<DeviceTypeEntity> typelist)
         {
             var validlist = datas.Where(t => t.device != null).ToList();
             if (!validlist.IsZxxAny()) return;
@@ -454,7 +450,7 @@ namespace IotWebApi.Services
                     EventType = "设备通信恢复",
                     EventContent = $"设备[{dbdev.DeviceName}]通信恢复上线"
                 };
-                FillEventBase(run, dbdev, unitlist, buildlist, deptlist, typelist);
+                FillEventBase(run, dbdev, unitlist, typelist);
                 runlist.Add(run);
             }
 
@@ -478,8 +474,6 @@ namespace IotWebApi.Services
                 var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
                 if (!devlist.IsZxxAny()) return;
                 var unitlist = BasicunitInfoDAO.Instance.GetList();
-                var buildlist = BuildInfoDAO.Instance.GetList();
-                var deptlist = DeptInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
 
                 var deviceupdates = new List<DeviceInfoEntity>();
@@ -500,7 +494,7 @@ namespace IotWebApi.Services
                         EventType = "设备离线",
                         EventContent = $"设备[{dbdev.DeviceName}]通信中断离线,原因:{confirm.Reason}"
                     };
-                    FillEventBase(run, dbdev, unitlist, buildlist, deptlist, typelist);
+                    FillEventBase(run, dbdev, unitlist, typelist);
                     runlist.Add(run);
                 }
                 if (deviceupdates.IsZxxAny()) DeviceInfoDAO.Instance.UpdateColumns(deviceupdates, it => new { it.DeviceState });
@@ -526,7 +520,7 @@ namespace IotWebApi.Services
         /// <summary>
         /// 控制结果入库(逐台设备写入控制日志)
         /// </summary>
-        private void SaveControlResult(List<PluginControlResultMessage> results, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+        private void SaveControlResult(List<PluginControlResultMessage> results, List<BasicunitInfoEntity> unitlist, List<DeviceTypeEntity> typelist)
         {
             var deviceids = results.SelectMany(t => t.DeviceResults).Select(t => t.DeviceId).Distinct().ToList();
             if (!deviceids.IsZxxAny()) return;
@@ -554,7 +548,7 @@ namespace IotWebApi.Services
                     var dbdev = devlist.FirstOrDefault(t => t.DeviceId == item.DeviceId);
                     if (dbdev != null)
                     {
-                        FillEventBase(control, dbdev, unitlist, buildlist, deptlist, typelist);
+                        FillEventBase(control, dbdev, unitlist, typelist);
                     }
                     else
                     {
@@ -606,8 +600,6 @@ namespace IotWebApi.Services
                 var devlist = DeviceInfoDAO.Instance.GetListBy(t => deviceids.Contains(t.DeviceId));
                 if (!devlist.IsZxxAny()) return;
                 var unitlist = BasicunitInfoDAO.Instance.GetList();
-                var buildlist = BuildInfoDAO.Instance.GetList();
-                var deptlist = DeptInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
 
                 var signallist = new List<EventSignal>();
@@ -622,7 +614,7 @@ namespace IotWebApi.Services
                     var verdict = _alarmMaskService.Apply(fire, dbdev);
                     if (verdict == AlarmMaskVerdict.完全屏蔽) continue;
                     // 四态生命周期流转(§9.2:EventAlarm去重登记/恢复回写;静默告警照常流转)
-                    long alarmid = _alarmLifecycleService.Apply(fire, dbdev, unitlist, buildlist, deptlist, typelist);
+                    long alarmid = _alarmLifecycleService.Apply(fire, dbdev, unitlist, typelist);
                     // 设备告警标志:成立置位,恢复且无其他活动告警才清零(Ack清零由处理接口承接)
                     if (fire.EventType == "设备告警" && dbdev.DeviceAlarm != 1)
                     {
@@ -643,7 +635,7 @@ namespace IotWebApi.Services
                         EventValue = fire.ValueText,
                         EventContent = verdict == AlarmMaskVerdict.静默 ? $"[已屏蔽]{content}" : content
                     };
-                    FillEventBase(signal, dbdev, unitlist, buildlist, deptlist, typelist);
+                    FillEventBase(signal, dbdev, unitlist, typelist);
                     signallist.Add(signal);
                     if (verdict != AlarmMaskVerdict.静默)
                     {
@@ -711,23 +703,17 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 填充记录基础字段(设备归属的单位/建筑/部门/设备类型信息;
+        /// 填充记录基础字段(设备归属的单位/设备类型信息;
         /// internal供告警生命周期服务复用同一填充逻辑)
         /// </summary>
-        internal static void FillEventBase(EventBase evt, DeviceInfo device, List<BasicunitInfoEntity> unitlist, List<BuildInfo> buildlist, List<DeptInfo> deptlist, List<DeviceTypeEntity> typelist)
+        internal static void FillEventBase(EventBase evt, DeviceInfo device, List<BasicunitInfoEntity> unitlist, List<DeviceTypeEntity> typelist)
         {
             evt.DeviceId = device.DeviceId;
             evt.DeviceName = device.DeviceName;
             evt.DeviceTypeCode = device.DeviceTypeCode;
             evt.UnitId = device.UnitId;
-            evt.BuildId = device.BuildId;
-            evt.DeptId = device.DeptId;
             var unit = unitlist.FirstOrDefault(t => t.UnitId == device.UnitId);
             if (unit != null) evt.UnitName = unit.UnitName;
-            var build = buildlist.FirstOrDefault(t => t.BuildId == device.BuildId);
-            if (build != null) evt.BuildName = build.FullName.BeautifyFullName();
-            var dept = deptlist.FirstOrDefault(t => t.DeptId == device.DeptId);
-            if (dept != null) evt.DeptName = dept.FullName.BeautifyFullName();
             var devtype = typelist.FirstOrDefault(t => t.TypeCode == device.DeviceTypeCode);
             if (devtype != null) evt.DeviceTypeName = devtype.TypeName;
         }

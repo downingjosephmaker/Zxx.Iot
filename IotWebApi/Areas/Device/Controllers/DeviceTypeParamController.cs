@@ -255,26 +255,6 @@ namespace IotWebApi.Controllers
         }
 
         /// <summary>
-        /// 根据设备类型查询参数类别下拉框(统计数据-建筑)
-        /// </summary>
-        /// <param name="buildid">建筑ID</param>
-        /// <returns></returns>
-        [HttpGet]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Device)]
-        public List<ParamTypeInfo> GetParamReportSelectByBuild(int buildid)
-        {
-            var devices = DeviceInfoDAO.Instance.GetListBy(t => t.BuildId == buildid);
-            if (!devices.IsZxxAny()) return new List<ParamTypeInfo>();
-            var typecode = devices.Select(t => t.DeviceTypeCode).Distinct().ToList();
-            var paramlist = DeviceTypeParamDAO.Instance.GetListBy(t => typecode.Contains(t.DeviceTypeCode) && t.IsReport);
-            var list = GetTypeParamList(paramlist, true);
-            TotalCount = list.IsZxxAny() ? list.Count : 0;
-            return list;
-        }
-
-        /// <summary>
         /// 根据中台json文件和设备类型编码导入参数信息
         /// </summary>
         /// <param name="file">json文件</param>

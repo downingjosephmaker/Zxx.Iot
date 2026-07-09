@@ -149,16 +149,6 @@ namespace IotWebApi.Areas.Device.Models
         [DisplayName("设备子类型")]
         public int SubType { get; set; }
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 建筑名称
-        ///</summary>
-        [DisplayName("建筑名称")]
-        public string BuildName { get; set; }
-        /// <summary>
         /// 部门ID
         ///</summary>
         [DisplayName("部门ID")]

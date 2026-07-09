@@ -53,16 +53,6 @@ namespace IotWebApi.Areas.Event.Models
         public int pagesize { get; set; } = 20;
 
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 部门ID
-        ///</summary>
-        [DisplayName("部门ID")]
-        public int DeptId { get; set; }
-        /// <summary>
         /// 设备名称
         /// </summary>
         [DisplayName("设备名称")]

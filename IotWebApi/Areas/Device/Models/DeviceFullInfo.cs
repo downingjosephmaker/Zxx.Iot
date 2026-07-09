@@ -14,16 +14,6 @@ namespace IotWebApi.Areas.Device.Models
         [DisplayName("单位名称")]
         public string UnitName { get; set; }
         /// <summary>
-        /// 建筑名称
-        ///</summary>
-        [DisplayName("建筑名称")]
-        public string BuildName { get; set; }
-        /// <summary>
-        /// 部门名称
-        ///</summary>
-        [DisplayName("部门名称")]
-        public string DeptName { get; set; }
-        /// <summary>
         /// 设备类型名称
         ///</summary>
         [DisplayName("设备类型名称")]

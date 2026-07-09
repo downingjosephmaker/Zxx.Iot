@@ -21,30 +21,6 @@ namespace IotModel
         [SugarColumn(ColumnName = "unit_name", IsNullable = true, Length = 50, ColumnDescription = "单位名称", DefaultValue = "", ColumnDataType = "varchar")]
         public string UnitName { get; set; }
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        [SugarColumn(ColumnName = "build_id", ColumnDescription = "建筑ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 建筑名称
-        ///</summary>
-        [DisplayName("建筑名称")]
-        [SugarColumn(ColumnName = "build_name", IsNullable = true, Length = 300, ColumnDescription = "建筑名称", DefaultValue = "", ColumnDataType = "varchar")]
-        public string BuildName { get; set; }
-        /// <summary>
-        /// 部门ID
-        ///</summary>
-        [DisplayName("部门ID")]
-        [SugarColumn(ColumnName = "dept_id", ColumnDescription = "部门ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int DeptId { get; set; }
-        /// <summary>
-        /// 部门名称
-        ///</summary>
-        [DisplayName("部门名称")]
-        [SugarColumn(ColumnName = "dept_name", IsNullable = true, Length = 300, ColumnDescription = "部门名称", DefaultValue = "", ColumnDataType = "varchar")]
-        public string DeptName { get; set; }
-        /// <summary>
         /// 设备类型编码
         ///</summary>
         [DisplayName("设备类型编码")]

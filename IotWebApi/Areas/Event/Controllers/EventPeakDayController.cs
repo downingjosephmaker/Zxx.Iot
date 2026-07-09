@@ -275,46 +275,6 @@ namespace IotWebApi.Controllers
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                actionModel.sconlist.Add(new SelectCondition
-                {
-                    ParamName = "BuildId",
-                    ParamType = "=",
-                    ParamValue = model.BuildId.ToString()
-                });
-                //var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                //if (builds.IsZxxAny())
-                //{
-                //    var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                //    actionModel.sconlist.Add(new SelectCondition
-                //    {
-                //        ParamName = "BuildId",
-                //        ParamType = "in",
-                //        ParamValue = buildids.ListIntZdToString()
-                //    });
-                //}
-            }
-            else if (model.DeptId > 0)
-            {
-                actionModel.sconlist.Add(new SelectCondition
-                {
-                    ParamName = "DeptId",
-                    ParamType = "=",
-                    ParamValue = model.DeptId.ToString()
-                });
-                //var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                //if (depts.IsZxxAny())
-                //{
-                //    var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                //    actionModel.sconlist.Add(new SelectCondition
-                //    {
-                //        ParamName = "DeptId",
-                //        ParamType = "in",
-                //        ParamValue = deptsids.ListIntZdToString()
-                //    });
-                //}
-            }
 
             #endregion
 

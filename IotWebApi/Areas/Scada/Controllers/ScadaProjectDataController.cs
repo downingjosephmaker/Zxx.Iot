@@ -39,47 +39,6 @@ namespace IotWebApi.Areas.Scada.Controllers
                     ParamValue = optmdl.UnitId.ToString(),
                 });
             }
-            //部门权限
-            {
-                List<DeptInfo> departInfo = new();
-                foreach (var item in optmdl._DeptInfoDic)
-                {
-                    departInfo.AddRange(item.Value);
-                }
-                var departCon = model.sconlist.Find(s => s.ParamName.ToLower() == "deptid" && s.ParamType == "=" && !s.ParamValue.IsZxxNullOrEmpty());
-                if (departCon != null)
-                {
-                    var deptid = departCon.ParamValue.ToZxxInt();
-                    var tempDepart = DeptInfoDAO.Instance.GetOneBy(s => s.DeptId == deptid);
-                    if (tempDepart != null)
-                    {
-                        if (departInfo.Any(s => s.FullCode.Contains($"|{tempDepart.DeptId}|") && s.TreeLevel > tempDepart.TreeLevel))
-                        {
-                            model.sconlist.Remove(departCon);
-                            var thirdIdList = departInfo.Where(s => s.FullCode.Contains($"|{tempDepart.DeptId}|")).Select(s => s.DeptId);
-                            if (thirdIdList.IsZxxAny())
-                            {
-                                model.sconlist.Add(new SelectCondition()
-                                {
-                                    ParamName = "DeptId",
-                                    ParamType = "in",
-                                    ParamValue = thirdIdList.ListIntZdToString(","),
-                                });
-                            }
-                        }
-                    }
-                }
-                else   //部门权限为必需条件
-                {
-                    model.sconlist.Add(new SelectCondition()
-                    {
-                        ParamName = "dept_id",
-                        ParamValue = optmdl._DeptIdList.ListIntZdToString(","),
-                        ParamType = "in",
-                    });
-                }
-            }
-
             var list = DeviceInfoDAO.Instance.GetListByPage(model, ref totalNumber);
             if (list.IsZxxAny())
             {

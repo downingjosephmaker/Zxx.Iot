@@ -276,13 +276,6 @@ namespace IotWebApi.Controllers
         private List<ReportAnalysisInfo> GetDayDataList(EnergyAnalysisSelect model)
         {
             List<ReportAnalysisInfo> infolist = new List<ReportAnalysisInfo>();
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询
-            if (model.DeviceId == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return infolist;
-            }
-            //DataTypeDL 转设备类型码集合
-            var dtypecodes = GetDeviceTypeCodes(model.DataTypeDL);
             //IsTotal=1 时康慈单位排除总表/热水回水/热水进水设备
             bool excludeKangci = model.IsTotal == 1 && IsKangciUnit();
             long rmin = SnowModel.Instance.GetId(model.StartTime.Date);
@@ -293,28 +286,6 @@ namespace IotWebApi.Controllers
                 var _datalist = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && t.DeviceId == model.DeviceId
                     && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true));
                 if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-            }
-            else if (model.BuildId > 0)
-            {
-                var buildids = GetTargetBuildIds(model.BuildId, model.QueryMode);
-                if (buildids.IsZxxAny())
-                {
-                    var _datalist = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && buildids.Contains(t.BuildId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var deptids = GetTargetDeptIds(model.DeptId, model.QueryMode);
-                if (deptids.IsZxxAny())
-                {
-                    var _datalist = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && deptids.Contains(t.DeptId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
             }
             if (!datalist.IsZxxAny()) return infolist;
 
@@ -362,13 +333,6 @@ namespace IotWebApi.Controllers
         private List<ReportAnalysisInfo> GetWeekDataList(EnergyAnalysisSelect model)
         {
             List<ReportAnalysisInfo> infolist = new List<ReportAnalysisInfo>();
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询
-            if (model.DeviceId == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return infolist;
-            }
-            //DataTypeDL 转设备类型码集合
-            var dtypecodes = GetDeviceTypeCodes(model.DataTypeDL);
             //IsTotal=1 时康慈单位排除总表/热水回水/热水进水设备
             bool excludeKangci = model.IsTotal == 1 && IsKangciUnit();
             DateTime starttime = model.StartTime.GetFirstDayOfWeek();
@@ -381,28 +345,6 @@ namespace IotWebApi.Controllers
                 var _datalist = EventReportWeekDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && t.DeviceId == model.DeviceId
                     && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true));
                 if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-            }
-            else if (model.BuildId > 0)
-            {
-                var buildids = GetTargetBuildIds(model.BuildId, model.QueryMode);
-                if (buildids.IsZxxAny())
-                {
-                    var _datalist = EventReportWeekDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && buildids.Contains(t.BuildId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var deptids = GetTargetDeptIds(model.DeptId, model.QueryMode);
-                if (deptids.IsZxxAny())
-                {
-                    var _datalist = EventReportWeekDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && deptids.Contains(t.DeptId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
             }
             if (!datalist.IsZxxAny()) return infolist;
 
@@ -445,13 +387,6 @@ namespace IotWebApi.Controllers
         private List<ReportAnalysisInfo> GetMonthDataList(EnergyAnalysisSelect model)
         {
             List<ReportAnalysisInfo> infolist = new List<ReportAnalysisInfo>();
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询
-            if (model.DeviceId == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return infolist;
-            }
-            //DataTypeDL 转设备类型码集合
-            var dtypecodes = GetDeviceTypeCodes(model.DataTypeDL);
             //IsTotal=1 时康慈单位排除总表/热水回水/热水进水设备
             bool excludeKangci = model.IsTotal == 1 && IsKangciUnit();
             DateTime starttime = new DateTime(model.StartTime.Year, model.StartTime.Month, 1);
@@ -465,28 +400,6 @@ namespace IotWebApi.Controllers
                 var _datalist = EventReportMonthDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && t.DeviceId == model.DeviceId
                     && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true));
                 if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-            }
-            else if (model.BuildId > 0)
-            {
-                var buildids = GetTargetBuildIds(model.BuildId, model.QueryMode);
-                if (buildids.IsZxxAny())
-                {
-                    var _datalist = EventReportMonthDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && buildids.Contains(t.BuildId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var deptids = GetTargetDeptIds(model.DeptId, model.QueryMode);
-                if (deptids.IsZxxAny())
-                {
-                    var _datalist = EventReportMonthDAO.Instance.GetListBy(t => t.SnowId >= rmin && t.SnowId < rmax && deptids.Contains(t.DeptId)
-                        && (excludeKangci ? !IsKangciExcludedDeviceName(t.DeviceName) : true)
-                        && (dtypecodes.IsZxxAny() ? dtypecodes.Contains(t.DeviceTypeCode) : true));
-                    if (_datalist.IsZxxAny()) datalist.AddRange(_datalist);
-                }
             }
             if (!datalist.IsZxxAny()) return infolist;
 
@@ -524,62 +437,6 @@ namespace IotWebApi.Controllers
             }
 
             return infolist;
-        }
-
-        /// <summary>
-        /// 设备大类(DataTypeDL)转设备类型码集合(取最大树层级的叶子类型码)
-        /// </summary>
-        /// <param name="dataTypeDL">设备大类编码</param>
-        /// <returns>类型码集合；为空时返回空集合(表示不限类型)</returns>
-        private List<string> GetDeviceTypeCodes(string dataTypeDL)
-        {
-            List<string> codes = new List<string>();
-            if (dataTypeDL.IsZxxNullOrEmpty()) return codes;
-            var dtypes = SysCommonDAO<DeviceType>.Instance.GetListBy(t => t.FullCode.Contains($"|{dataTypeDL}|"));
-            if (dtypes.IsZxxAny())
-            {
-                int maxlevel = dtypes.Max(t => t.TreeLevel);
-                codes = dtypes.FindAll(t => t.TreeLevel == maxlevel).Select(t => t.TypeCode).Distinct().ToList();
-            }
-            return codes;
-        }
-
-        /// <summary>
-        /// 根据 BuildId 和 QueryMode 解析目标建筑ID集合
-        /// </summary>
-        /// <param name="buildId">建筑ID</param>
-        /// <param name="queryMode">0:仅当前 1:含子集 2:仅子集</param>
-        /// <returns>目标建筑ID集合</returns>
-        private List<int> GetTargetBuildIds(int buildId, int queryMode)
-        {
-            if (queryMode == 0) return new List<int> { buildId };
-            //含子集/仅子集：按 FullCode 查询所有下级建筑
-            var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{buildId}|"));
-            var buildids = builds.IsZxxAny() ? builds.Select(t => t.BuildId).Distinct().ToList() : new List<int> { buildId };
-            //仅子集时剔除当前建筑本身
-            if (queryMode == 2) buildids.RemoveAll(t => t == buildId);
-            //含子集但没查到子集时，退回当前建筑
-            if (buildids.Count == 0) buildids.Add(buildId);
-            return buildids;
-        }
-
-        /// <summary>
-        /// 根据 DeptId 和 QueryMode 解析目标部门ID集合
-        /// </summary>
-        /// <param name="deptId">部门ID</param>
-        /// <param name="queryMode">0:仅当前 1:含子集 2:仅子集</param>
-        /// <returns>目标部门ID集合</returns>
-        private List<int> GetTargetDeptIds(int deptId, int queryMode)
-        {
-            if (queryMode == 0) return new List<int> { deptId };
-            //含子集/仅子集：按 FullCode 查询所有下级部门
-            var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{deptId}|"));
-            var deptids = depts.IsZxxAny() ? depts.Select(t => t.DeptId).Distinct().ToList() : new List<int> { deptId };
-            //仅子集时剔除当前部门本身
-            if (queryMode == 2) deptids.RemoveAll(t => t == deptId);
-            //含子集但没查到子集时，退回当前部门
-            if (deptids.Count == 0) deptids.Add(deptId);
-            return deptids;
         }
 
         /// <summary>

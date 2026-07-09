@@ -52,16 +52,6 @@ namespace IotWebApi.Areas.Event.Models
     public class RestfulAlarmAnalysisOne
     {
         /// <summary>
-        /// 建筑ID
-        ///</summary>
-        [DisplayName("建筑ID")]
-        public int BuildId { get; set; }
-        /// <summary>
-        /// 配电房名称
-        ///</summary>
-        [DisplayName("配电房名称")]
-        public string BuildName { get; set; }
-        /// <summary>
         /// 报警处理率
         ///</summary>
         [DisplayName("报警处理率")]

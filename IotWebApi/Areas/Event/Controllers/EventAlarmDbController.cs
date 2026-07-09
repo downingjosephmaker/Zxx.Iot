@@ -46,8 +46,6 @@ namespace IotWebApi.Controllers
             {
                 list.ForEach(t =>
                 {
-                    t.BuildName = t.BuildName.BeautifyFullName();
-                    t.DeptName = t.DeptName.BeautifyFullName();
                     t.DeviceName = t.DeviceName.BeautifyFullName();
                 });
             }
@@ -275,56 +273,6 @@ namespace IotWebApi.Controllers
             if (yesyearva > 0) json["年环比"] = ((double)(dayyearva - yesyearva) * 100 / yesyearva).ToString("f2") + "%";
 
             return json.ToJson();
-        }
-
-        /// <summary>
-        /// 告警分析页面根据选中建筑子集显示报警排名
-        /// </summary>
-        /// <param name="starttime">开始时间</param>
-        /// <param name="endtime">结束时间</param>
-        /// <returns></returns>
-        [HttpGet]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Event)]
-        public List<RestfulAlarmAnalysisOne> GetAlarmAnalysisOne(DateTime starttime, DateTime endtime)
-        {
-            List<RestfulAlarmAnalysisOne> list = new List<RestfulAlarmAnalysisOne>();
-            var optmdl = Request.GetToken();
-            var BuildAllList = BuildInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
-
-            long min = SnowModel.Instance.GetId(starttime);
-            long max = SnowModel.Instance.GetId(endtime.AddDays(1));
-
-            //2级建筑排名
-            var buildlist = BuildAllList.FindAll(t => t.TreeLevel == 2);
-            foreach (var item in buildlist)
-            {
-                RestfulAlarmAnalysisOne one = new RestfulAlarmAnalysisOne
-                {
-                    BuildId = item.BuildId,
-                    BuildName = item.BuildName,
-                    AlarmChuLiLv = "0%"
-                };
-                var _buildlist = BuildAllList.FindAll(t => t.FullCode.Contains(item.FullCode));
-                if (!_buildlist.IsZxxAny()) continue;
-                var bids = _buildlist.Select(t => t.BuildId).ToList();
-                var dayvalue = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && bids.Contains(t.BuildId) && t.EventType != "离线");
-                if (dayvalue > 0)
-                {
-                    one.AlarmAllCount = dayvalue;
-                    var dayvalue2 = SysCommonDAO<EventAlarm>.Instance.GetListCount(t => t.SnowId >= min && t.SnowId <= max && bids.Contains(t.BuildId) && t.CheckResult == "已处理" && t.EventType != "离线");
-                    if (dayvalue2 > 0)
-                    {
-                        long checkcount = dayvalue2;
-                        one.AlarmChuLiLv = (checkcount.ToDouble() * 100 / one.AlarmAllCount).ToString("f2") + "%";
-                    }
-                }
-                list.Add(one);
-            }
-
-            TotalCount = list.Count;
-            return list;
         }
 
         /// <summary>

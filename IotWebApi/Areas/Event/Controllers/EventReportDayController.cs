@@ -66,17 +66,7 @@ namespace IotWebApi.Controllers
             {
                 int chartid = devdata.DeviceId;
                 string chartname = devdata.DeviceName;
-                if (model.BuildId > 0)
-                {
-                    chartid = devdata.BuildId;
-                    chartname = devdata.BuildName;
-                }
-                else if (model.DeptId > 0)
-                {
-                    chartid = devdata.DeptId;
-                    chartname = devdata.DeptName;
-                }
-                else if (devdata.DeviceId > 0)
+                if (devdata.DeviceId > 0)
                 {
                     var arry = chartname.Split('|').ToList();
                     chartname = arry.Last();
@@ -248,64 +238,6 @@ namespace IotWebApi.Controllers
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级建筑
-                    var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                    if (builds.IsZxxAny())
-                    {
-                        var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                        //仅子集时剔除当前建筑本身
-                        if (model.QueryMode == 2) buildids.RemoveAll(t => t == model.BuildId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "BuildId",
-                            ParamType = "in",
-                            ParamValue = buildids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "=",
-                        ParamValue = model.BuildId.ToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级部门
-                    var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                    if (depts.IsZxxAny())
-                    {
-                        var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                        //仅子集时剔除当前部门本身
-                        if (model.QueryMode == 2) deptsids.RemoveAll(t => t == model.DeptId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "DeptId",
-                            ParamType = "in",
-                            ParamValue = deptsids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "=",
-                        ParamValue = model.DeptId.ToString()
-                    });
-                }
-            }
 
             if (!model.DataTypeDL.IsZxxNullOrEmpty())
             {
@@ -327,12 +259,6 @@ namespace IotWebApi.Controllers
             }
 
             #endregion
-
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询，避免拉到非预期设备
-            if (model.DeviceIds.Count == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return (new List<ReportAnalysisInfo>(), 0);
-            }
 
             //康慈单位在合计(IsTotal=1)时排除总表/热水回水/热水进水设备(避免与分表重复累加)；非合计时保留
             if (IsKangciUnit() && model.IsTotal == 1)
@@ -452,64 +378,6 @@ namespace IotWebApi.Controllers
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级建筑
-                    var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                    if (builds.IsZxxAny())
-                    {
-                        var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                        //仅子集时剔除当前建筑本身
-                        if (model.QueryMode == 2) buildids.RemoveAll(t => t == model.BuildId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "BuildId",
-                            ParamType = "in",
-                            ParamValue = buildids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "=",
-                        ParamValue = model.BuildId.ToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级部门
-                    var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                    if (depts.IsZxxAny())
-                    {
-                        var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                        //仅子集时剔除当前部门本身
-                        if (model.QueryMode == 2) deptsids.RemoveAll(t => t == model.DeptId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "DeptId",
-                            ParamType = "in",
-                            ParamValue = deptsids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "=",
-                        ParamValue = model.DeptId.ToString()
-                    });
-                }
-            }
 
             if (!model.DataTypeDL.IsZxxNullOrEmpty())
             {
@@ -531,12 +399,6 @@ namespace IotWebApi.Controllers
             }
 
             #endregion
-
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询，避免拉到非预期设备
-            if (model.DeviceIds.Count == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return (new List<ReportAnalysisInfo>(), 0);
-            }
 
             //康慈单位在合计(IsTotal=1)时排除总表/热水回水/热水进水设备(避免与分表重复累加)；非合计时保留
             if (IsKangciUnit() && model.IsTotal == 1)
@@ -652,64 +514,6 @@ namespace IotWebApi.Controllers
                     ParamValue = model.DeviceIds.ListIntZdToString()
                 });
             }
-            else if (model.BuildId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级建筑
-                    var builds = SysCommonDAO<BuildInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.BuildId}|"));
-                    if (builds.IsZxxAny())
-                    {
-                        var buildids = builds.Select(t => t.BuildId).Distinct().ToList();
-                        //仅子集时剔除当前建筑本身
-                        if (model.QueryMode == 2) buildids.RemoveAll(t => t == model.BuildId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "BuildId",
-                            ParamType = "in",
-                            ParamValue = buildids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "BuildId",
-                        ParamType = "=",
-                        ParamValue = model.BuildId.ToString()
-                    });
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                if (model.QueryMode == 1 || model.QueryMode == 2)
-                {
-                    //含子集/仅子集：按 FullCode 查询所有下级部门
-                    var depts = SysCommonDAO<DeptInfo>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DeptId}|"));
-                    if (depts.IsZxxAny())
-                    {
-                        var deptsids = depts.Select(t => t.DeptId).Distinct().ToList();
-                        //仅子集时剔除当前部门本身
-                        if (model.QueryMode == 2) deptsids.RemoveAll(t => t == model.DeptId);
-                        actionModel.sconlist.Add(new SelectCondition
-                        {
-                            ParamName = "DeptId",
-                            ParamType = "in",
-                            ParamValue = deptsids.ListIntZdToString()
-                        });
-                    }
-                }
-                else
-                {
-                    actionModel.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "DeptId",
-                        ParamType = "=",
-                        ParamValue = model.DeptId.ToString()
-                    });
-                }
-            }
             if (!model.DataTypeDL.IsZxxNullOrEmpty())
             {
                 var dtypes = SysCommonDAO<DeviceType>.Instance.GetListBy(t => t.FullCode.Contains($"|{model.DataTypeDL}|"));
@@ -731,11 +535,6 @@ namespace IotWebApi.Controllers
 
             #endregion
 
-            //BuildId/DeptId 维度必须传设备大类(DataTypeDL)，否则不查询，避免拉到非预期设备
-            if (model.DeviceIds.Count == 0 && model.DataTypeDL.IsZxxNullOrEmpty() && (model.BuildId > 0 || model.DeptId > 0))
-            {
-                return (new List<ReportAnalysisInfo>(), 0);
-            }
 
             //康慈单位在合计(IsTotal=1)时排除总表/热水回水/热水进水设备(避免与分表重复累加)；非合计时保留
             if (IsKangciUnit() && model.IsTotal == 1)
@@ -855,17 +654,7 @@ namespace IotWebApi.Controllers
 
             int chartid = devdata.DeviceId;
             string chartname = devdata.DeviceName;
-            if (model.BuildId > 0)
-            {
-                chartid = devdata.BuildId;
-                chartname = devdata.BuildName;
-            }
-            else if (model.DeptId > 0)
-            {
-                chartid = devdata.DeptId;
-                chartname = devdata.DeptName;
-            }
-            else if (devdata.DeviceId > 0)
+            if (devdata.DeviceId > 0)
             {
                 var arry = chartname.Split('|').ToList();
                 chartname = arry.Last();
@@ -1046,505 +835,6 @@ namespace IotWebApi.Controllers
             TotalCount = totalNumber.ToZxxInt();
             return list;
         }
-
-        #region 电力分项统计
-
-        /// <summary>
-        /// 电力分项统计(曲线)
-        /// </summary>
-        /// <param name="model">曲线</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Event)]
-        public DataChart GetSubDataChartBy(DataReportChartSelect model)
-        {
-            TotalCount = 1;
-            DataChart chart = new DataChart();
-            if (model.DataType == 1 && model.EndTime != model.StartTime)
-            {
-                Message = "选中时类型时，开始时间和结束时间必须相同";
-                return chart;
-            }
-            if (model.BuildId == 0 && model.DeptId == 0)
-            {
-                Message = "建筑ID和部门D必须赋值一个";
-                return chart;
-            }
-            //按能耗类型分类设备信息
-            Dictionary<string, List<DeviceInfoEntity>> dicEnergyType = new Dictionary<string, List<DeviceInfoEntity>>();
-
-            #region 电力分项设备特殊处理
-
-            List<DeviceInfoEntity> devicelist = new List<DeviceInfoEntity>();
-            if (model.BuildId > 0)
-            {
-                var list = DeviceInfoDAO.Instance.GetListBy(t => t.BuildId == model.BuildId && t.DeviceTypeFullCode.Contains($"|zndb|"));
-                if (list.IsZxxAny())
-                {
-                    list.RemoveAll(t => t.ExpandObject.EnergyType.IsZxxNullOrEmpty());
-                    devicelist.AddRange(list);
-                    model.BuildId = 0;
-                    model.DeviceIds.AddRange(devicelist.Select(t => t.DeviceId));
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var list = DeviceInfoDAO.Instance.GetListBy(t => t.DeptId == model.DeptId && t.DeviceTypeFullCode.Contains($"|zndb|"));
-                if (list.IsZxxAny())
-                {
-                    list.RemoveAll(t => t.ExpandObject.EnergyType.IsZxxNullOrEmpty());
-                    devicelist.AddRange(list);
-                    model.DeptId = 0;
-                    model.DeviceIds.AddRange(devicelist.Select(t => t.DeviceId));
-                }
-            }
-            if (devicelist.Count == 0)
-            {
-                Message = "没有查询到分项设备数据";
-                return chart;
-            }
-            var optmdl = Request.GetToken();
-            if (IsKangciUnit()) devicelist.RemoveAll(t => IsKangciExcludedDeviceName(t.DeviceName));
-            foreach (var item in devicelist)
-            {
-                if (!dicEnergyType.ContainsKey(item.ExpandObject.EnergyType))
-                {
-                    dicEnergyType.Add(item.ExpandObject.EnergyType, new List<DeviceInfoEntity> { item });
-                }
-                else
-                {
-                    dicEnergyType[item.ExpandObject.EnergyType].Add(item);
-                }
-            }
-            model.ParamCodes = new List<string> { "energy" };
-            model.ParamTypeName = "";
-
-            #endregion
-
-            int timemax = 0;
-
-            #region 数据获取时间段整理
-
-            List<ReportAnalysisInfo> datalist = new List<ReportAnalysisInfo>();
-            if (model.DataType >= 1 && model.DataType <= 2)
-            {
-                //本期日能耗表查询
-                var datavalue = GetDayDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffDays(model.EndTime);
-            }
-            else if (model.DataType == 3)
-            {
-                //本期周能耗表查询
-                var datavalue = GetWeekDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffWeeks(model.EndTime);
-            }
-            else if (model.DataType >= 4 && model.DataType <= 5)
-            {
-                //本期月能耗表查询
-                var datavalue = GetMonthDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffMonths(model.EndTime) + 1;
-                if (model.DataType == 5) timemax = model.StartTime.DiffYears(model.EndTime) + 1;
-            }
-            if (datalist.Count == 0) return chart;
-
-            #endregion
-
-            int keyindex = 1;
-            foreach (var key in dicEnergyType.Keys)
-            {
-                DataChartChild chartChild = new DataChartChild()
-                {
-                    ChartTuLiId = $"{keyindex}-{key}",
-                };
-                chartChild.ChartTuLi = key;
-                chart.ChartTuY.Add(chartChild);
-                keyindex++;
-            }
-
-            if (model.DataType == 1)
-            {
-                var reporttype = typeof(Expand_EventReportWeek);
-                var fields = typeof(Expand_EventReportWeek).GetProperties();
-                for (int i = 0; i < 24; i++)
-                {
-                    chart.ChartX.Add($"{i}时");
-                    string fieldname = $"HourValue{i}";
-                    foreach (var item in chart.ChartTuY)
-                    {
-                        var tulilsit = item.ChartTuLiId.Split("-").ToList();
-                        string key = tulilsit[1];
-                        string value = "-";
-                        var devids = dicEnergyType[key].Select(t => t.DeviceId);
-                        var _datalist = datalist.FindAll(t => devids.Contains(t.DeviceId));
-                        if (_datalist.IsZxxAny())
-                        {
-                            var field = fields.FirstOrDefault(t => t.Name == fieldname);
-                            if (field != null)
-                            {
-                                double totalbq = 0;
-                                bool isvalue = false;
-                                foreach (var _data in _datalist)
-                                {
-                                    var param = _data.ExpandObjects.FirstOrDefault(t => t.ParamCode == "energy");
-                                    if (param != null)
-                                    {
-                                        totalbq += field.GetValue(param).ToZxxDouble();
-                                        isvalue = true;
-                                    }
-                                }
-                                if (isvalue) value = totalbq.ToString("f1");
-                            }
-                        }
-                        item.ChartY.Add(value);
-                    }
-                }
-            }
-            else
-            {
-                long minbq = 0, maxbq = 0;
-                for (int i = 0; i <= timemax; i++)
-                {
-                    string DateStr = "";
-                    if (model.DataType == 2)
-                    {
-                        DateTime rtime = model.StartTime.AddDays(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddDays(1));
-                        DateStr = $"{rtime.Day}日";
-                    }
-                    else if (model.DataType == 3)
-                    {
-                        DateTime starttime = model.StartTime.GetFirstDayOfWeek();
-                        DateTime rtime = starttime.AddDays(i * 7);
-                        int rweek = rtime.GetWeekOfYear();
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddDays(7));
-                        DateStr = $"{rweek}周";
-                    }
-                    else if (model.DataType == 4)
-                    {
-                        DateTime starttime = new DateTime(model.StartTime.Year, model.StartTime.Month, 1);
-                        DateTime rtime = starttime.AddMonths(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddMonths(1));
-                        DateStr = $"{rtime.Month}月";
-                    }
-                    else if (model.DataType == 5)
-                    {
-                        DateTime starttime = new DateTime(model.StartTime.Year, 1, 1);
-                        DateTime rtime = starttime.AddYears(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddYears(1));
-                        DateStr = $"{rtime.Year}年";
-                    }
-
-                    chart.ChartX.Add(DateStr);
-                    foreach (var item in chart.ChartTuY)
-                    {
-                        var tulilsit = item.ChartTuLiId.Split("-").ToList();
-                        string key = tulilsit[1];
-                        string value = "-";
-                        var devids = dicEnergyType[key].Select(t => t.DeviceId);
-                        var _datalist = datalist.FindAll(t => t.SnowId >= minbq && t.SnowId < maxbq && devids.Contains(t.DeviceId));
-                        if (_datalist.IsZxxAny())
-                        {
-                            double totalbq = 0;
-                            bool isvalue = false;
-                            foreach (var _data in _datalist)
-                            {
-                                var param = _data.ExpandObjects.FirstOrDefault(t => t.ParamCode == "energy");
-                                if (param != null)
-                                {
-                                    totalbq += param.TotalValue.ToZxxDouble();
-                                    isvalue = true;
-                                }
-                            }
-                            if (isvalue) value = totalbq.ToString("f1");
-                        }
-                        item.ChartY.Add(value);
-                    }
-                }
-            }
-
-            return chart;
-        }
-
-        /// <summary>
-        /// 电力分项统计(表格)
-        /// </summary>
-        /// <param name="model">表格</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Event)]
-        public DataReport GetSubDataTableBy(DataReportTableSelect model)
-        {
-            DataReport reportTable = new DataReport();
-            if (model.DataType == 1 && model.EndTime != model.StartTime)
-            {
-                Message = "选中时类型时，开始时间和结束时间必须相同";
-                return reportTable;
-            }
-            //Table 报表强制按时间升序输出(旧→新)，忽略前端 DataSort
-            model.DataSort = 1;
-            if (model.DeviceIds.Count == 0 && model.BuildId == 0 && model.DeptId == 0)
-            {
-                Message = "设备ID集合、建筑ID和部门D必须赋值一个";
-                return reportTable;
-            }
-
-            // 添加固定列的表头
-            reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "RowNo", ColumnCn = "序号" });
-            reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "DateStr", ColumnCn = "时间" });
-
-            //按能耗类型分类设备信息
-            Dictionary<string, List<DeviceInfoEntity>> dicEnergyType = new Dictionary<string, List<DeviceInfoEntity>>();
-
-            #region 电力分项设备特殊处理
-
-            List<DeviceInfoEntity> devicelist = new List<DeviceInfoEntity>();
-            if (model.BuildId > 0)
-            {
-                var list = DeviceInfoDAO.Instance.GetListBy(t => t.BuildId == model.BuildId && t.DeviceTypeFullCode.Contains($"|zndb|"));
-                if (list.IsZxxAny())
-                {
-                    list.RemoveAll(t => t.ExpandObject.EnergyType.IsZxxNullOrEmpty());
-                    devicelist.AddRange(list);
-                    model.BuildId = 0;
-                    model.DeviceIds.AddRange(devicelist.Select(t => t.DeviceId));
-                }
-            }
-            else if (model.DeptId > 0)
-            {
-                var list = DeviceInfoDAO.Instance.GetListBy(t => t.DeptId == model.DeptId && t.DeviceTypeFullCode.Contains($"|zndb|"));
-                if (list.IsZxxAny())
-                {
-                    list.RemoveAll(t => t.ExpandObject.EnergyType.IsZxxNullOrEmpty());
-                    devicelist.AddRange(list);
-                    model.DeptId = 0;
-                    model.DeviceIds.AddRange(devicelist.Select(t => t.DeviceId));
-                }
-            }
-            if (devicelist.Count == 0)
-            {
-                Message = "没有查询到分项设备数据";
-                return reportTable;
-            }
-            var optmdl = Request.GetToken();
-            if (IsKangciUnit()) devicelist.RemoveAll(t => IsKangciExcludedDeviceName(t.DeviceName));
-            foreach (var item in devicelist)
-            {
-                if (!dicEnergyType.ContainsKey(item.ExpandObject.EnergyType))
-                {
-                    dicEnergyType.Add(item.ExpandObject.EnergyType, new List<DeviceInfoEntity> { item });
-                }
-                else
-                {
-                    dicEnergyType[item.ExpandObject.EnergyType].Add(item);
-                }
-            }
-            model.ParamCodes = new List<string> { "energy" };
-            model.ParamTypeName = "";
-
-            #endregion
-
-            int timemax = 0;
-
-            #region 数据获取时间段整理
-
-            List<ReportAnalysisInfo> datalist = new List<ReportAnalysisInfo>();
-            if (model.DataType >= 1 && model.DataType <= 2)
-            {
-                //本期日能耗表查询
-                var datavalue = GetDayDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffDays(model.EndTime);
-            }
-            else if (model.DataType == 3)
-            {
-                //本期周能耗表查询
-                var datavalue = GetWeekDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffWeeks(model.EndTime);
-            }
-            else if (model.DataType >= 4 && model.DataType <= 5)
-            {
-                //本期月能耗表查询
-                var datavalue = GetMonthDataList(model);
-                if (datavalue.Item1.IsZxxAny()) datalist.AddRange(datavalue.Item1);
-                timemax = model.StartTime.DiffMonths(model.EndTime) + 1;
-                if (model.DataType == 5) timemax = model.StartTime.DiffYears(model.EndTime) + 1;
-            }
-            if (datalist.Count == 0) return reportTable;
-
-            #endregion
-
-            // 添加动态列的表头
-            foreach (var key in dicEnergyType.Keys)
-            {
-                reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = key, ColumnCn = key });
-            }
-
-            if (model.DataType == 1)
-            {
-                var reporttype = typeof(Expand_EventReportWeek);
-                var fields = typeof(Expand_EventReportWeek).GetProperties();
-                for (int i = 0; i < 24; i++)
-                {
-                    var row = new Dictionary<string, object>();
-                    row["RowNo"] = i + 1;
-                    row["DateStr"] = $"{model.StartTime.ToDateString()} {i}时";
-
-                    string fieldname = $"HourValue{i}";
-                    foreach (var key in dicEnergyType.Keys)
-                    {
-                        var devids = dicEnergyType[key].Select(t => t.DeviceId);
-                        var _datalist = datalist.FindAll(t => devids.Contains(t.DeviceId));
-                        if (_datalist.IsZxxAny())
-                        {
-                            var field = fields.FirstOrDefault(t => t.Name == fieldname);
-                            if (field != null)
-                            {
-                                double totalbq = 0;
-                                string unit = "";
-                                foreach (var _data in _datalist)
-                                {
-                                    var param = _data.ExpandObjects.FirstOrDefault(t => t.ParamCode == "energy");
-                                    if (param != null)
-                                    {
-                                        totalbq += field.GetValue(param).ToZxxDouble();
-                                        unit = param.ValueUnit;
-                                    }
-                                }
-                                row[key] = totalbq.ToString("f1") + unit;
-                            }
-                        }
-                    }
-                    reportTable.ReportDatas.Add(row);
-                }
-            }
-            else
-            {
-                long minbq = 0, maxbq = 0;
-                for (int i = 0; i <= timemax; i++)
-                {
-                    var row = new Dictionary<string, object>();
-                    row["RowNo"] = i + 1;
-                    string DateStr = "";
-                    if (model.DataType == 2)
-                    {
-                        DateTime rtime = model.StartTime.AddDays(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddDays(1));
-                        DateStr = $"{rtime.Day}日";
-                    }
-                    else if (model.DataType == 3)
-                    {
-                        DateTime starttime = model.StartTime.GetFirstDayOfWeek();
-                        DateTime rtime = starttime.AddDays(i * 7);
-                        int rweek = rtime.GetWeekOfYear();
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddDays(7));
-                        DateStr = $"{rweek}周";
-                    }
-                    else if (model.DataType == 4)
-                    {
-                        DateTime starttime = new DateTime(model.StartTime.Year, model.StartTime.Month, 1);
-                        DateTime rtime = starttime.AddMonths(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddMonths(1));
-                        DateStr = $"{rtime.Month}月";
-                    }
-                    else if (model.DataType == 5)
-                    {
-                        DateTime starttime = new DateTime(model.StartTime.Year, 1, 1);
-                        DateTime rtime = starttime.AddYears(i);
-                        minbq = SnowModel.Instance.GetId(rtime);
-                        maxbq = SnowModel.Instance.GetId(rtime.AddYears(1));
-                        DateStr = $"{rtime.Year}年";
-                    }
-                    row["DateStr"] = DateStr;
-
-                    foreach (var key in dicEnergyType.Keys)
-                    {
-                        var devids = dicEnergyType[key].Select(t => t.DeviceId);
-                        var _datalist = datalist.FindAll(t => devids.Contains(t.DeviceId));
-                        if (_datalist.IsZxxAny())
-                        {
-                            double totalbq = 0;
-                            bool isvalue = false;
-                            string unit = "";
-                            foreach (var _data in _datalist)
-                            {
-                                var param = _data.ExpandObjects.FirstOrDefault(t => t.ParamCode == "energy");
-                                if (param != null)
-                                {
-                                    totalbq += param.TotalValue.ToZxxDouble();
-                                    unit = param.ValueUnit;
-                                    isvalue = true;
-                                }
-                            }
-                            if (isvalue) row[key] = totalbq.ToString("f1") + unit;
-                        }
-                    }
-                    reportTable.ReportDatas.Add(row);
-                }
-            }
-
-            return reportTable;
-        }
-
-        /// <summary>
-        /// 电力分项统计(导出)
-        /// </summary>
-        /// <param name="model">导出</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Event)]
-        public MetaData GetSubDataTableExcelBy(DataReportChartSelect model)
-        {
-            TotalCount = 1;
-            MetaData data = new MetaData
-            {
-                Status = false,
-                Message = "电力分项统计数据导出失败"
-            };
-            DataReportTableSelect tableSelect = new DataReportTableSelect();
-            model.CopyTypeValue(tableSelect);
-            tableSelect.page = 1;
-            // pagesize=0 走全量查询(GetListBy)，保证导出数据完整
-            tableSelect.pagesize = 0;
-            var reportTable = GetSubDataTableBy(tableSelect);
-            if (reportTable == null || reportTable.ReportDatas.Count == 0)
-            {
-                data.Message = "电力分项统计无数据可导出";
-                return data;
-            }
-            // 生成文件名
-            string fileName = $"电力分项统计数据-{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.xlsx";
-            string filepath = Path.Combine(OperatorCommon.NetLocalfile, "export", fileName);
-            string serverparh = Path.Combine(OperatorCommon.NetYingShefile, "export", fileName);
-            filepath.EnsureDirectory(true);
-
-            if (reportTable.ExportExcelCom(filepath))
-            {
-                // 返回文件信息
-                data.Status = true;
-                data.Message = "电力分项统计数据导出成功";
-                data.Result = serverparh;
-            }
-            return data;
-        }
-
-        #endregion
 
         #region 碳排分析
 
@@ -2295,9 +1585,9 @@ namespace IotWebApi.Controllers
         /// 数据来源参考 GetDataTableExcelBy(日/周/月能耗表)，导出格式参考 GetReoprtDayExcelBy。
         /// 通过 DataType 切换统计粒度：2=日(走日能耗表)、4=月(走月能耗表)、5=年(走月能耗表按年聚合)。
         /// 仅返回能耗参数(energy)。IsTotal=1 时多设备能耗按时间点累加成一个合计值(每个时间一行)；IsTotal=0 时每台设备每个时间点各一行。
-        /// DeviceIds/BuildId/DeptId 三选一传值即可。
+        /// DeviceIds 传值即可。
         /// </remarks>
-        /// <param name="model">查询条件(DeviceIds/BuildId/DeptId/DataType/IsTotal)</param>
+        /// <param name="model">查询条件(DeviceIds/DataType/IsTotal)</param>
         /// <returns>DataReport(设备能耗表格)</returns>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
@@ -2329,18 +1619,6 @@ namespace IotWebApi.Controllers
                 // 非累加：按设备逐行
                 reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "DeviceId", ColumnCn = "设备编号" });
                 reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "DeviceName", ColumnCn = "设备名称" });
-            }
-            else if (model.BuildId > 0)
-            {
-                // 累加 + 建筑维度：显示建筑 ID/名称
-                reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "BuildId", ColumnCn = "建筑编号" });
-                reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "BuildName", ColumnCn = "建筑名称" });
-            }
-            else if (model.DeptId > 0)
-            {
-                // 累加 + 部门维度：显示部门 ID/名称
-                reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "DeptId", ColumnCn = "部门编号" });
-                reportTable.ReportColumns.Add(new ReportColumn { ColumnEn = "DeptName", ColumnCn = "部门名称" });
             }
             else
             {
@@ -2451,7 +1729,7 @@ namespace IotWebApi.Controllers
         /// 数据来源参考 GetDataTableExcelBy，导出格式参考 GetReoprtDayExcelBy。
         /// 将 GetDeviceEnergyTableBy 的结果导出为 xlsx，返回文件下载路径。
         /// </remarks>
-        /// <param name="model">查询条件(DeviceIds/BuildId/DeptId/DataType/IsTotal)</param>
+        /// <param name="model">查询条件(DeviceIds/DataType/IsTotal)</param>
         /// <returns>MetaData(Result 为导出文件路径)</returns>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
@@ -2509,8 +1787,7 @@ namespace IotWebApi.Controllers
         /// 能耗合计行：同一时间点(日/月/年)所有设备的 energy 累加成一个值
         /// </summary>
         /// <remarks>
-        /// 维度列由 model 决定：BuildId>0 填建筑 ID/名称；DeptId>0 填部门 ID/名称；
-        /// 否则(DeviceIds)填"合计"标识列。
+        /// 维度列填"合计"标识列(DeviceIds)。
         /// </remarks>
         /// <param name="reportTable">表格输出</param>
         /// <param name="model">查询条件(用于判断维度)</param>
@@ -2536,23 +1813,8 @@ namespace IotWebApi.Controllers
             row["RowNo"] = rowNo++;
             row["DateStr"] = dateStr;
 
-            // 维度列：建筑/部门/合计(DeviceIds)
-            if (model.BuildId > 0)
-            {
-                var first = datalist.FirstOrDefault(t => t.BuildId == model.BuildId) ?? datalist.First();
-                row["BuildId"] = first.BuildId;
-                row["BuildName"] = first.BuildName ?? "";
-            }
-            else if (model.DeptId > 0)
-            {
-                var first = datalist.FirstOrDefault(t => t.DeptId == model.DeptId) ?? datalist.First();
-                row["DeptId"] = first.DeptId;
-                row["DeptName"] = first.DeptName ?? "";
-            }
-            else
-            {
-                row["TotalName"] = "合计";
-            }
+            // 维度列：合计(DeviceIds)
+            row["TotalName"] = "合计";
 
             row["energy"] = isvalue ? $"{totalbq.ToString("f1")}{unit}" : "-";
             reportTable.ReportDatas.Add(row);
