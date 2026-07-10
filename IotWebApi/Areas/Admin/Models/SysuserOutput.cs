@@ -75,11 +75,6 @@ namespace IotWebApi.Areas.Admin.Models
         [DisplayName("单位ID")]
         public int TenantId { get; set; }
         /// <summary>
-        /// 单位名称
-        ///</summary>
-        [DisplayName("单位名称")]
-        public string UnitName { get; set; }
-        /// <summary>
         /// 备注
         ///</summary>
         [DisplayName("备注")]

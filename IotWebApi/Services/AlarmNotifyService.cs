@@ -136,7 +136,7 @@ namespace IotWebApi.Services
         /// </summary>
         private async Task SendAsync(NotifyChannel channel, EventSignal signal, string prefix = "")
         {
-            string text = $"{prefix}{signal.EventTime} [{signal.UnitName}]{signal.DeviceName}：{signal.EventContent}";
+            string text = $"{prefix}{signal.EventTime} {signal.DeviceName}：{signal.EventContent}";
             await SendTextAsync(channel, $"设备告警通知-{signal.DeviceName}", text, signal.ToJson());
         }
 

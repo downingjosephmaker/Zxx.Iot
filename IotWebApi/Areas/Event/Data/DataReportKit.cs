@@ -10,6 +10,21 @@ namespace IotWebApi.Areas.Event.Data
     public class DataReportKit
     {
         /// <summary>
+        /// 单位名称从租户表回填(EventBase.unit_name 冗余列已删,报表行仅带 TenantId)。
+        /// </summary>
+        public static void FillUnitName(List<ReportAnalysisInfo> infolist)
+        {
+            if (!infolist.IsZxxAny()) return;
+            var unitlist = BasicunitInfoDAO.Instance.GetList();
+            if (!unitlist.IsZxxAny()) return;
+            var unitmap = unitlist.ToDictionary(t => t.TenantId, t => t.UnitName);
+            foreach (var info in infolist)
+            {
+                if (unitmap.TryGetValue(info.TenantId, out var unitname)) info.UnitName = unitname;
+            }
+        }
+
+        /// <summary>
         /// 根据条件获取日能耗数据列表
         /// </summary>
         /// <param name="model"></param>
@@ -98,6 +113,7 @@ namespace IotWebApi.Areas.Event.Data
                     }
                 }
             }
+            FillUnitName(infolist);
 
             return (infolist, totalcount);
         }
@@ -188,6 +204,7 @@ namespace IotWebApi.Areas.Event.Data
                     infolist.Add(info);
                 }
             }
+            FillUnitName(infolist);
 
             return (infolist, totalcount);
         }
@@ -284,6 +301,7 @@ namespace IotWebApi.Areas.Event.Data
                     }
                 }
             }
+            FillUnitName(infolist);
 
             return (infolist, totalcount);
         }

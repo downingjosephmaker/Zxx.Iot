@@ -8,11 +8,6 @@ namespace IotWebApi.Areas.Device.Models
     public class DeviceMonitorInfo : MqttWebModel
     {
         /// <summary>
-        /// 单位名称
-        ///</summary>
-        [DisplayName("单位名称")]
-        public string UnitName { get; set; }
-        /// <summary>
         /// 设备类型名称
         ///</summary>
         [DisplayName("设备类型名称")]

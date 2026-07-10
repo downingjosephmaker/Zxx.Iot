@@ -911,6 +911,26 @@ namespace IotModel
             }
         }
 
+        /// <summary>
+        /// 种子期显式主键直插：OffIdentity 写入固定 ID 后同步 PG 自增序列。
+        /// PG 的 serial 序列不因显式插值推进，不同步则运行期首次自增插入撞种子主键；
+        /// MySQL/TiDB 显式插值自动推进 AUTO_INCREMENT，无需处理。
+        /// </summary>
+        protected void SeedOffIdentity(List<T> list)
+        {
+            Db.Insertable(list).OffIdentity().ExecuteCommand();
+            if (DbType == DbType.PostgreSQL)
+            {
+                var entityinfo = Db.EntityMaintenance.GetEntityInfo<T>();
+                var idcol = entityinfo.Columns.FirstOrDefault(t => t.IsIdentity);
+                if (idcol != null)
+                {
+                    Db.Ado.ExecuteCommand(
+                        $"SELECT setval(pg_get_serial_sequence('{entityinfo.DbTableName}', '{idcol.DbColumnName}'), (SELECT MAX(\"{idcol.DbColumnName}\") FROM \"{entityinfo.DbTableName}\"))");
+                }
+            }
+        }
+
         private List<TableColumn> GetFieldNames()
         {
             List<TableColumn> list = new();

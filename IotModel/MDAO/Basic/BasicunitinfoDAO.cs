@@ -1,5 +1,6 @@
 ﻿using CenBoCommon.Zxx;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace IotModel
@@ -25,19 +26,28 @@ namespace IotModel
             {
                 if (_dbContext == null) _dbContext = objs[0];
                 string time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                var entity = new BasicunitInfoEntity
+                // 树形字段预计算后基类直插:种子期在DbContext静态锁内,
+                // 不可走重写Insert的BeginTran事务树形逻辑;建表后序列必从1起步,unit_id=1有保证
+                var list = new List<BasicunitInfoEntity>
                 {
-                    UnitName = "开发单位",
-                    AreaId = "|330000|330100|330106|",
-                    AreaName = "浙江省|杭州市|西湖区",
-                    CreateId = 1,
-                    CreateTime = time,
-                    CreateName = "开发管理员",
-                    UpdateId = 1,
-                    UpdateTime = time,
-                    UpdateName = "开发管理员"
+                    new BasicunitInfoEntity
+                    {
+                        ParentId = 0,
+                        TreeLevel = 1,
+                        FullCode = "|1|",
+                        FullName = "开发单位",
+                        UnitName = "开发单位",
+                        AreaId = "|330000|330100|330106|",
+                        AreaName = "浙江省|杭州市|西湖区",
+                        CreateId = 1,
+                        CreateTime = time,
+                        CreateName = "开发管理员",
+                        UpdateId = 1,
+                        UpdateTime = time,
+                        UpdateName = "开发管理员"
+                    }
                 };
-                Insert(entity);
+                InsertRange(list);
             }
             catch (Exception ex)
             {

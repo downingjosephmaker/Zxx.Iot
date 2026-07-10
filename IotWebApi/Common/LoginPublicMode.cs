@@ -41,7 +41,6 @@ namespace IotWebApi
                     TokenExpireTime = time.AddHours(GetTokenRefreshHours()),
                     SourceType = sourceType,
                     TenantId = user.TenantId,
-                    UnitName = user.UnitName,
                 };
 
                 var RoleAllList = SysRoleDAO.Instance.GetList();
@@ -56,7 +55,7 @@ namespace IotWebApi
 
                 if (model.IsSystem)
                 {
-                    var unitlist = SysCommonDAO<BasicunitInfo>.Instance.GetList();
+                    var unitlist = BasicunitInfoDAO.Instance.GetList();
                     if (unitlist != null) model.UnitAllCount = unitlist.Count;
                 }
                 else
@@ -65,16 +64,18 @@ namespace IotWebApi
                     if (relatelist.IsZxxAny()) model.UnitAllCount = relatelist.Count;
                 }
 
-                model.LoginToken = EncryptsHelper.Encrypt(model.ToJson());
-
+                // 单位名从租户表关联查(sys_user.unit_name 冗余列已删)，须在 Token 加密前就位
                 if (user.TenantId > 0)
                 {
                     var unitentity = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == user.TenantId);
                     if (unitentity != null)
                     {
+                        model.UnitName = unitentity.UnitName;
                         model.RouterPath = unitentity.ExpandObject.RouterPath;
                     }
                 }
+
+                model.LoginToken = EncryptsHelper.Encrypt(model.ToJson());
 
                 user.LoginCount++;
                 user.OnlineState = 1;

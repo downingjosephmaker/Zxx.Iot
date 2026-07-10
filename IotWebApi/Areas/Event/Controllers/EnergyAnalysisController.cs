@@ -321,6 +321,7 @@ namespace IotWebApi.Controllers
                 }
                 infolist.Add(info);
             }
+            DataReportKit.FillUnitName(infolist);
 
             return infolist;
         }
@@ -375,6 +376,7 @@ namespace IotWebApi.Controllers
                 }
                 infolist.Add(info);
             }
+            DataReportKit.FillUnitName(infolist);
 
             return infolist;
         }
@@ -435,6 +437,7 @@ namespace IotWebApi.Controllers
                 }
                 infolist.Add(info);
             }
+            DataReportKit.FillUnitName(infolist);
 
             return infolist;
         }

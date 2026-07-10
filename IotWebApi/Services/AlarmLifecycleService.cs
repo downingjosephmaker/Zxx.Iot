@@ -29,8 +29,7 @@ namespace IotWebApi.Services
         /// 完全屏蔽的告警不进生命周期,静默告警照常流转仅不推送不通知;
         /// 返回活动告警主键供升级链登记,恢复/异常返回0)
         /// </summary>
-        public long Apply(AlarmFireInfo fire, DeviceInfo device, List<BasicunitInfoEntity> unitlist,
-            List<DeviceTypeEntity> typelist)
+        public long Apply(AlarmFireInfo fire, DeviceInfo device, List<DeviceTypeEntity> typelist)
         {
             try
             {
@@ -77,7 +76,7 @@ namespace IotWebApi.Services
                         }
                     }
                 };
-                DataPointIngestService.FillEventBase(alarm, device, unitlist, typelist);
+                DataPointIngestService.FillEventBase(alarm, device, typelist);
                 EventAlarmDAO.Instance.InsertRange(new List<EventAlarmEntity> { alarm });
                 _actives[key] = alarm.SnowId;
                 return alarm.SnowId;

@@ -95,13 +95,19 @@ namespace IotWebApi
                     DepartSelectLevel = 2,
                     SourceType = "Web",
                     TenantId = _Sysuser.TenantId,
-                    UnitName = _Sysuser.UnitName,
                     UserID = _Sysuser.UserId,
                     UserName = _Sysuser.TrueName,
                 };
 
                 //从数据库获取用户信息
                 model._Sysuser = _Sysuser;
+
+                //单位名从租户表关联查(sys_user.unit_name 冗余列已删)
+                if (_Sysuser.TenantId > 0)
+                {
+                    var unitinfo = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _Sysuser.TenantId);
+                    if (unitinfo != null) model.UnitName = unitinfo.UnitName;
+                }
 
                 //从数据库获取角色信息
                 model._Sysrole = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == model._Sysuser.RoleId);

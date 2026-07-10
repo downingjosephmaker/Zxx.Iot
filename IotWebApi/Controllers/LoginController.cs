@@ -224,7 +224,6 @@ namespace IotWebApi.Controllers
                 var info = new SysUserEntity
                 {
                     TenantId = 4,
-                    UnitName = "嘉兴港野猫墩物流园区",
                     RoleId = 4,
                     UserUid = _UserUid,
                     TrueName = _TrueName,

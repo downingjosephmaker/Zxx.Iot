@@ -220,13 +220,17 @@ namespace IotModel
         {
             try
             {
-                string sql = @"
-INSERT INTO `sys_role` VALUES (1, '开发管理员', 'A001', 1, 0, '开发管理员','|1|','最高级权限', 0, 1, '2024-02-22 14:53:06', '开发管理员', 1, '2024-02-22 14:53:03', '开发管理员');
-INSERT INTO `sys_role` VALUES (2, '代理商', 'B001', 2, 1,'代理商','|1|2|','前台和部分后台权限', 0, 1, '2024-02-22 14:53:08', '开发管理员', 1, '2024-02-22 14:53:03', '开发管理员');
-INSERT INTO `sys_role` VALUES (3, '单位管理员', 'C001', 3, 2,'单位管理员','|1|2|3|','前台和部分后台权限', 1, 1, '2024-02-22 14:53:08', '开发管理员', 1, '2024-04-03 15:17:57', '开发管理员');
-INSERT INTO `sys_role` VALUES (4, '单位普通', 'D001', 4, 3,'单位普通','|1|2|3|4|','前台和部分后台权限', 0, 1, '2024-02-22 14:53:09', '开发管理员', 1, '2024-02-22 14:53:03', '开发管理员');
-                ";
-                Db.Ado.ExecuteCommand(sql);
+                var list = new List<SysRole>
+                {
+                    new SysRole { RoleId = 1, RoleName = "开发管理员", SortBorder = "A001", TreeLevel = 1, ParentId = 0, FullName = "开发管理员", FullCode = "|1|", RoleDescribe = "最高级权限", HasChild = false, CreateId = 1, CreateTime = "2024-02-22 14:53:06", CreateName = "开发管理员", UpdateId = 1, UpdateTime = "2024-02-22 14:53:03", UpdateName = "开发管理员" },
+                    new SysRole { RoleId = 2, RoleName = "代理商", SortBorder = "B001", TreeLevel = 2, ParentId = 1, FullName = "代理商", FullCode = "|1|2|", RoleDescribe = "前台和部分后台权限", HasChild = false, CreateId = 1, CreateTime = "2024-02-22 14:53:08", CreateName = "开发管理员", UpdateId = 1, UpdateTime = "2024-02-22 14:53:03", UpdateName = "开发管理员" },
+                    new SysRole { RoleId = 3, RoleName = "单位管理员", SortBorder = "C001", TreeLevel = 3, ParentId = 2, FullName = "单位管理员", FullCode = "|1|2|3|", RoleDescribe = "前台和部分后台权限", HasChild = true, CreateId = 1, CreateTime = "2024-02-22 14:53:08", CreateName = "开发管理员", UpdateId = 1, UpdateTime = "2024-04-03 15:17:57", UpdateName = "开发管理员" },
+                    new SysRole { RoleId = 4, RoleName = "单位普通", SortBorder = "D001", TreeLevel = 4, ParentId = 3, FullName = "单位普通", FullCode = "|1|2|3|4|", RoleDescribe = "前台和部分后台权限", HasChild = false, CreateId = 1, CreateTime = "2024-02-22 14:53:09", CreateName = "开发管理员", UpdateId = 1, UpdateTime = "2024-02-22 14:53:03", UpdateName = "开发管理员" },
+                };
+                // RoleId 是 IsIdentity 自增列。superadmin.RoleId=1 依赖此处 RoleId=1 精确落地,
+                // 而普通 InsertRange 会剔除自增列、由 DB 生成(显式值被忽略)。
+                // SeedOffIdentity 强制写入 1..4 并同步 PG 序列,避免运行期新增角色撞种子主键。
+                SeedOffIdentity(list);
             }
             catch (Exception ex)
             {

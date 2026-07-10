@@ -87,14 +87,6 @@ namespace IotWebApi.Controllers
             info.Password = HashCryto.GetHash2String(string.Concat(password.ToUpper(), info.PasswordSalt), HashAlgorithmType.SHA256);
 
             info.TenantId = optmdl.TenantId;
-            info.UnitName = optmdl.UnitName;
-            ////角色级别==3 : 不是管理员=》代理商=》单位管理员
-            //if (optmdl._Sysrole.TreeLevel == 3)
-            //{
-            //    //根据单位管理员设置默认单位
-            //    info.TenantId = optmdl.TenantId;
-            //    info.UnitName = optmdl.UnitName;
-            //}
 
             info.CreateId = optmdl.UserID;
             info.CreateTime = DateTime.Now.ToDateTimeString();
@@ -349,18 +341,12 @@ namespace IotWebApi.Controllers
             //    return Message;
             //}
             info.TenantId = userinfo.TenantId;
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == userinfo.TenantId);
-            if (unit != null)
-            {
-                info.UnitName = unit.UnitName;
-            }
             info.UpdateId = optmdl.UserID;
             info.UpdateTime = DateTime.Now.ToDateTimeString();
             info.UpdateName = optmdl.UserName;
             Status = SysUserDAO.Instance.UpdateColumns(info, it => new
             {
                 it.TenantId,
-                it.UnitName,
                 it.UpdateId,
                 it.UpdateTime,
                 it.UpdateName,
