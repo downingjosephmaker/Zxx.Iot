@@ -76,8 +76,27 @@ namespace IotWebApi.Controllers
         {
             Status = false;
             Message = "角色信息删除失败。";
+            var self = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == id);
+            int parentId = self?.ParentId ?? 0;
             Status = SysRoleDAO.Instance.DeleteBy(t => t.FullCode.Contains($"|{id}|"));
-            if (Status) Message = "角色信息删除成功。";
+            if (Status)
+            {
+                // 若父级已无其它子角色，回填 has_child=false(与 Basicunitinfo.DeleteByPk 同范式)
+                if (parentId > 0)
+                {
+                    var parent = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == parentId);
+                    if (parent != null)
+                    {
+                        bool stillHasChild = SysRoleDAO.Instance.GetListBy(t => t.ParentId == parentId).IsZxxAny();
+                        if (parent.HasChild != stillHasChild)
+                        {
+                            parent.HasChild = stillHasChild;
+                            SysRoleDAO.Instance.UpdateColumns(parent, it => new { it.HasChild });
+                        }
+                    }
+                }
+                Message = "角色信息删除成功。";
+            }
             return Message;
         }
 
