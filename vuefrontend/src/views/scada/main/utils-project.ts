@@ -160,7 +160,7 @@ export const loadProject = async (
       ProjectDesc: data.ProjectDesc,
       ProjectStatus: data.ProjectStatus,
       Thumbnail: data.Thumbnail,
-      UnitId: data.UnitId,
+      TenantId: data.TenantId,
       ExpandJson: data.ExpandJson,
       CreateId: data.CreateId,
       CreateTime: data.CreateTime,
@@ -213,7 +213,7 @@ export const initializeNewProject = (
     ProjectName: "未命名项目",
     ProjectDesc: "",
     ProjectStatus: 0,
-    UnitId: 0
+    TenantId: 0
   };
 
   // 重置项目数据为默认值

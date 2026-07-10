@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using IotModel;
 
@@ -48,34 +48,17 @@ namespace IotWebApi
                         updatelist.Add(item);
                     }
                 }
-                if (qxtype == 1)
+                // 楼栋/部门层级已剥离,原按 qxtype 区分保存 BuildIds/DeptCodes 的分支合并为单一保存(qxtype 参数保留仅为前端兼容)
+                Status = SysRelatedDAO.Instance.TranAction(() =>
                 {
-                    Status = SysRelatedDAO.Instance.TranAction(() =>
+                    if (insertlist.Count > 0) SysRelatedDAO.Instance.InsertRange(insertlist);
+                    if (updatelist.Count > 0) SysRelatedDAO.Instance.UpdateIgnoreColumns(updatelist, it => new
                     {
-                        if (insertlist.Count > 0) SysRelatedDAO.Instance.InsertRange(insertlist);
-                        if (updatelist.Count > 0) SysRelatedDAO.Instance.UpdateIgnoreColumns(updatelist, it => new
-                        {
-                            it.DeptCodes,
-                            it.CreateId,
-                            it.CreateTime,
-                            it.CreateName
-                        });
+                        it.CreateId,
+                        it.CreateTime,
+                        it.CreateName
                     });
-                }
-                else if (qxtype == 2)
-                {
-                    Status = SysRelatedDAO.Instance.TranAction(() =>
-                    {
-                        if (insertlist.Count > 0) SysRelatedDAO.Instance.InsertRange(insertlist);
-                        if (updatelist.Count > 0) SysRelatedDAO.Instance.UpdateIgnoreColumns(updatelist, it => new
-                        {
-                            it.BuildIds,
-                            it.CreateId,
-                            it.CreateTime,
-                            it.CreateName
-                        });
-                    });
-                }
+                });
                 if (Status)
                 {
                     Message = "用户权限信息保存成功。";

@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<CollectStrategyFormProps>(), {
   formInline: () => ({
     title: "",
     SnowId: 0,
-    UnitId: 0,
+    TenantId: 0,
     ScopeType: 1,
     ScopeId: "",
     ParamCode: "",

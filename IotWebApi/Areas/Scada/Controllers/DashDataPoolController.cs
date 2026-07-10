@@ -117,7 +117,6 @@ namespace IotWebApi.Controllers
         {
             var optmdl = Request.GetToken();
             if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
-            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.TenantId.ToString() });
             int totalNumber = 0;
             var list = DashDataPoolDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;

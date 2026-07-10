@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using SqlSugar;
 using System.ComponentModel;
 
@@ -25,18 +25,6 @@ namespace IotModel
         [DisplayName("用户ID")]
         [SugarColumn(ColumnName = "user_id", ColumnDescription = "用户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int UserId { get; set; }
-        /// <summary>
-        /// 建筑ID集合
-        ///</summary>
-        [DisplayName("建筑ID集合")]
-        [SugarColumn(ColumnName = "build_ids", IsNullable = true, Length = 1000, ColumnDescription = "建筑ID集合", DefaultValue = "", ColumnDataType = "varchar")]
-        public string BuildIds { get; set; }
-        /// <summary>
-        /// 部门ID集合
-        ///</summary>
-        [DisplayName("部门ID集合")]
-        [SugarColumn(ColumnName = "dept_codes", IsNullable = true, Length = 1000, ColumnDescription = "部门ID集合", DefaultValue = "", ColumnDataType = "varchar")]
-        public string DeptCodes { get; set; }
         /// <summary>
         /// 单位ID
         ///</summary>

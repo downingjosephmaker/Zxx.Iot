@@ -12,7 +12,7 @@ export interface ScadaProjectFormItemProps {
   ProjectStatus: number; // 发布状态(0:未发布 1:发布)
   Thumbnail?: string; // 缩略图路径
   ProjectDefault?: number; // 默认状态(0:未设置 1:默认)
-  UnitId?: number; // 单位ID
+  TenantId?: number; // 单位ID
   ExpandJson?: string; // 拓展属性(json)
 }
 
@@ -24,7 +24,7 @@ export interface ScadaProjectItem {
   Thumbnail?: string; // 缩略图路径
   ProjectDefault?: number; // 默认状态(0:未设置 1:默认)
   IsDeleted?: number;
-  UnitId?: number; // 单位ID
+  TenantId?: number; // 单位ID
   ExpandJson?: string; // 拓展属性(json)
   CreateTime?: string;
   UpdateTime?: string;

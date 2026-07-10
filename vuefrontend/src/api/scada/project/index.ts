@@ -14,7 +14,7 @@ export interface ScadaProjectInfo {
   Thumbnail?: string;
   ProjectDefault?: number;
   RuntimeUrl?: string;
-  UnitId?: number;
+  TenantId?: number;
   ExpandJson?: string;
   CreateId?: number;
   CreateTime?: string;

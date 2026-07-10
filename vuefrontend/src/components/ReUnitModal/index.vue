@@ -7,7 +7,7 @@ import { storage } from "@/utils/storage";
 import gsIcon from "@/assets/svg/gs2.svg?component";
 
 interface Unit {
-  UnitId: number;
+  TenantId: number;
   UnitName: string;
   UnitCode: string;
   UnitAddress: string;
@@ -135,14 +135,14 @@ defineExpose({ getRef });
       <el-row :gutter="20" class="mt-2">
         <el-col
           v-for="unit in currentUnits"
-          :key="unit.UnitId"
+          :key="unit.TenantId"
           class="mt-4"
           :span="7"
         >
           <el-card
             shadow="hover"
             class="unit-card"
-            :class="{ active: selectedUnit?.UnitId === unit.UnitId }"
+            :class="{ active: selectedUnit?.TenantId === unit.TenantId }"
             @click="selectUnit(unit)"
           >
             <div class="card-content">

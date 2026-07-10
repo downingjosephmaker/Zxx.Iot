@@ -48,11 +48,6 @@ namespace IotWebApi.Areas.Event.Models
         /// </summary>
         [DisplayName("是否合计")]
         public int IsTotal { get; set; }
-        /// <summary>
-        /// 查询模式(0:仅当前 1:含子集 2:仅子集)-仅对 BuildId/DeptId 维度有效
-        /// </summary>
-        [DisplayName("查询模式(0:仅当前 1:含子集 2:仅子集)")]
-        public int QueryMode { get; set; }
     }
 
     /// <summary>

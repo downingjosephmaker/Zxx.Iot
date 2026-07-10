@@ -256,7 +256,7 @@ export function useStrategy(tableRef: Ref) {
     const formData: CollectStrategyFormItemProps & PushStrategyFormItemProps = {
       title,
       SnowId: 0,
-      UnitId: 0,
+      TenantId: 0,
       ScopeType: 1,
       ScopeId: "",
       ParamCode: "",

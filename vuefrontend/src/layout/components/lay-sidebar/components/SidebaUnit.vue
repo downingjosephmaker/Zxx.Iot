@@ -35,7 +35,7 @@ const showModalFun = () => {
     beforeSure: async (done, { options }) => {
       const FormRefz = formRef.value.getRef();
       UnitName.value = FormRefz.UnitName;
-      await ChangeUserTokenByUnit(FormRefz.UnitId).then(res => {
+      await ChangeUserTokenByUnit(FormRefz.TenantId).then(res => {
         if (res.Status) {
           // Fix TypeScript error by casting to our interface
           const dataz = storage.getItem("user-info") as UserInfo;

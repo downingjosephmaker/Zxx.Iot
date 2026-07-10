@@ -18,7 +18,7 @@ export interface SysAreaData {
   UpdateTime?: string;
   UpdateName?: string;
   SnowId?: number;
-  UnitId?: number;
+  TenantId?: number;
 
   /** 业务字段 */
   AreaId: string; // 行政区划Id

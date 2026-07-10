@@ -148,7 +148,6 @@ namespace IotWebApi.Areas.Scada.Controllers
         {
             var optmdl = Request.GetToken();
             if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
-            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.TenantId.ToString() });
             int totalNumber = 0;
             var list = ScadaProjectDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;

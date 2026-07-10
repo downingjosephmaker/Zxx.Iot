@@ -14,7 +14,7 @@ export interface EnergySavingRateData {
   UpdateTime?: string;
   UpdateName?: string;
   SnowId?: number;
-  UnitId?: number;
+  TenantId?: number;
 
   // 业务字段
   DeviceIds?: string; // 设备ID集合(|)

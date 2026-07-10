@@ -5,7 +5,7 @@ import { storage } from "@/utils/storage";
 /** 采集策略（对应后端 CollectStrategy 实体） */
 export interface CollectStrategyItem {
   SnowId: number | string;
-  UnitId?: number;
+  TenantId?: number;
   /** 挂靠层级(1=产品,2=设备,3=点位) */
   ScopeType?: number;
   /** 挂靠对象(产品=设备类型编码,设备/点位=设备ID) */
@@ -29,7 +29,7 @@ export interface CollectStrategyItem {
 /** 推送策略（对应后端 PushStrategy 实体） */
 export interface PushStrategyItem {
   SnowId: number | string;
-  UnitId?: number;
+  TenantId?: number;
   /** 挂靠层级(1=产品,2=设备,3=点位) */
   ScopeType?: number;
   /** 挂靠对象(产品=设备类型编码,设备/点位=设备ID) */

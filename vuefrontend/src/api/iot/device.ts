@@ -70,7 +70,7 @@ export interface DeviceInfoItem {
   HasChild?: boolean;
   ExpandJson?: string;
   ExpandObject?: ExpandDeviceInfo;
-  UnitId?: number;
+  TenantId?: number;
   /** 列表增强列 */
   UnitName?: string;
   BuildName?: string;

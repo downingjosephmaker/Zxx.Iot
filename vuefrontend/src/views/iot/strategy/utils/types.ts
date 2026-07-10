@@ -8,7 +8,7 @@ export type { CollectStrategyItem, PushStrategyItem } from "@/api/iot/strategy";
 export interface CollectStrategyFormItemProps {
   title?: string;
   SnowId: string | number;
-  UnitId: number;
+  TenantId: number;
   /** 挂靠层级(1=产品,2=设备,3=点位) */
   ScopeType: number;
   ScopeId: string;
@@ -23,7 +23,7 @@ export interface CollectStrategyFormItemProps {
 export interface PushStrategyFormItemProps {
   title?: string;
   SnowId: string | number;
-  UnitId: number;
+  TenantId: number;
   /** 挂靠层级(1=产品,2=设备,3=点位) */
   ScopeType: number;
   ScopeId: string;

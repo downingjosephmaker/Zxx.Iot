@@ -129,23 +129,6 @@ namespace IotWebApi.Controllers
         {
             var optmdl = Request.GetToken();
             var dtrlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.TenantId && t.MenuCode.Contains(menucode));
-            //if (dtrlist.Count == 0)
-            //{
-            //    var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.TenantId == optmdl.TenantId);
-            //    var tpclist = devlist.Select(t => t.DeviceTypeCode).Distinct().ToList();
-            //    var tpalist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
-            //    var tplist = tpalist.FindAll(t => tpclist.Contains(t.TypeCode));
-            //    var mtpclist = tplist.Select(t => t.ParentId).Distinct().ToList();
-            //    var mtplist = tpalist.FindAll(t => mtpclist.Contains(t.TypeCode));
-            //    dtrlist = mtplist.Select(t => new DeviceTypeRun()
-            //    {
-            //        UnitId = optmdl.TenantId,
-            //        DeviceTypeCode = t.TypeCode,
-            //        DeviceTypeName = t.TypeName,
-            //        MenuCode = menucode
-            //    }).ToList();
-            //    DeviceTypeRunDAO.Instance.InsertRange(dtrlist);
-            //}
 
             return dtrlist;
         }

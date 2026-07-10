@@ -206,12 +206,6 @@ namespace IotWebApi.Controllers
                 page = page,
                 pagesize = pagesize,
             };
-            actionModel.sconlist.Add(new SelectCondition
-            {
-                ParamName = "UnitId",
-                ParamType = "=",
-                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
-            });
             if (model.DataSort == 0)
             {
                 actionModel.sconlist.Add(new SelectCondition
@@ -346,12 +340,6 @@ namespace IotWebApi.Controllers
                 page = page,
                 pagesize = pagesize,
             };
-            actionModel.sconlist.Add(new SelectCondition
-            {
-                ParamName = "UnitId",
-                ParamType = "=",
-                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
-            });
             if (model.DataSort == 0)
             {
                 actionModel.sconlist.Add(new SelectCondition
@@ -482,12 +470,6 @@ namespace IotWebApi.Controllers
                 page = page,
                 pagesize = pagesize,
             };
-            actionModel.sconlist.Add(new SelectCondition
-            {
-                ParamName = "UnitId",
-                ParamType = "=",
-                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
-            });
             if (model.DataSort == 0)
             {
                 actionModel.sconlist.Add(new SelectCondition

@@ -102,7 +102,7 @@ const projectInfo = ref<ScadaProjectInfo>({
   ProjectName: "未命名项目",
   ProjectDesc: "",
   ProjectStatus: 0,
-  UnitId: 0
+  TenantId: 0
 });
 
 const showComponentPanel = ref(true);
