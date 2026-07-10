@@ -16,7 +16,37 @@ namespace IotModel
         ///</summary>
         [DisplayName("主键")]
         [SugarColumn(ColumnName = "unit_id", IsPrimaryKey = true, IsIdentity = true, ColumnDescription = "主键", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
+        /// <summary>
+        /// 上级租户ID(0=根租户)
+        ///</summary>
+        [DisplayName("上级租户ID")]
+        [SugarColumn(ColumnName = "parent_id", ColumnDescription = "上级租户ID(0=根)", DefaultValue = "0", ColumnDataType = "int")]
+        public int ParentId { get; set; }
+        /// <summary>
+        /// 租户层级(1=顶级)
+        ///</summary>
+        [DisplayName("租户层级")]
+        [SugarColumn(ColumnName = "tree_level", ColumnDescription = "租户层级(1=顶级)", DefaultValue = "1", ColumnDataType = "int")]
+        public int TreeLevel { get; set; }
+        /// <summary>
+        /// 祖先链(全,形如 |1|3|7|)
+        ///</summary>
+        [DisplayName("祖先链")]
+        [SugarColumn(ColumnName = "full_code", IsNullable = true, Length = 200, ColumnDescription = "祖先链(全,形如 |1|3|7|)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string FullCode { get; set; }
+        /// <summary>
+        /// 租户全称(全路径)
+        ///</summary>
+        [DisplayName("租户全称")]
+        [SugarColumn(ColumnName = "full_name", IsNullable = true, Length = 400, ColumnDescription = "租户全称(全路径)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string FullName { get; set; }
+        /// <summary>
+        /// 是否有子租户
+        ///</summary>
+        [DisplayName("是否有子租户")]
+        [SugarColumn(ColumnName = "has_child", Length = 1, ColumnDescription = "是否有子租户", DefaultValue = "0", ColumnDataType = "bit")]
+        public bool HasChild { get; set; }
         /// <summary>
         /// 单位名称
         ///</summary>

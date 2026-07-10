@@ -777,10 +777,16 @@ namespace IotModel
             if (!IsTenantScopedEntity) return;
             var tenantId = TenantScope.CurrentTenantId;
             if (tenantId == null) return;
+            // 超管全局豁免：不追加 TenantId 过滤，看全部租户数据（沿用旧 IsSystem 语义）。
+            if (TenantScope.CurrentIsSystem) return;
 
-            db.QueryFilter.AddTableFilter<ITenantEntity>(it => it.TenantId == tenantId.Value);
+            // 查询过滤：可见集 IN（当前租户 + 所有子孙，决策 B1 父见子孙）。
+            // 未装配子孙集时 CurrentVisibleTenantIds 退化为 [CurrentTenantId]，只见自己。
+            var visibleIds = TenantScope.CurrentVisibleTenantIds;
+            db.QueryFilter.AddTableFilter<ITenantEntity>(it => visibleIds.Contains(it.TenantId));
             db.Aop.DataExecuting = (value, entityInfo) =>
             {
+                // 插入回填仍以单值当前租户为准：一条数据只归属一个租户，非子孙集。
                 if (entityInfo.OperationType == DataFilterType.InsertByObject
                     && entityInfo.PropertyName == nameof(ITenantEntity.TenantId)
                     && entityInfo.EntityValue is ITenantEntity entity
@@ -800,7 +806,11 @@ namespace IotModel
             if (!IsTenantScopedEntity) return list;
             var tenantId = TenantScope.CurrentTenantId;
             if (tenantId == null || !list.IsZxxAny()) return list;
-            return list.Where(x => ((ITenantEntity)x).TenantId == tenantId.Value).ToList();
+            // 超管全局豁免：缓存出口不过滤，返回全表（与 SQL 路径一致）。
+            if (TenantScope.CurrentIsSystem) return list;
+            // 与 SQL 路径一致：按可见集（当前+子孙）过滤缓存出口。
+            var visibleIds = TenantScope.CurrentVisibleTenantIds;
+            return list.Where(x => visibleIds.Contains(((ITenantEntity)x).TenantId)).ToList();
         }
 
         private IDatabase RedisService

@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using IotModel;
 using IotWebApi.Areas.Device.Models;
@@ -128,10 +128,10 @@ namespace IotWebApi.Controllers
         public List<DeviceTypeRun> GetMasterTypeList(string menucode)
         {
             var optmdl = Request.GetToken();
-            var dtrlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && t.MenuCode.Contains(menucode));
+            var dtrlist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.TenantId && t.MenuCode.Contains(menucode));
             //if (dtrlist.Count == 0)
             //{
-            //    var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.UnitId == optmdl.UnitId);
+            //    var devlist = DeviceInfoDAO.Instance.GetListBy(t => t.TenantId == optmdl.TenantId);
             //    var tpclist = devlist.Select(t => t.DeviceTypeCode).Distinct().ToList();
             //    var tpalist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
             //    var tplist = tpalist.FindAll(t => tpclist.Contains(t.TypeCode));
@@ -139,7 +139,7 @@ namespace IotWebApi.Controllers
             //    var mtplist = tpalist.FindAll(t => mtpclist.Contains(t.TypeCode));
             //    dtrlist = mtplist.Select(t => new DeviceTypeRun()
             //    {
-            //        UnitId = optmdl.UnitId,
+            //        UnitId = optmdl.TenantId,
             //        DeviceTypeCode = t.TypeCode,
             //        DeviceTypeName = t.TypeName,
             //        MenuCode = menucode
@@ -162,7 +162,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId);
+            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.TenantId);
             var realtypes = devices.Select(t => t.DeviceTypeCode).Distinct().ToList();
             if (!realtypes.IsZxxAny()) return list;
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
@@ -194,7 +194,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId);
+            var devices = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.TenantId);
             var realtypes = devices.Select(t => t.DeviceTypeCode).Distinct().ToList();
             if (!realtypes.IsZxxAny()) return list;
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
@@ -233,7 +233,7 @@ namespace IotWebApi.Controllers
         {
             List<DeviceTypeSelect> list = new List<DeviceTypeSelect>();
             var optmdl = Request.GetToken();
-            var mtplist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && !t.MenuCode.Contains("otherCollect"));
+            var mtplist = DeviceTypeRunDAO.Instance.GetListBy(t => t.TenantId == optmdl.TenantId && !t.MenuCode.Contains("otherCollect"));
             var typelist = DeviceTypeDAO.Instance.GetListBy(t => t.IsEnable);
             var typeparamlist = DeviceTypeParamDAO.Instance.GetListBy(t => t.IsPeak);
             var typeparams = typeparamlist.Select(t => t.DeviceTypeCode).Distinct().ToList();

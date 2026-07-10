@@ -223,7 +223,7 @@ namespace IotWebApi.Controllers
                 //自动注册
                 var info = new SysUserEntity
                 {
-                    UnitId = 4,
+                    TenantId = 4,
                     UnitName = "嘉兴港野猫墩物流园区",
                     RoleId = 4,
                     UserUid = _UserUid,

@@ -51,8 +51,9 @@ namespace IotWebApi
                             }
                         }
 
-                        // 认证通过后写入租户上下文（AsyncLocal 随请求异步流转），供 DbContext 对 ITenantEntity 实体自动追加 TenantId 隔离
-                        if (context.Result == null) TenantScope.CurrentTenantId = model.UnitId;
+                        // 认证通过后装配租户上下文（AsyncLocal 随请求异步流转）：写当前租户ID + 是否超管 + 按 full_code 祖先链算可见子孙集，
+                        // 供 DbContext 对 ITenantEntity 实体自动追加 tenant_id IN(当前+子孙) 隔离（决策 B1 父见子孙）；超管全局豁免看全部。
+                        if (context.Result == null) TenantScope.Assign(model.TenantId, model.IsSystem);
                     }
                 }
                 catch (Exception)

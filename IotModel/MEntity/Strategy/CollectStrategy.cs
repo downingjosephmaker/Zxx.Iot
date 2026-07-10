@@ -23,8 +23,8 @@ namespace IotModel
         /// 单位ID(暂不挂ITenantEntity:合并引擎为后台组件且合并结果全局共享,按平台级实体tenant_id=0共享,待超管旁路机制落地后纳入隔离)
         ///</summary>
         [DisplayName("单位ID")]
-        [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
+        public int TenantId { get; set; }
         /// <summary>
         /// 挂靠层级(1=产品,2=设备,3=点位)
         ///</summary>

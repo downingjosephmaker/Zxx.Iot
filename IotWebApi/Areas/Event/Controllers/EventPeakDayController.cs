@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using IotModel;
@@ -248,7 +248,7 @@ namespace IotWebApi.Controllers
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId == 0 ? optmdl.UnitId.ToString() : model.UnitId.ToString()
+                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {

@@ -1,4 +1,4 @@
-﻿using SqlSugar;
+using SqlSugar;
 using System.Collections.Generic;
 using System.ComponentModel;
 using IotModel;
@@ -15,7 +15,7 @@ namespace IotWebApi
         /// 单位ID
         ///</summary>
         [DisplayName("单位ID")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
         /// <summary>
         /// 设备类型编码
         ///</summary>

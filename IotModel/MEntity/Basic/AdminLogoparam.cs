@@ -32,7 +32,7 @@ namespace IotModel
         /// 单位ID
         ///</summary>
         [DisplayName("单位ID")]
-        [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
+        [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
     }
 }

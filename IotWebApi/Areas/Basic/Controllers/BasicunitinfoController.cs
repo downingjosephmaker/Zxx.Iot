@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 using IotModel;
@@ -36,7 +36,7 @@ namespace IotWebApi.Controllers
                     item.UpdateId = optmdl.UserID;
                     item.UpdateTime = time.ToDateTimeString();
                     item.UpdateName = optmdl.UserName;
-                    if (item.UnitId == 0)
+                    if (item.TenantId == 0)
                     {
                         item.CreateId = optmdl.UserID;
                         item.CreateTime = time.ToDateTimeString();
@@ -48,16 +48,20 @@ namespace IotWebApi.Controllers
                         updatelist.Add(item);
                     }
                 }
-                Status = BasicunitInfoDAO.Instance.TranAction(() =>
+                // 逐条调用 DAO override（内含树形 full_code/tree_level 维护 + 自带事务），
+                // 不再外套 TranAction 以免嵌套事务；逐条保证后插子节点能读到先插父节点。
+                Status = true;
+                foreach (var item in insertlist)
                 {
-                    if (insertlist.Count > 0) BasicunitInfoDAO.Instance.InsertRange(insertlist);
-                    if (updatelist.Count > 0) BasicunitInfoDAO.Instance.UpdateIgnoreColumns(updatelist, it => new
+                    if (!BasicunitInfoDAO.Instance.Insert(item)) { Status = false; break; }
+                }
+                if (Status)
+                {
+                    foreach (var item in updatelist)
                     {
-                        it.CreateId,
-                        it.CreateTime,
-                        it.CreateName
-                    });
-                });
+                        if (!BasicunitInfoDAO.Instance.Update(item)) { Status = false; break; }
+                    }
+                }
                 if (Status)
                 {
                     if (insertlist.Count > 0)
@@ -74,7 +78,7 @@ namespace IotWebApi.Controllers
                                     bool isnew = true;
                                     if (!comfortAlllist.IsZxxAny())
                                     {
-                                        if (comfortAlllist.Any(t => t.TenantId == item.UnitId)) isnew = false;
+                                        if (comfortAlllist.Any(t => t.TenantId == item.TenantId)) isnew = false;
                                     }
                                     if (isnew)
                                     {
@@ -91,7 +95,7 @@ namespace IotWebApi.Controllers
                                             UpdateId = optmdl.UserID,
                                             UpdateTime = time.ToDateTimeString(),
                                             UpdateName = optmdl.UserName,
-                                            TenantId = item.UnitId
+                                            TenantId = item.TenantId
                                         };
                                         comfortlist.Add(xiaji);
                                         DeviceComfort dongxiaji = new DeviceComfort
@@ -107,7 +111,7 @@ namespace IotWebApi.Controllers
                                             UpdateId = optmdl.UserID,
                                             UpdateTime = time.ToDateTimeString(),
                                             UpdateName = optmdl.UserName,
-                                            TenantId = item.UnitId
+                                            TenantId = item.TenantId
                                         };
                                         comfortlist.Add(dongxiaji);
                                     }
@@ -134,10 +138,27 @@ namespace IotWebApi.Controllers
         public string DeleteByPk(int _UnitId)
         {
             Message = "单位基本信息删除失败。";
-            Status = BasicunitInfoDAO.Instance.DeleteBy(t => t.UnitId == _UnitId);
+            // 级联删除：按祖先链 full_code 含 |UnitId| 一次删整棵子树（照搬旧 BuildInfo 范式）
+            var self = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _UnitId);
+            int parentId = self?.ParentId ?? 0;
+            Status = BasicunitInfoDAO.Instance.DeleteBy(t => t.FullCode.Contains($"|{_UnitId}|"));
             if (Status)
             {
-                Message = "设备表删除成功。";
+                // 若父级已无其它子节点，回填 has_child=false
+                if (parentId > 0)
+                {
+                    var parent = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == parentId);
+                    if (parent != null)
+                    {
+                        bool stillHasChild = BasicunitInfoDAO.Instance.GetListBy(t => t.ParentId == parentId).IsZxxAny();
+                        if (parent.HasChild != stillHasChild)
+                        {
+                            parent.HasChild = stillHasChild;
+                            BasicunitInfoDAO.Instance.UpdateColumns(parent, it => new { it.HasChild });
+                        }
+                    }
+                }
+                Message = "单位基本信息删除成功。";
             }
             return Message;
         }
@@ -153,7 +174,7 @@ namespace IotWebApi.Controllers
         [ApiGroup(ApiGroupNames.Basic)]
         public BasicunitInfoEntity GetInfoByPk(int _UnitId)
         {
-            var entity = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == _UnitId);
+            var entity = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _UnitId);
             return entity;
         }
 
@@ -193,7 +214,7 @@ namespace IotWebApi.Controllers
                 string unitids = string.Join(",", redlist.Select(t => t.TenantId));
                 model.sconlist.Add(new SelectCondition
                 {
-                    ParamName = "UnitId",
+                    ParamName = "TenantId",
                     ParamType = "in",
                     ParamValue = unitids,
                 });
@@ -204,9 +225,9 @@ namespace IotWebApi.Controllers
                 {
                     model.sconlist.Add(new SelectCondition
                     {
-                        ParamName = "UnitId",
+                        ParamName = "TenantId",
                         ParamType = "=",
-                        ParamValue = optmdl.UnitId.ToString(),
+                        ParamValue = optmdl.TenantId.ToString(),
                     });
                 }
             }
@@ -258,9 +279,9 @@ namespace IotWebApi.Controllers
             }
             if (types.Count == 0) return list;
             var optmdl = Request.GetToken();
-            var deviceList = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
+            var deviceList = SysCommonDAO<DeviceInfo>.Instance.GetListBy(t => t.TenantId == optmdl.TenantId && types.Contains(t.DeviceTypeCode));
             if (!deviceList.IsZxxAny()) return list;
-            var reportDayList = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= minday && t.SnowId < maxday && t.TenantId == optmdl.UnitId && types.Contains(t.DeviceTypeCode));
+            var reportDayList = EventReportDayDAO.Instance.GetListBy(t => t.SnowId >= minday && t.SnowId < maxday && t.TenantId == optmdl.TenantId && types.Contains(t.DeviceTypeCode));
             List<BalanceTree> balancelist = new List<BalanceTree>();
             balancelist.AddRange(GetBalances(deviceList, reportDayList, 0, 1, typeunit));
             var maxLevel = balancelist.Max(t => t.treeLevel);

@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using IotModel;
 using IotWebApi.Areas.Scada.Models;
@@ -29,7 +29,7 @@ namespace IotWebApi.Areas.Scada.Controllers
 
             var optmdl = Request.GetToken();
             info.SnowId = SnowModel.Instance.NewId();
-            info.TenantId = optmdl.UnitId;
+            info.TenantId = optmdl.TenantId;
             info.CreateId = optmdl.UserID;
             info.CreateTime = DateTime.Now.ToDateTimeString();
             info.CreateName = optmdl.UserName;
@@ -157,7 +157,7 @@ namespace IotWebApi.Areas.Scada.Controllers
         {
             var optmdl = Request.GetToken();
             if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
-            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.UnitId.ToString() });
+            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.TenantId.ToString() });
             int totalNumber = 0;
             var list = DashProjectDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;

@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using CenboEventBus;
 using IotLog;
 using FluentValidation;
@@ -267,82 +267,10 @@ namespace IotWebApi
                         using var sr = new StreamReader(request.Body, leaveOpen: true, encoding: Encoding.UTF8);
                         paramJson = await sr.ReadToEndAsync();
 
-                        //批量添加建筑/部门权限
-                        if (tokenmdl != null && paramJson.Contains("sconlist"))
-                        {
-                            bool refreshModel = false;
-                            var model = paramJson.ToObject<ActionPara>();
-                            bool islistpage = false;
-                            if (actionDesc.ActionName.ToLower() == "getlistbypage") islistpage = true;
-                            if (!tokenmdl.IsSystem || islistpage)
-                            {
-                                refreshModel = true;
-                            }
-                            if (islistpage)
-                            {
-                                var unitCon = model.sconlist.Find(s => s.ParamName.ToLower() == "unitid" && !s.ParamValue.IsZxxNullOrEmpty());
-                                if (unitCon == null)
-                                {
-                                    bool isAddUnitId = true;
-                                    List<string> strings = new List<string>()
-                                    {
-                                        "sysuser","basicunitinfo"
-                                    };
-                                    if (strings.Contains(actionDesc.ControllerName.ToLower()) && tokenmdl.IsSystem)
-                                    {
-                                        isAddUnitId = false;
-                                    }
-                                    if (isAddUnitId)
-                                    {
-                                        var returnType = actionDesc.MethodInfo.ReturnType;
-                                        Type actualReturnType = returnType;
-                                        // 如果是异步方法，例如 Task<T>，您可能想获取 T 的类型
-                                        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-                                        {
-                                            actualReturnType = returnType.GetGenericArguments()[0];
-                                        }
-                                        Type typeToInspect = null;
-                                        if (actualReturnType.IsGenericType &&
-                                             (actualReturnType.GetGenericTypeDefinition() == typeof(List<>) ||
-                                              actualReturnType.GetGenericTypeDefinition() == typeof(IList<>) ||
-                                              actualReturnType.GetGenericTypeDefinition() == typeof(ICollection<>) ||
-                                              actualReturnType.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
-                                        {
-                                            typeToInspect = actualReturnType.GetGenericArguments()[0];
-                                        }
-                                        else if (actualReturnType.IsArray)
-                                        {
-                                            typeToInspect = actualReturnType.GetElementType();
-                                        }
-                                        else if (actualReturnType != typeof(void))
-                                        {
-                                            typeToInspect = actualReturnType;
-                                        }
-                                        if (typeToInspect != null)
-                                        {
-                                            PropertyInfo[] properties = typeToInspect.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                                            if (properties.Any(t => t.Name.ToLower() == "unitid"))
-                                            {
-                                                model.sconlist.Add(new SelectCondition()
-                                                {
-                                                    ParamName = "UnitId",
-                                                    ParamType = "=",
-                                                    ParamValue = tokenmdl.UnitId.ToString(),
-                                                });
-                                                refreshModel = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (refreshModel)
-                            {
-                                // 将修改后的内容写回 Body
-                                var modifiedBytes = Encoding.UTF8.GetBytes(model.ToJson());
-                                request.Body = new MemoryStream(modifiedBytes);
-                                request.Body.Position = 0; // 重置流位置
-                            }
-                        }
+                        // 租户隔离已统一由 DbContext 全局 QueryFilter(AddTableFilter<ITenantEntity>) + TenantScope 超管豁免接管。
+                        // 原先在此按 tokenmdl 向 sconlist 注入 "UnitId=当前租户" 的旧机制已移除:它靠属性名字符串 "unitid"
+                        // 反射匹配,且注入的是 =当前租户(与决策 B1 父见子孙冲突)。sys_user 现已实现 ITenantEntity 随全局
+                        // 过滤器隔离;basicunit_info 由其 Controller 内 SysRelated 授权过滤。
 
                         //Action中可再次读取流
                         request.Body.Seek(0, SeekOrigin.Begin);

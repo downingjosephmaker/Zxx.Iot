@@ -58,7 +58,7 @@ namespace IotWebApi
                 {
                     foreach (var item in _SysrelList)
                     {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.TenantId);
+                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == item.TenantId);
                         if (unit != null)
                         {
                             if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);
@@ -67,7 +67,7 @@ namespace IotWebApi
                 }
 
                 //缓存权限单位ID
-                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.UnitId));
+                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.TenantId));
             }
 
             return model;
@@ -94,7 +94,7 @@ namespace IotWebApi
                     IsSystem = false,
                     DepartSelectLevel = 2,
                     SourceType = "Web",
-                    UnitId = _Sysuser.UnitId,
+                    TenantId = _Sysuser.TenantId,
                     UnitName = _Sysuser.UnitName,
                     UserID = _Sysuser.UserId,
                     UserName = _Sysuser.TrueName,
@@ -112,7 +112,7 @@ namespace IotWebApi
                 {
                     foreach (var item in _SysrelList)
                     {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == item.TenantId);
+                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == item.TenantId);
                         if (unit != null)
                         {
                             if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);
@@ -121,7 +121,7 @@ namespace IotWebApi
                 }
 
                 //缓存权限单位ID
-                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.UnitId));
+                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.TenantId));
             }
 
             return model;

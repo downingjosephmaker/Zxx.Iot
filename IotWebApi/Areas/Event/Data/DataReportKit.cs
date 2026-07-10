@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using IotModel;
 using IotWebApi.Areas.Event.Models;
 
@@ -34,7 +34,7 @@ namespace IotWebApi.Areas.Event.Data
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId.ToString()
+                ParamValue = model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {
@@ -129,7 +129,7 @@ namespace IotWebApi.Areas.Event.Data
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId.ToString()
+                ParamValue = model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {
@@ -220,7 +220,7 @@ namespace IotWebApi.Areas.Event.Data
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId.ToString()
+                ParamValue = model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {

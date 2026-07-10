@@ -29,7 +29,7 @@ namespace IotWebApi
                 List<DeviceTypeRun> updatelist = new List<DeviceTypeRun>();
                 foreach (var item in list)
                 {
-                    item.TenantId = optmdl.UnitId;
+                    item.TenantId = optmdl.TenantId;
                     if(item.SnowId > 0)
                     {
                         updatelist.Add(item);

@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using IotModel;
 using IotWebApi.Areas.Scada.Models;
@@ -36,7 +36,7 @@ namespace IotWebApi.Areas.Scada.Controllers
                 {
                     ParamName = "UnitId",
                     ParamType = "=",
-                    ParamValue = optmdl.UnitId.ToString(),
+                    ParamValue = optmdl.TenantId.ToString(),
                 });
             }
             var list = DeviceInfoDAO.Instance.GetListByPage(model, ref totalNumber);

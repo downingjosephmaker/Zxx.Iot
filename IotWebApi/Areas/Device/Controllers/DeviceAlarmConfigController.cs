@@ -82,9 +82,9 @@ namespace IotWebApi.Controllers
             List<DeviceInfo> devlist = new List<DeviceInfo>();
             List<DeviceAlarmConfig> alarmconfiglist = new List<DeviceAlarmConfig>();
             {
-                var _devlist = DeviceInfoDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && t.TenantId == optmdl.UnitId);
+                var _devlist = DeviceInfoDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && t.TenantId == optmdl.TenantId);
                 if (_devlist.IsZxxAny()) devlist.AddRange(_devlist);
-                var _alarmconfiglist = DeviceAlarmConfigDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && t.TenantId == optmdl.UnitId);
+                var _alarmconfiglist = DeviceAlarmConfigDAO.Instance.GetListBy(t => t.DeviceTypeCode == model.typecode && t.TenantId == optmdl.TenantId);
                 if (_alarmconfiglist.IsZxxAny()) alarmconfiglist.AddRange(_alarmconfiglist);
             }
             if (devlist.Count > 0)
@@ -294,7 +294,7 @@ namespace IotWebApi.Controllers
                 config.CreateId = optmdl.UserID;
                 config.CreateTime = time.ToDateTimeString();
                 config.CreateName = optmdl.UserName;
-                config.TenantId = optmdl.UnitId;
+                config.TenantId = optmdl.TenantId;
                 config.SnowId = SnowModel.Instance.NewId();
                 Status = DeviceAlarmConfigDAO.Instance.Insert(config);
             }

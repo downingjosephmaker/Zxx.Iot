@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using IotModel;
+using Newtonsoft.Json;
 
 namespace IotWebApi
 {
@@ -55,9 +56,11 @@ namespace IotWebApi
         public bool IsSystem { get; set; }
 
         /// <summary>
-        /// 当前单位ID
+        /// 当前租户ID（Token 载荷字段）。[JsonProperty("UnitId")] 保持序列化字段名不变，
+        /// 使存量旧 Token（JSON 里为 "UnitId"）反序列化后仍能落到本属性，避免全员被迫重登。
         ///</summary>
-        public int UnitId { get; set; }
+        [JsonProperty("UnitId")]
+        public int TenantId { get; set; }
 
         /// <summary>
         /// 当前单位名称

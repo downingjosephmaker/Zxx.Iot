@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using IotModel;
 using IotWebApi.Areas.Admin.Models;
@@ -86,13 +86,13 @@ namespace IotWebApi.Controllers
             string password = EncryptsHelper.MD5Make32(info.Password).ToUpper();
             info.Password = HashCryto.GetHash2String(string.Concat(password.ToUpper(), info.PasswordSalt), HashAlgorithmType.SHA256);
 
-            info.UnitId = optmdl.UnitId;
+            info.TenantId = optmdl.TenantId;
             info.UnitName = optmdl.UnitName;
             ////角色级别==3 : 不是管理员=》代理商=》单位管理员
             //if (optmdl._Sysrole.TreeLevel == 3)
             //{
             //    //根据单位管理员设置默认单位
-            //    info.UnitId = optmdl.UnitId;
+            //    info.TenantId = optmdl.TenantId;
             //    info.UnitName = optmdl.UnitName;
             //}
 
@@ -348,8 +348,8 @@ namespace IotWebApi.Controllers
             //    Message = $"账号{info.TrueName}不需要设置默认单位。";
             //    return Message;
             //}
-            info.UnitId = userinfo.UnitId;
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == userinfo.UnitId);
+            info.TenantId = userinfo.TenantId;
+            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == userinfo.TenantId);
             if (unit != null)
             {
                 info.UnitName = unit.UnitName;
@@ -359,7 +359,7 @@ namespace IotWebApi.Controllers
             info.UpdateName = optmdl.UserName;
             Status = SysUserDAO.Instance.UpdateColumns(info, it => new
             {
-                it.UnitId,
+                it.TenantId,
                 it.UnitName,
                 it.UpdateId,
                 it.UpdateTime,
@@ -390,7 +390,7 @@ namespace IotWebApi.Controllers
                 UserName = optmdl.UserName,
                 LoginTime = DateTime.Now,
                 SourceType = optmdl.SourceType,
-                UnitId = optmdl.UnitId,
+                TenantId = optmdl.TenantId,
                 UnitName = optmdl.UnitName,
                 IsSystem = optmdl.IsSystem,
             };
@@ -415,7 +415,7 @@ namespace IotWebApi.Controllers
             string res = "";
             Message = "用户Token传递失败。";
             Status = false;
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == unitid);
+            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == unitid);
             if (unit != null)
             {
                 var optmdl = Request.GetToken();
@@ -425,7 +425,7 @@ namespace IotWebApi.Controllers
                     UserName = optmdl.UserName,
                     LoginTime = optmdl.LoginTime,
                     SourceType = optmdl.SourceType,
-                    UnitId = unitid,
+                    TenantId = unitid,
                     UnitName = unit.UnitName,
                     IsSystem = optmdl.IsSystem,
                 };

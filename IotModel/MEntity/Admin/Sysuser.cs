@@ -9,7 +9,7 @@ namespace IotModel
     [DisplayName("用户信息表")]
     [EntityCache]
     [SugarTable(TableName = "sys_user", TableDescription = "用户信息表", IsDisabledUpdateAll = true)]
-    public class SysUser : BaseEntity
+    public class SysUser : BaseEntity, ITenantEntity
     {
         /// <summary>
         /// 用户ID
@@ -101,8 +101,8 @@ namespace IotModel
         /// 单位ID
         ///</summary>
         [DisplayName("单位ID")]
-        [SugarColumn(ColumnName = "unit_id", ColumnDescription = "单位ID", DefaultValue = "0", ColumnDataType = "int")]
-        public int UnitId { get; set; }
+        [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
+        public int TenantId { get; set; }
         /// <summary>
         /// 单位名称
         ///</summary>

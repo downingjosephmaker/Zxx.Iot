@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using IotModel;
@@ -210,7 +210,7 @@ namespace IotWebApi.Controllers
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId == 0 ? optmdl.UnitId.ToString() : model.UnitId.ToString()
+                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {
@@ -350,7 +350,7 @@ namespace IotWebApi.Controllers
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId == 0 ? optmdl.UnitId.ToString() : model.UnitId.ToString()
+                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {
@@ -486,7 +486,7 @@ namespace IotWebApi.Controllers
             {
                 ParamName = "UnitId",
                 ParamType = "=",
-                ParamValue = model.UnitId == 0 ? optmdl.UnitId.ToString() : model.UnitId.ToString()
+                ParamValue = model.TenantId == 0 ? optmdl.TenantId.ToString() : model.TenantId.ToString()
             });
             if (model.DataSort == 0)
             {
@@ -864,13 +864,13 @@ namespace IotWebApi.Controllers
 
             //分项能耗（电/水/氢能/光伏/气/热）
             //电
-            var elecDeviceList = GetDevicesBy(optmdl.UnitId, "|zndb|");
+            var elecDeviceList = GetDevicesBy(optmdl.TenantId, "|zndb|");
             if (elecDeviceList.IsZxxAny())
             {
                 dicEnergyType.Add("电", elecDeviceList);
             }
             //水
-            var waterDeviceList = GetDevicesBy(optmdl.UnitId, "|znsb|");
+            var waterDeviceList = GetDevicesBy(optmdl.TenantId, "|znsb|");
             if (waterDeviceList.IsZxxAny())
             {
                 dicEnergyType.Add("水", waterDeviceList);
@@ -878,7 +878,7 @@ namespace IotWebApi.Controllers
             //dicEnergyType.Add("气", null);
             //dicEnergyType.Add("热", null);
             ////光伏
-            //var gqitem = GetGQDevicesBy(optmdl.UnitId);
+            //var gqitem = GetGQDevicesBy(optmdl.TenantId);
             //if (gqitem.Item1.Count > 0)
             //{
             //    dicEnergyType.Add("减排", gqitem.Item1);
@@ -938,7 +938,7 @@ namespace IotWebApi.Controllers
 
             #region 数据整理
 
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == optmdl.UnitId);
+            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == optmdl.TenantId);
             Dictionary<string, double> dicFactors = new Dictionary<string, double>();
             if (unit != null)
             {
@@ -1151,13 +1151,13 @@ namespace IotWebApi.Controllers
             var optmdl = Request.GetToken();
             //分项能耗（电/水/气/热） 
             //电
-            var elecDeviceList = GetDevicesBy(optmdl.UnitId, "|zndb|");
+            var elecDeviceList = GetDevicesBy(optmdl.TenantId, "|zndb|");
             if (elecDeviceList.IsZxxAny())
             {
                 dicEnergyType.Add("电", elecDeviceList);
             }
             //水
-            var waterDeviceList = GetDevicesBy(optmdl.UnitId, "|znsb|");
+            var waterDeviceList = GetDevicesBy(optmdl.TenantId, "|znsb|");
             if (waterDeviceList.IsZxxAny())
             {
                 dicEnergyType.Add("水", waterDeviceList);
@@ -1165,7 +1165,7 @@ namespace IotWebApi.Controllers
             //dicEnergyType.Add("气", null);
             //dicEnergyType.Add("热", null);
             ////光伏
-            //var gqitem = GetGQDevicesBy(optmdl.UnitId);
+            //var gqitem = GetGQDevicesBy(optmdl.TenantId);
             //if (gqitem.Item1.Count > 0)
             //{
             //    dicEnergyType.Add("减排", gqitem.Item1);
@@ -1219,7 +1219,7 @@ namespace IotWebApi.Controllers
 
             #region 数据整理
 
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == optmdl.UnitId);
+            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == optmdl.TenantId);
             Dictionary<string, double> dicFactors = new Dictionary<string, double>();
             if (unit != null)
             {

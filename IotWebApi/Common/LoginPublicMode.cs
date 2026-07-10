@@ -40,7 +40,7 @@ namespace IotWebApi
                     LoginTime = time,
                     TokenExpireTime = time.AddHours(GetTokenRefreshHours()),
                     SourceType = sourceType,
-                    UnitId = user.UnitId,
+                    TenantId = user.TenantId,
                     UnitName = user.UnitName,
                 };
 
@@ -67,9 +67,9 @@ namespace IotWebApi
 
                 model.LoginToken = EncryptsHelper.Encrypt(model.ToJson());
 
-                if (user.UnitId > 0)
+                if (user.TenantId > 0)
                 {
-                    var unitentity = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == user.UnitId);
+                    var unitentity = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == user.TenantId);
                     if (unitentity != null)
                     {
                         model.RouterPath = unitentity.ExpandObject.RouterPath;

@@ -1,4 +1,4 @@
-﻿using IotModel;
+using IotModel;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IotWebApi.Controllers
@@ -38,7 +38,7 @@ namespace IotWebApi.Controllers
             Status = false;
             Message = "系统Logo保存失败。";
             var optmdl = Request.GetToken();
-            info.TenantId = optmdl.UnitId;
+            info.TenantId = optmdl.TenantId;
             if (info.Id == 0)
                 Status = AdminLogoparamDAO.Instance.Insert(info);
             else Status = AdminLogoparamDAO.Instance.Update(info);

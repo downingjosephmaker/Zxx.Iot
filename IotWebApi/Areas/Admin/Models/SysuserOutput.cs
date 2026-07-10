@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace IotWebApi.Areas.Admin.Models
 {
@@ -73,7 +73,7 @@ namespace IotWebApi.Areas.Admin.Models
         /// 单位ID
         ///</summary>
         [DisplayName("单位ID")]
-        public int UnitId { get; set; }
+        public int TenantId { get; set; }
         /// <summary>
         /// 单位名称
         ///</summary>

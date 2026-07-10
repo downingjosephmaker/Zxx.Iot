@@ -39,7 +39,7 @@ namespace IotWebApi.Controllers
                     if (item.SnowId == 0)
                     {
                         item.SnowId = SnowModel.Instance.NewId();
-                        item.TenantId = optmdl.UnitId;
+                        item.TenantId = optmdl.TenantId;
                         item.CreateId = optmdl.UserID;
                         item.CreateTime = time.ToDateTimeString();
                         item.CreateName = optmdl.UserName;
@@ -117,7 +117,7 @@ namespace IotWebApi.Controllers
         {
             var optmdl = Request.GetToken();
             if (model.sconlist == null) model.sconlist = new List<SelectCondition>();
-            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.UnitId.ToString() });
+            model.sconlist.Add(new SelectCondition { ParamName = "UnitId", ParamType = "=", ParamValue = optmdl.TenantId.ToString() });
             int totalNumber = 0;
             var list = DashDataPoolDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;

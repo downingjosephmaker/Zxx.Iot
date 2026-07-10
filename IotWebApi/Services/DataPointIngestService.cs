@@ -712,7 +712,7 @@ namespace IotWebApi.Services
             evt.DeviceName = device.DeviceName;
             evt.DeviceTypeCode = device.DeviceTypeCode;
             evt.TenantId = device.TenantId;
-            var unit = unitlist.FirstOrDefault(t => t.UnitId == device.TenantId);
+            var unit = unitlist.FirstOrDefault(t => t.TenantId == device.TenantId);
             if (unit != null) evt.UnitName = unit.UnitName;
             var devtype = typelist.FirstOrDefault(t => t.TypeCode == device.DeviceTypeCode);
             if (devtype != null) evt.DeviceTypeName = devtype.TypeName;

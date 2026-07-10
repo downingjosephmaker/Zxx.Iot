@@ -1,4 +1,4 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text;
@@ -118,7 +118,7 @@ namespace IotWebApi.Controllers
         public SunTimesResult GetSunTimes(DateTime? date = null)
         {
             var optmdl = Request.GetToken();
-            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.UnitId == optmdl.UnitId);
+            var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == optmdl.TenantId);
             if (unit == null || string.IsNullOrEmpty(unit.AreaId))
             {
                 Status = false;

@@ -35,7 +35,7 @@ namespace IotModel
                     UserXb = "未知",
                     IsEnable = 1,
                     UserRemark = "Admin6688",
-                    UnitId = 1,
+                    TenantId = 1,
                     UnitName = "开发单位",
                     CreateId = 1,
                     CreateTime = time,
