@@ -210,7 +210,7 @@ const handleAlertClick = alert => {
         <div class="logo">
           <i class="fas fa-bolt" />
         </div>
-        <h1 class="nav-title">嘉兴港野猫墩物流园区能源监管驾驶舱</h1>
+        <h1 class="nav-title">能源监管驾驶舱</h1>
       </div>
       <div class="nav-actions">
         <div class="time-display">

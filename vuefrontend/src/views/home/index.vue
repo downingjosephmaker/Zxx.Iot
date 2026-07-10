@@ -296,7 +296,7 @@ const goToYearEnergyReport = () => {
         <div class="logo">
           <el-icon><component :is="useRenderIcon(boltIcon)" /></el-icon>
         </div>
-        <h1 class="nav-title">嘉兴港野猫墩物流园区综合能源管控平台</h1>
+        <h1 class="nav-title">综合能源管控平台</h1>
       </div>
       <div class="nav-actions">
         <div class="report-btn" @click="goToMonthEnergyReport">
