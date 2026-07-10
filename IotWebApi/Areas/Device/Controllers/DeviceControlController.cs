@@ -79,12 +79,18 @@ namespace IotWebApi.Controllers
 
             var optmdl = Request.GetToken();
             var commandGuid = SnowModel.Instance.NewId().ToString();
+            // 模式3链路起点：上游请求 Trace（TraceContextMiddleware 生成，与本次请求日志的"追踪"字段一致）
+            // + 接口标识 + 下发时刻时间戳，随命令传给插件；插件侧日志带同一 traceId 即可跨组件串联并计算链路耗时
+            string upstreamTraceId = HttpContext.Items["__TraceId"] as string;
+            string traceAction = HttpContext.Items["__TraceAction"] as string;
+            string traceId = $"{upstreamTraceId}-{traceAction}-{DateTime.Now:yyyyMMddHHmmssfff}";
             var message = new PluginMessage
             {
                 MessageType = PluginMessageEnum.设备控制,
                 MessageJson = new
                 {
                     CommandId = commandGuid,
+                    TraceId = traceId,
                     ClassName = command.ClassName,
                     ConContent = para.ConContent,
                     DeviceIds = deviceids
@@ -104,7 +110,7 @@ namespace IotWebApi.Controllers
             }
 
             LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
-                $"用户[{optmdl?.UserName}]下发命令[{command.CommandName}/{command.ClassName}]至设备{deviceids.ToJson()},命令ID[{commandGuid}]",
+                $"用户[{optmdl?.UserName}]下发命令[{command.CommandName}/{command.ClassName}]至设备{deviceids.ToJson()},命令ID[{commandGuid}],traceId[{traceId}]",
                 CONTROL_CATEGORY);
 
             Status = true;

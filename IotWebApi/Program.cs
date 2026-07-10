@@ -41,20 +41,10 @@ if (!urls.IsZxxNullOrEmpty())
 
 #region 配置Serilog（统一由 Zhjngk.ServiceLog 管理）
 
-// 从配置读取 Loki 地址（appsettings.json 的 "Loki": { "Url": "..." }），未配置则不推 Loki
-string lokiUrl = AppSetting.GetConfig("Loki:Url");
-// 一行完成所有 Serilog 初始化。
-// Sink 策略按运行环境自动判断：
-//   · Docker 容器内 → 只输出 stdout（供 docker logs / Alloy 采集），不写本地文件
-//   · 非容器（开发机/直接部署）→ 写文件(按天+按20MB滚动) + 控制台
-// Loki 配置了 URL 则直推（注意：若同时用 Alloy 采 stdout，会重复，二选一）
-LogBootstrap.Init(appName: "zhjngk-webapi", options: new LogOptions
-{
-    RetainedFileCount = 300,
-    LokiUrl = lokiUrl,
-    LogDir = "Logs",           // 日志目录（Docker 部署时需挂 volume 持久化）
-    EnableFile = true,            // 强制写文件（Docker 内也写，双保险：stdout 实时 + 文件本地备份）
-});
+// 日志选项整体来自 appsettings.json 的 "LogConfig" 节（AppName/LogDir/滚动/保留/Loki）；
+// 文件(按天+按大小滚动)与控制台 sink 始终启用，LokiUrl 配置了才直推 Loki
+var logConfig = AppSetting.GetT<LogOptions>("LogConfig");
+LogBootstrap.Init(logConfig);
 builder.Host.UseSerilog();
 
 #endregion
@@ -400,6 +390,10 @@ app.UseCookiePolicy();
 app.UseStatusCodePages();
 
 app.UseRouting();
+
+// Trace 上下文中间件：必须在 UseRouting 之后注册（才能拿到路由的 ControllerActionDescriptor），
+// 在 Controller/Filter 之前执行，确保 LogContext 贯穿整个请求
+app.UseMiddleware<IotWebApi.Middleware.TraceContextMiddleware>();
 
 app.UseCors();
 

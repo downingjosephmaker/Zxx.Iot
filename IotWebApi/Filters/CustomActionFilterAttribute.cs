@@ -29,7 +29,7 @@ namespace IotWebApi
         public void OnActionExecuted(ActionExecutedContext context)
         {
             // 结果阶段重新建立 TraceId/Action 上下文（OnAuthorizationAsync 的 using 已结束）
-            using (LogContext.PushProperty("TraceId", _traceId))
+            using (LogContext.PushProperty("Trace", _traceId))
             using (LogContext.PushProperty("Action", $"{(context.ActionDescriptor as ControllerActionDescriptor)?.ControllerName}.{(context.ActionDescriptor as ControllerActionDescriptor)?.ActionName}"))
             {
                 try
@@ -222,28 +222,21 @@ namespace IotWebApi
         private string userip = "";
         private string apidysource = "";//API调用来源
         private long SnowId = 0;
-        private string _traceId = "";   // 实际使用的 TraceId（优先上游 X-Trace-Id，否则 SnowId）
+        private string _traceId = "";   // 实际使用的 TraceId（由 TraceContextMiddleware 统一生成，此处仅读取）
         private OperatorModel tokenmdl = null;
         private Stopwatch sw = new();
         public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
         {
             sw.Restart();
 
-            // 请求级日志上下文：TraceId 贯穿授权→执行→结果全链路，
-            // 该请求线程内的所有 LogHelper/ILogger 调用自动携带 TraceId（Serilog LogContext 机制）
-            IDisposable traceScope = null;
+            var actionDesc = context.ActionDescriptor as ControllerActionDescriptor;
+
+            // TraceId 由 TraceContextMiddleware 统一生成并 push 到 LogContext，
+            // 此处仅读取（供 OnActionExecuted 结果阶段重建日志上下文使用）
+            _traceId = context.HttpContext.Items["__TraceId"] as string ?? "";
 
             try
             {
-                var actionDesc = context.ActionDescriptor as ControllerActionDescriptor;
-
-                // TraceId 必须在 NoOptLog 检查之前建立，确保所有请求（含服务间调用）都有 TraceId
-                // 优先用上游传入的 X-Trace-Id（如 Service.4G_ZT 的"ZT-{时间}"），没有则生成新的
-                _traceId = context.HttpContext.Request.Headers["X-Trace-Id"].FirstOrDefault();
-                if (string.IsNullOrEmpty(_traceId)) _traceId = SnowModel.Instance.NewId().ToString();
-                traceScope = LogContext.PushProperty("TraceId", _traceId);
-                traceScope = LogContext.PushProperty("Action", $"{actionDesc?.ControllerName}.{actionDesc?.ActionName}");
-
                 // NoOptLog 只跳过审计日志和业务日志记录，不跳过 TraceId
                 if (IsFilterLogAction(context.ActionDescriptor)) return;
 
@@ -298,11 +291,6 @@ namespace IotWebApi
             catch (Exception ex)
             {
                 LogHelper.ErrorLogWrite("CustomActionFilterAttribute", "OnAuthorizationAsync", ex.ToString(), "方法错误");
-            }
-            finally
-            {
-                // 释放 LogContext：using 块结束时弹出 TraceId，避免污染其他请求
-                traceScope?.Dispose();
             }
         }
 
