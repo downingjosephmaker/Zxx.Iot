@@ -156,16 +156,16 @@ const onLogin = async (formEl: FormInstance | undefined) => {
                 // 使用 nextTick 确保路由完全初始化
                 nextTick(() => {
                   router
-                    .push("/scada/project")
+                    .push("/project")
                     .then(() => {
                       message("登录成功", { type: "success" });
                     })
                     .catch(err => {
                       console.error("路由跳转失败:", err);
-                      // 如果Cockpit路由失败，回退到welcome页面
-                      router.push("/welcome").catch(() => {
-                        // 如果welcome也失败，刷新页面
-                        window.location.href = "/#/welcome";
+                      // 如果项目管理路由失败，回退到组态编辑器页面
+                      router.push("/scada").catch(() => {
+                        // 兜底：刷新到项目管理页
+                        window.location.href = "/#/project";
                       });
                     });
                 });
