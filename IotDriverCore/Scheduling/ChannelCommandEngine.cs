@@ -45,6 +45,11 @@ namespace IotDriverCore
         private CancellationTokenSource? _cts;
 
         /// <summary>
+        /// 已停止标志(区分"未启动"与"已停止":Start前入队采集指令是合法模式,不能只判_cts)
+        /// </summary>
+        private volatile bool _stopped;
+
+        /// <summary>
         /// 控制指令最终超时回调(驱动发布超时控制结果用)
         /// </summary>
         public Action<DriverCommand>? TimeoutHandler { get; set; }
@@ -62,6 +67,7 @@ namespace IotDriverCore
         /// </summary>
         public void Start()
         {
+            _stopped = false;
             _cts ??= new CancellationTokenSource();
             List<string> endpoints;
             lock (_cmdLock) { endpoints = _queues.Keys.ToList(); }
@@ -73,6 +79,7 @@ namespace IotDriverCore
         /// </summary>
         public async Task StopAsync()
         {
+            _stopped = true;
             var cts = _cts;
             _cts = null;
             cts?.Cancel();
@@ -91,6 +98,7 @@ namespace IotDriverCore
 
         public void Dispose()
         {
+            _stopped = true;
             _cts?.Cancel();
         }
 
@@ -99,11 +107,17 @@ namespace IotDriverCore
         #region 指令入队与回执匹配
 
         /// <summary>
-        /// 指令入队(队列不存在自动创建,并确保端点发送循环已启动)
+        /// 指令入队(队列不存在自动创建,并确保端点发送循环已启动);
+        /// 引擎已停止时控制指令立即走超时回调返回失败回执,不再静默滞留于无发送循环的队列
         /// </summary>
         public void Enqueue(DriverCommand cmd)
         {
             if (cmd.Endpoint.IsZxxNullOrEmpty()) return;
+            if (_stopped && cmd.CmdKind == DriverCommand.KindControl)
+            {
+                FailControlCommand(cmd);
+                return;
+            }
             lock (_cmdLock)
             {
                 if (!_queues.TryGetValue(cmd.Endpoint, out var list))
@@ -127,11 +141,30 @@ namespace IotDriverCore
         }
 
         /// <summary>
-        /// 清空全部队列(插件停止时调用)
+        /// 清空全部队列(插件停止时调用);在队未完成的控制指令逐条走超时回调,
+        /// 让调用方(手动下发/规则联动)收到失败回执而非无回执无超时的静默丢失
         /// </summary>
         public void ClearAll()
         {
-            lock (_cmdLock) { _queues.Clear(); }
+            List<DriverCommand> pending;
+            lock (_cmdLock)
+            {
+                pending = _queues.Values.SelectMany(t => t)
+                    .Where(c => c.CmdKind == DriverCommand.KindControl && c.State != 2 && c.State != 3)
+                    .ToList();
+                _queues.Clear();
+            }
+            foreach (var cmd in pending) FailControlCommand(cmd);
+        }
+
+        /// <summary>
+        /// 控制指令失败出局:置废弃态并回调TimeoutHandler(引擎停止/清队兜底,与ProcessTimeouts超限废弃同款回执路径)
+        /// </summary>
+        private void FailControlCommand(DriverCommand cmd)
+        {
+            cmd.State = 3;
+            var handler = TimeoutHandler;
+            if (handler != null) _ = Task.Run(() => handler(cmd));
         }
 
         /// <summary>

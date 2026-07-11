@@ -139,7 +139,8 @@ namespace IotWebApi.Areas.Admin.Controllers
         }
 
         /// <summary>
-        /// 根据插件Guid删除(D11修复:先停并卸载运行实例,再删登记)
+        /// 根据插件Guid删除(D11+补审修复:先删登记再卸载——
+        /// 排队中的重载在闸门内重读DB已无此行即走卸载分支,不会把删除中的插件复活成孤儿实例)
         /// </summary>
         /// <param name="guid">插件Guid</param>
         /// <returns></returns>
@@ -152,8 +153,9 @@ namespace IotWebApi.Areas.Admin.Controllers
             Status = false;
             Message = "插件删除失败。";
             if (DenyIfNotSuperAdmin(out _)) return Message;
-            await _pluginService.UnloadOneAsync(guid);
             Status = SysPluginDAO.Instance.DeleteBy(t => t.PluginGuid == guid);
+            // 行已不存在时也执行卸载:可顺手清除历史竞态遗留的无行孤儿实例
+            await _pluginService.UnloadOneAsync(guid);
             if (Status)
             {
                 Message = "插件删除成功。";
@@ -328,14 +330,18 @@ namespace IotWebApi.Areas.Admin.Controllers
             });
             if (Status && temp.PluginStatus == 1 && temp.PluginPath != info.PluginPath)
             {
-                await _pluginService.ReloadOneAsync(info.PluginGuid);
+                // 补审修复:重载结果须回传——路径改坏时旧实例已按新路径重载失败,不能报"更新成功"了事
+                bool reloaded = await _pluginService.ReloadOneAsync(info.PluginGuid);
+                Message = reloaded ? "插件信息更新成功，已按新路径重载。"
+                    : "插件信息更新成功，但按新路径重载失败(插件当前未运行)，请检查DLL与系统日志。";
+                return Message;
             }
             Message = "插件信息更新成功。";
             return Message;
         }
 
         /// <summary>
-        /// 上传插件(zip整包或单DLL;解压/落位到版本化目录files/plugins/{guid}/{时间戳}/,
+        /// 上传插件(zip整包或单DLL;解压/落位到版本化目录plugins/{guid}/{时间戳}/,
         /// 规避Windows文件锁与ALC协作式卸载不确定性;临时可回收ALC反射元数据登记入库,
         /// 新插件默认停用;已启用的插件上传后即时热更新到新版本)
         /// </summary>
@@ -529,7 +535,15 @@ namespace IotWebApi.Areas.Admin.Controllers
                 }
 
                 data.Status = true;
-                data.Message = $"插件[{pluginName}]上传并登记成功" + (hotreloaded ? "，已即时热更新。" : "，默认停用，请配置后启用。");
+                // 补审修复:区分四种真实状态,已启用但热更失败时不再误提示"默认停用请配置后启用"
+                if (exist == null)
+                    data.Message = $"插件[{pluginName}]上传并登记成功，默认停用，请配置后启用。";
+                else if (exist.PluginStatus != 1)
+                    data.Message = $"插件[{pluginName}]上传并更新成功，插件当前停用，启用后按新版本加载。";
+                else if (hotreloaded)
+                    data.Message = $"插件[{pluginName}]上传并登记成功，已即时热更新。";
+                else
+                    data.Message = $"插件[{pluginName}]上传落位成功，但热更新失败(插件当前未运行)，请检查配置与系统日志。";
                 return data;
             }
             catch (Exception ex)

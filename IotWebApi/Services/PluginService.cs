@@ -136,7 +136,9 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 重载核心(闸门内调用):卸旧→独立ALC加载→登记→回写Manifest与配置回填→启动
+        /// 重载核心(闸门内调用):先在新ALC验证(加载/Guid匹配/实例化)→再卸旧→注入→回写元数据→启动。
+        /// 补审修复:验证失败不击落运行中的旧实例;启动失败不登记不进白名单并卸载新上下文,
+        /// 返回值真实反映启动结果(SaveConfig/EnablePlugin/上传不再误报"已生效")
         /// </summary>
         private async Task<bool> ReloadOneCoreAsync(SysPluginEntity item)
         {
@@ -147,66 +149,16 @@ namespace IotWebApi.Services
                 return false;
             }
 
-            // 1. 卸载旧实例与上下文
-            await UnloadOneCoreAsync(item.PluginGuid);
-
-            // 2. 独立ALC加载并实例化(仅登记Guid匹配的插件类型)
+            // 1. 先在新ALC上加载并实例化Guid匹配类型,失败直接退出,不动运行中的旧实例
             PluginLoadContext loadContext = new PluginLoadContext(pluginPath);
+            ICenBoPlugin plugin = null;
             try
             {
                 var assembly = loadContext.LoadFromAssemblyPath(pluginPath);
-                var pluginTypes = assembly.GetTypes()
-                    .Where(t => typeof(ICenBoPlugin).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface);
-                foreach (var pluginType in pluginTypes)
-                {
-                    var plugin = (ICenBoPlugin)Activator.CreateInstance(pluginType);
-                    if (plugin.PluginGuid != item.PluginGuid) continue;
-                    try
-                    {
-                        plugin.PluginInit(_eventBus);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
-                        continue; // 注入失败跳过该插件
-                    }
-
-                    // 3. 登记新上下文和实例,刷新控制命令白名单
-                    OperatorCommon.PluginLoadContexts[item.PluginGuid] = loadContext;
-                    OperatorCommon.DicPlugins[item.PluginGuid] = plugin;
-                    RefreshCommandRegistry();
-
-                    // 4. Manifest持久化+DB配置为空时用缺省配置回填(B-1.1本地文件一次性迁移)
-                    PersistMetadata(item, plugin);
-
-                    // 5. 启动(B-1.1:传DB plugin_config,插件内不再直读本地Config文件)
-                    try
-                    {
-                        if (await plugin.PluginStart(item.PluginConfig))
-                        {
-                            item.PluginHeartTime = DateTime.Now.ToDateTimeString();
-                            item.PluginHeartStatus = 0;
-                            item.UpdateTime = DateTime.Now.ToDateTimeString();
-                            item.ExpandObject = null;
-                            SysPluginDAO.Instance.UpdateColumns(item, it => new { it.PluginHeartTime, it.PluginHeartStatus, it.UpdateTime });
-                            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}加载且启动成功", Service_CATEGORY);
-                        }
-                        else
-                        {
-                            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}加载但启动失败", Service_CATEGORY);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
-                    }
-                    return true;
-                }
-
-                // DLL中无Guid匹配的插件类型:卸载空上下文
-                loadContext.Unload();
-                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}的DLL中未找到Guid匹配的ICenBoPlugin实现", Service_CATEGORY);
-                return false;
+                plugin = assembly.GetTypes()
+                    .Where(t => typeof(ICenBoPlugin).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+                    .Select(t => (ICenBoPlugin)Activator.CreateInstance(t))
+                    .FirstOrDefault(p => p.PluginGuid == item.PluginGuid);
             }
             catch (Exception ex)
             {
@@ -214,6 +166,62 @@ namespace IotWebApi.Services
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
                 return false;
             }
+            if (plugin == null)
+            {
+                loadContext.Unload();
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}的DLL中未找到Guid匹配的ICenBoPlugin实现", Service_CATEGORY);
+                return false;
+            }
+
+            // 2. 新DLL验证通过才卸载旧实例与上下文
+            await UnloadOneCoreAsync(item.PluginGuid);
+
+            // 3. 注入事件总线
+            try
+            {
+                plugin.PluginInit(_eventBus);
+            }
+            catch (Exception ex)
+            {
+                loadContext.Unload();
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
+                return false;
+            }
+
+            // 4. Manifest持久化+DB配置为空时用缺省配置回填(B-1.1本地文件一次性迁移)
+            PersistMetadata(item, plugin);
+
+            // 5. 启动(B-1.1:传DB plugin_config,插件内不再直读本地Config文件)
+            bool started = false;
+            try
+            {
+                started = await plugin.PluginStart(item.PluginConfig);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY);
+            }
+            if (!started)
+            {
+                try { await plugin.PluginStop(); }  //清理启动半途已拉起的资源
+                catch (Exception ex) { LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), Service_CATEGORY); }
+                loadContext.Unload();
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}启动失败,未登记(不接收控制命令),详见错误日志", Service_CATEGORY);
+                return false;
+            }
+
+            // 6. 启动成功才登记上下文与实例,刷新控制命令白名单
+            OperatorCommon.PluginLoadContexts[item.PluginGuid] = loadContext;
+            OperatorCommon.DicPlugins[item.PluginGuid] = plugin;
+            RefreshCommandRegistry();
+
+            item.PluginHeartTime = DateTime.Now.ToDateTimeString();
+            item.PluginHeartStatus = 0;
+            item.UpdateTime = DateTime.Now.ToDateTimeString();
+            item.ExpandObject = null;
+            SysPluginDAO.Instance.UpdateColumns(item, it => new { it.PluginHeartTime, it.PluginHeartStatus, it.UpdateTime });
+            LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}加载且启动成功", Service_CATEGORY);
+            return true;
         }
 
         /// <summary>
