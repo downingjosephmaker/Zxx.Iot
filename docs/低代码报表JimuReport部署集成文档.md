@@ -2,7 +2,7 @@
 
 > 口径来源：`docs/协议模拟器与插件体系完善方案.md` §7 D-7 与 Q7。
 > 路线：旁挂 **JimuReport**（Java/Spring Boot 独立服务）；数据源**不直连业务库**，经 WebApi 数据集端点（带租户过滤）；平台侧代码已随第四批落码，**docker 部署与示例报表制作为运维侧动作**。
-> ⚠️ 前置：JimuReport 免费版为 GPL-3.0 + 附加条款双许可，**生产使用前须完成合规确认**（Q7），不过关则转 .NET 商业组件（Stimulsoft/ActiveReports/FastReport）比价。
+> 许可合规确认项已于 2026-07-12 经用户拍板取消，不作为部署前置。
 
 ## 1. 架构
 
@@ -145,13 +145,16 @@ public class IotTokenService implements JmReportTokenServiceI {
 
 ## 5. 遗留与可选清理
 
-- **同族遗留待拍板**：`EventReportWeek/Month/PeakDay`（实体+DAO+Controller）本批**保留**——不在已确认删除清单内；若拍板废弃可随后续批次同法清理。
+- **同族遗留已删（2026-07-12 拍板）**：`EventReportWeek/Month/PeakDay` 三族（实体+DAO+FullEntity+Expand+Controller 共 15 文件）与前端死文件 `api/report/electricReport.ts`（零导入方，所引 `DataReport`/`HtkRecordDataPeakDay` 控制器后端不存在）已删除。
 - **已删实体的物理表**（CodeFirst 不删表，确认无回滚需要后由运维执行）：
 
 ```sql
--- event_report_day 为按年分表，先查出全部物理分表再删：
-SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'event_report_day%';
+-- event_report_day/event_report_week 按年分表、event_peak_day 按月分表，先查出全部物理分表再删：
+SELECT tablename FROM pg_tables WHERE schemaname='public'
+  AND (tablename LIKE 'event_report_day%' OR tablename LIKE 'event_report_week%' OR tablename LIKE 'event_peak_day%');
 -- 逐表：DROP TABLE IF EXISTS public.<tablename>;
+-- event_report_month 为单表：
+DROP TABLE IF EXISTS public.event_report_month;
 ```
 
 - 数据库 `sys_menu` 中若存在指向已删页面（能耗分析/报表 dataAnalysis/reportForms 系）的菜单行，由运维清理（当前前端为纯静态路由，DB 菜单不参与渲染，仅影响菜单管理页整洁）。
