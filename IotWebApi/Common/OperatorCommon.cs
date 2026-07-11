@@ -301,6 +301,21 @@ namespace IotWebApi
         }
 
         /// <summary>
+        /// 插件存储根(物理):{BaseDirectory}/plugins。
+        /// 独立于NetLocalfile(/files静态映射根)之外——插件DLL不经静态文件服务对外暴露(D15残余风险根治)。
+        /// sys_plugin.plugin_path 落库口径=相对本根({guid}/{时间戳}/x.dll)
+        /// </summary>
+        public static string PluginLocalRoot
+        {
+            get
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "plugins");
+                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                return path;
+            }
+        }
+
+        /// <summary>
         /// 用户状态信息
         /// </summary>
         public static List<ZxxUserInfo> UserList = new List<ZxxUserInfo>();

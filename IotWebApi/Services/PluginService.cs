@@ -140,7 +140,7 @@ namespace IotWebApi.Services
         /// </summary>
         private async Task<bool> ReloadOneCoreAsync(SysPluginEntity item)
         {
-            var pluginPath = Path.Combine(OperatorCommon.NetLocalfile, item.PluginPath);
+            var pluginPath = Path.Combine(OperatorCommon.PluginLocalRoot, item.PluginPath);
             if (!File.Exists(pluginPath))
             {
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件{item.PluginName}不存在，路径:{pluginPath}", Service_CATEGORY);

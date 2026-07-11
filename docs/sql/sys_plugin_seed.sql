@@ -7,7 +7,8 @@
 ALTER TABLE sys_plugin ADD COLUMN IF NOT EXISTS plugin_manifest text;
 -- 部署路径二选一:
 --   ① 插件管理页/Swagger 调 SysPlugin/UploadPluginFile 上传 zip/DLL —— 自动落版本化目录并回填 plugin_path/plugin_manifest/plugin_config;
---   ② 带依赖整目录拷入 files/plugins/{guid}/{时间戳}/ 后手工回填 plugin_path(相对路径,如 plugins/{guid}/{时间戳}/IotPlugin.Xxx.dll)。
+--   ② 带依赖整目录拷入 {部署目录}/plugins/{guid}/{时间戳}/ 后手工回填 plugin_path(相对插件根,如 {guid}/{时间戳}/IotPlugin.Xxx.dll)。
+--      注意:插件根在部署目录下的 plugins/,不在 files/ 静态映射内(插件DLL不对外提供下载)。
 -- plugin_manifest/plugin_config 由宿主加载时反射 ICenBoPlugin.PluginManifest 自动回写,无需手工维护。
 -- 幂等:主键冲突跳过,可重复执行。
 

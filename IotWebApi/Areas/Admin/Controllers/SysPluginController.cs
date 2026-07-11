@@ -10,7 +10,7 @@ using System.IO.Compression;
 namespace IotWebApi.Areas.Admin.Controllers
 {
     /// <summary>
-    /// 插件管理(B-1.6:zip/DLL上传落版本化目录files/plugins/{guid}/{时间戳}/+即时装卸;
+    /// 插件管理(B-1.6:zip/DLL上传落版本化目录plugins/{guid}/{时间戳}/(部署目录下,不在/files静态映射内)+即时装卸;
     /// 上传/启停/删除/配置保存等价远程代码执行入口,仅超级管理员可操作(Q6),
     /// 前端meta.roles只是展示层,后端必须收口)
     /// </summary>
@@ -371,7 +371,7 @@ namespace IotWebApi.Areas.Admin.Controllers
 
             // 1. 落入临时目录(zip解压/单DLL直存)
             string timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
-            var stagingDir = Path.Combine(OperatorCommon.NetLocalfile, "plugins", "_staging", timestamp);
+            var stagingDir = Path.Combine(OperatorCommon.PluginLocalRoot, "_staging", timestamp);
             Directory.CreateDirectory(stagingDir);
             try
             {
@@ -430,13 +430,12 @@ namespace IotWebApi.Areas.Admin.Controllers
                 }
 
                 // 3. 落位版本化目录(旧版本目录不动,规避运行中ALC的文件锁)
-                var versionRoot = Path.Combine(OperatorCommon.NetLocalfile, "plugins", pluginGuid);
+                var versionRoot = Path.Combine(OperatorCommon.PluginLocalRoot, pluginGuid);
                 Directory.CreateDirectory(versionRoot);
                 var versionDir = Path.Combine(versionRoot, timestamp);
                 Directory.Move(stagingDir, versionDir);
-                // 落库口径=相对NetLocalfile(PluginService.ReloadOneCoreAsync用NetLocalfile拼接解析,
-                // NetLocalfile物理根已是{BaseDirectory}/files,带files/前缀会双重拼接致File.Exists恒假)
-                string pluginPath = Path.Combine("plugins", pluginGuid, timestamp, mainDll).Replace(@"\", "/");
+                // 落库口径=相对PluginLocalRoot(与PluginService.ReloadOneCoreAsync解析基座一致)
+                string pluginPath = Path.Combine(pluginGuid, timestamp, mainDll).Replace(@"\", "/");
 
                 // 4. 登记/更新sys_plugin(新插件默认停用;DB配置为空时用Manifest缺省配置回填)
                 string defaultConfig = "";
