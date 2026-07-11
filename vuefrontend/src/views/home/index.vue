@@ -264,28 +264,6 @@ const startScrolling = () => {
   }
 };
 
-const goToMonthEnergyReport = () => {
-  // 修改获取上月日期的代码，确保获取的是上月1号的日期
-  const prevMonth = dayjs()
-    .subtract(1, "month")
-    .startOf("month")
-    .format("YYYY-MM-DD");
-  // 跳转到月度能源报告二级页面
-  router.push({
-    path: "/MonthEnergyReport",
-    query: { date: prevMonth }
-  });
-};
-
-const goToYearEnergyReport = () => {
-  // 获取当年1月1日的日期
-  const currentYear = dayjs().startOf("year").format("YYYY-MM-DD");
-  // 跳转到年度能源报告二级页面
-  router.push({
-    path: "/YearEnergyReport",
-    query: { date: currentYear }
-  });
-};
 </script>
 
 <template>
@@ -299,14 +277,6 @@ const goToYearEnergyReport = () => {
         <h1 class="nav-title">综合能源管控平台</h1>
       </div>
       <div class="nav-actions">
-        <div class="report-btn" @click="goToMonthEnergyReport">
-          <el-icon><component :is="useRenderIcon(calendarIcon)" /></el-icon>
-          <span>月度分析报告</span>
-        </div>
-        <div class="report-btn" @click="goToYearEnergyReport">
-          <el-icon><component :is="useRenderIcon(calendarIcon)" /></el-icon>
-          <span>年度分析报告</span>
-        </div>
         <div class="date-type-selector">
           <el-icon><component :is="useRenderIcon(calendarIcon)" /></el-icon>
           <div class="date-type-options">
@@ -1613,24 +1583,6 @@ const goToYearEnergyReport = () => {
 }
 
 .admin-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 162, 255, 0.5);
-}
-
-.report-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #00a2ff, #0078d4);
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 10px rgba(0, 162, 255, 0.3);
-}
-
-.report-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 162, 255, 0.5);
 }

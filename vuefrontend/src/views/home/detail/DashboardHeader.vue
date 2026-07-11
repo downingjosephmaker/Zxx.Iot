@@ -23,7 +23,6 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import dayjs from "dayjs";
 
 // 导入图标
 import arrowLeft from "~icons/ep/arrow-left";
@@ -37,8 +36,6 @@ interface Props {
   showDateSelector?: boolean;
   dateType?: "day" | "month" | "year";
   dateOptions?: { label: string; value: string }[];
-  showPrevMonthBtn?: boolean;
-  currentDate?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -49,15 +46,12 @@ const props = withDefaults(defineProps<Props>(), {
     { label: "日", value: "day" },
     { label: "月", value: "month" },
     { label: "年", value: "year" }
-  ],
-  showPrevMonthBtn: false,
-  currentDate: ""
+  ]
 });
 
 type EmitEvents = {
   (e: "update:dateType", type: "day" | "month" | "year"): void;
   (e: "refresh"): void;
-  (e: "prevMonth"): void;
 };
 const emit = defineEmits<EmitEvents>();
 
@@ -84,26 +78,6 @@ const updateTime = () => {
 // 返回上一页
 const goBack = () => {
   router.push("/cockpit");
-};
-
-// 跳转到上月分析报告
-const goToPrevMonth = () => {
-  // 如果提供了当前日期，则基于此计算上个月
-  const baseDate = props.currentDate || dayjs().format("YYYY-MM-DD");
-  // 修改获取上月日期的代码，确保获取的是上月1号的日期
-  const prevMonth = dayjs(baseDate)
-    .subtract(1, "month")
-    .startOf("month")
-    .format("YYYY-MM-DD");
-
-  // 跳转到上月报告
-  router.push({
-    path: "/MonthEnergyReportFullscreen",
-    query: { date: prevMonth }
-  });
-
-  // 触发自定义事件
-  emit("prevMonth");
 };
 
 // 处理日期类型变更
@@ -262,8 +236,7 @@ onUnmounted(() => {
 }
 
 .back-btn,
-.refresh-btn,
-.prev-month-btn {
+.refresh-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -289,25 +262,6 @@ onUnmounted(() => {
     135deg,
     rgba(255, 0, 0, 0.2),
     rgba(255, 0, 0, 0.3)
-  );
-  transform: translateY(-2px);
-}
-
-.prev-month-btn {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 162, 255, 0.1),
-    rgba(0, 162, 255, 0.2)
-  );
-  border: 1px solid rgba(0, 162, 255, 0.3);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.prev-month-btn:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 162, 255, 0.2),
-    rgba(0, 162, 255, 0.3)
   );
   transform: translateY(-2px);
 }

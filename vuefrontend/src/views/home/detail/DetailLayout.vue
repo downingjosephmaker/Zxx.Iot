@@ -16,10 +16,6 @@ const dateOptions = ref([
   { label: "年", value: "year" }
 ]);
 
-// 新增属性，控制是否显示上月分析报告按钮
-const showPrevMonthBtn = ref(false);
-const currentDate = ref("");
-
 // 根据路由参数设置标题
 onMounted(async () => {
   title.value = route.meta.title || "详情页";
@@ -43,16 +39,6 @@ onMounted(async () => {
       // 检查子组件是否需要日期选择器
       if (typeof detailContent.value.needDateSelector !== "undefined") {
         showDateSelector.value = detailContent.value.needDateSelector;
-      }
-
-      // 检查子组件是否需要显示上月分析报告按钮
-      if (typeof detailContent.value.showPrevMonthBtn !== "undefined") {
-        showPrevMonthBtn.value = detailContent.value.showPrevMonthBtn;
-      }
-
-      // 获取当前日期
-      if (typeof detailContent.value.currentDate !== "undefined") {
-        currentDate.value = detailContent.value.currentDate;
       }
     } else {
       console.warn("无法获取子组件实例");
@@ -86,17 +72,6 @@ const handleDateTypeChange = (newType: "day" | "month" | "year") => {
   }
 };
 
-// 处理上月分析报告事件
-const handlePrevMonth = () => {
-  if (
-    detailContent.value &&
-    typeof detailContent.value.handlePrevMonth === "function"
-  ) {
-    console.log("调用子组件handlePrevMonth方法");
-    detailContent.value.handlePrevMonth();
-  }
-};
-
 // 监听路由变化，更新标题
 watch(
   () => route.meta.title,
@@ -117,11 +92,8 @@ watch(
         :dateType="dateType"
         :dateOptions="dateOptions"
         :showDateSelector="showDateSelector"
-        :showPrevMonthBtn="showPrevMonthBtn"
-        :currentDate="currentDate"
         @update:dateType="handleDateTypeChange"
         @refresh="refreshData"
-        @prevMonth="handlePrevMonth"
       />
 
       <!-- 内容区域，更现代化的样式 -->
