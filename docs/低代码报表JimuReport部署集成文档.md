@@ -159,4 +159,4 @@ DROP TABLE IF EXISTS public.event_report_month;
 
 - 数据库 `sys_menu` 中若存在指向已删页面（能耗分析/报表 dataAnalysis/reportForms 系）的菜单行，由运维清理（当前前端为纯静态路由，DB 菜单不参与渲染，仅影响菜单管理页整洁）。
 - **中期加固项（有生产多租户诉求时做）**：新增 `[Token]` 端点签发"报表专用短时 token"（复用 EncryptsHelper，载荷加 marker 字段+独立短时限，VerifyToken 识别 marker），前端 iframe 改拼该 token——把泄露半径从全 API 缩小到报表数据集两个端点。
-- 已知预存问题（非本批引入）：`DbContext.EnsureCacheLoaded` 缓存回填在"首个读者是普通租户请求"时会把租户子集当全表写缓存（方向是过度过滤，不泄露），可能导致 VerifyToken 对有效用户间歇误报无效；根修在 DbContext 缓存回填改用不挂租户过滤的连接，属基础设施项待专批处理。
+- ~~已知预存问题~~ **已修复（2026-07-12）**：`DbContext` 缓存回填污染——`EnsureCacheLoaded` 回填、`ValidateCacheConsistency` 计数与刷新共三处查询加 `ClearFilter<ITenantEntity>()` 取无租户过滤的真全表（后者原是更主要的污染引擎：普通租户请求触发 10 分钟一致性校验时，子集计数与全表缓存必然"不一致"，反复清掉正确缓存再用子集污染回填）；租户隔离仍由缓存出口 `FilterTenantScope` 负责，全部缓存读路径已核验无未过滤出口。残余小项：插入恰逢缓存过期窗口会短暂种下少量行快照，由修正后的一致性校验在 ≤10 分钟内自愈。

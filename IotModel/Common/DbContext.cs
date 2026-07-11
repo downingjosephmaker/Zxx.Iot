@@ -1385,15 +1385,17 @@ namespace IotModel
             var allList = GetListFromRedis().Result;
             if (allList.IsZxxAny()) return FilterTenantScope(allList);
 
-            // 缓存空：从数据库查全表（不带任何 Where 条件）
+            // 缓存空：从数据库查全表（不带任何 Where 条件）。
+            // 缓存体是全租户共享的，必须 ClearFilter 取无租户过滤的真全表——
+            // 普通租户请求触发回填时若带过滤，会把租户子集当全表写入 Redis；隔离由出口 FilterTenantScope 负责。
             List<T> freshData;
             if (IsSplitTable)
             {
-                freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
+                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
             }
             else
             {
-                freshData = GetOperDb().Queryable<T>().ToList();
+                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
             }
             LogSql(sqlSugar);
 
@@ -2769,15 +2771,17 @@ namespace IotModel
                 var cacheData = valuestr.HasValue ? valuestr.ToString().ToObject<List<T>>() : null;
                 int cacheCount = cacheData?.Count ?? 0;
 
-                // 从数据库获取记录数
+                // 从数据库获取记录数。ClearFilter 与缓存体同口径（真全表）：
+                // 若带租户过滤，普通租户请求触发校验时子集计数必与全表缓存不一致，
+                // 会反复误清正确缓存并用过滤后的子集回填，形成持续污染。
                 int dbCount = 0;
                 if (IsSplitTable)
                 {
-                    dbCount = GetOperDb().Queryable<T>().SplitTable().Count();
+                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().Count();
                 }
                 else
                 {
-                    dbCount = GetOperDb().Queryable<T>().Count();
+                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().Count();
                 }
 
                 // 如果数量不一致，清除缓存
@@ -2786,15 +2790,15 @@ namespace IotModel
                     LogHelper.SysLogWrite(nameof(DbContext<T>), "VerifyCacheCount", $"缓存验证: {typename} 缓存数量({cacheCount})与数据库数量({dbCount})不一致，清除缓存", "缓存校验");
                     await DeleteFromRedis();
 
-                    // 获取最新数据并缓存
+                    // 获取最新数据并缓存（同 EnsureCacheLoaded 回填口径：无租户过滤的真全表）
                     List<T> freshData;
                     if (IsSplitTable)
                     {
-                        freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
+                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
                     }
                     else
                     {
-                        freshData = GetOperDb().Queryable<T>().ToList();
+                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
                     }
 
                     if (freshData.IsZxxAny())
