@@ -24,4 +24,9 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- 开放internal给测试项目(帧编解码纯函数单测,方案A §4.3) -->
+    <InternalsVisibleTo Include="IotTests" />
+  </ItemGroup>
+
 </Project>

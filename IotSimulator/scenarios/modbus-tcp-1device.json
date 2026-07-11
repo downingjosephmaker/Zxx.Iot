@@ -1,0 +1,21 @@
+{
+  "name": "modbus-tcp-1device",
+  "transport": {
+    "mode": "listen",
+    "host": "0.0.0.0",
+    "port": 20020
+  },
+  "protocol": "modbus-tcp",
+  "devices": [
+    {
+      "address": "1",
+      "points": [
+        { "di": "0",  "funcCode": 3, "dataType": "uint16",  "generator": { "type": "sine",   "base": 500,  "amp": 100, "periodS": 60 } },
+        { "di": "1",  "funcCode": 3, "dataType": "int16",   "generator": { "type": "random", "min": -50,  "max": 50 } },
+        { "di": "2",  "funcCode": 3, "dataType": "int32",   "generator": { "type": "step",   "base": 10000, "step": 10, "stepEveryS": 5 } },
+        { "di": "4",  "funcCode": 3, "dataType": "float32", "generator": { "type": "constant", "base": 3.14159 } },
+        { "di": "10", "funcCode": 4, "dataType": "uint16",  "generator": { "type": "random", "min": 0, "max": 1000 } }
+      ]
+    }
+  ]
+}

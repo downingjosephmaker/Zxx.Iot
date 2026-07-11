@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <SatelliteResourceLanguages>en;de;pt</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IotDriverCore\IotDriverCore.csproj" />
+    <ProjectReference Include="..\IotSimulator.Core\IotSimulator.Core.csproj" />
+    <ProjectReference Include="..\IotPlugin.Modbus\IotPlugin.Modbus.csproj" />
+    <ProjectReference Include="..\IotPlugin.Dlt645\IotPlugin.Dlt645.csproj" />
+    <ProjectReference Include="..\IotPlugin.Cjt188\IotPlugin.Cjt188.csproj" />
+  </ItemGroup>
+
+  <!-- 3个插件已加 InternalsVisibleTo("IotTests"),启用插件internal类单测 -->
+  <PropertyGroup><DefineConstants>$(DefineConstants);PLUGIN_INTERNALS</DefineConstants></PropertyGroup>
+
+  <ItemGroup>
+    <None Include="FrameSamples\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

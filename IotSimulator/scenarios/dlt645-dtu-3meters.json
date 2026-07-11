@@ -1,0 +1,35 @@
+{
+  "name": "dlt645-dtu-3meters",
+  "transport": {
+    "mode": "dial-in",
+    "host": "127.0.0.1",
+    "port": 20011,
+    "registerPacket": "DTU0001",
+    "heartbeat": { "hex": "AA", "intervalMs": 30000 }
+  },
+  "protocol": "dlt645-2007",
+  "devices": [
+    {
+      "address": "000000000001",
+      "points": [
+        { "di": "0x00010000", "length": 4, "scale": 0.01,  "generator": { "type": "sine",   "base": 5000, "amp": 200, "periodS": 60 } },
+        { "di": "0x02010100", "length": 2, "scale": 0.1,   "generator": { "type": "random", "min": 2180, "max": 2320 } },
+        { "di": "0x02020100", "length": 3, "scale": 0.001, "generator": { "type": "constant", "base": 3.256 } }
+      ]
+    },
+    {
+      "address": "000000000002",
+      "points": [
+        { "di": "0x00010000", "length": 4, "scale": 0.01, "generator": { "type": "step",   "base": 8000, "step": 1, "stepEveryS": 10 } },
+        { "di": "0x02010100", "length": 2, "scale": 0.1,  "generator": { "type": "random", "min": 2200, "max": 2300 } }
+      ]
+    },
+    {
+      "address": "000000000003",
+      "points": [
+        { "di": "0x00010000", "length": 4, "scale": 0.01, "generator": { "type": "constant", "base": 12345.67 } },
+        { "di": "0x02010100", "length": 2, "scale": 0.1,  "generator": { "type": "sine", "base": 2280, "amp": 20, "periodS": 30 } }
+      ]
+    }
+  ]
+}
