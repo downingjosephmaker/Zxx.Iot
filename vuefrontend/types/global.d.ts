@@ -114,6 +114,8 @@ declare global {
     WapianUrl?: string;
     /** SignalR 实时推送地址（对应 VITE_BASE_URL_WIRHURL），如 http://1.2.3.4:13699/signalr/chatHub */
     SignalRUrl?: string;
+    /** 低代码报表（JimuReport 旁挂服务）地址，空=未部署（页面显示未配置提示），如 http://1.2.3.4:8085/jmreport/list */
+    ReportUrl?: string;
     MapConfigure?: {
       amapKey?: string;
       options: {

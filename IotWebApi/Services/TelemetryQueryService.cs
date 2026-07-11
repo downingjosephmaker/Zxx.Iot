@@ -2,6 +2,7 @@ using CenBoCommon.Zxx;
 using IotLog;
 using IotModel;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace IotWebApi.Services
 {
@@ -96,8 +97,9 @@ namespace IotWebApi.Services
                 await using var cmd = new NpgsqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("did", deviceid);
                 cmd.Parameters.AddWithValue("code", paramcode.Trim());
-                cmd.Parameters.AddWithValue("st", stUtc);
-                cmd.Parameters.AddWithValue("et", etUtc);
+                // Npgsql 5.x的AddWithValue(DateTime)无视Kind按无时区timestamp发送,PG会按会话时区错位8小时,必须显式TimestampTz
+                cmd.Parameters.Add(new NpgsqlParameter("st", NpgsqlDbType.TimestampTz) { Value = stUtc });
+                cmd.Parameters.Add(new NpgsqlParameter("et", NpgsqlDbType.TimestampTz) { Value = etUtc });
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
@@ -129,6 +131,76 @@ namespace IotWebApi.Services
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), CATEGORY);
             }
             return result;
+        }
+
+        /// <summary>日用量行(Day=本地日期;Value=当日末表码-上日末表码,首日无基准或表码回退(换表/清零)时为null)</summary>
+        public sealed class DailyUsageRow
+        {
+            /// <summary>本地日期(yyyy-MM-dd)</summary>
+            public string Day { get; set; } = "";
+            /// <summary>设备ID</summary>
+            public long DeviceId { get; set; }
+            /// <summary>当日用量(累积表码日末差分)</summary>
+            public double? Value { get; set; }
+        }
+
+        /// <summary>
+        /// 查询多设备单参数按日用量(D-7报表数据集:基于telemetry_1h长期聚合的日末last_v差分,
+        /// 适用电能等累积表码点位;窗口前移一天取前日末值作首日差分基准;
+        /// bucket是UTC timestamptz,归日必须AT TIME ZONE本地时区,否则日边界错8小时)
+        /// </summary>
+        public async Task<List<DailyUsageRow>> QueryDailyUsageAsync(List<long> deviceids, string paramcode,
+            DateTime startLocal, DateTime endLocal)
+        {
+            var rows = new List<DailyUsageRow>();
+            if (!Enabled || !deviceids.IsZxxAny() || paramcode.IsZxxNullOrEmpty() || endLocal < startLocal)
+            {
+                return rows;
+            }
+
+            var dayFrom = startLocal.Date;
+            var stUtc = DateTime.SpecifyKind(dayFrom.AddDays(-1), DateTimeKind.Local).ToUniversalTime();
+            var etUtc = DateTime.SpecifyKind(endLocal.Date.AddDays(1), DateTimeKind.Local).ToUniversalTime();
+
+            try
+            {
+                await using var conn = new NpgsqlConnection(_connString);
+                await conn.OpenAsync();
+                const string sql =
+                    "SELECT device_id, day, day_last - lag(day_last) OVER (PARTITION BY device_id ORDER BY day) AS usage " +
+                    "FROM (SELECT h.device_id, date_trunc('day', h.bucket AT TIME ZONE 'Asia/Shanghai') AS day, " +
+                    "             last(h.last_v, h.bucket) AS day_last " +
+                    "      FROM iot_ts.telemetry_1h h " +
+                    "      JOIN iot_ts.point_map m ON m.point_id = h.point_id AND m.device_id = h.device_id " +
+                    "      WHERE m.param_code = @code AND h.device_id = ANY(@ids) AND h.bucket >= @st AND h.bucket < @et " +
+                    "      GROUP BY h.device_id, day) d " +
+                    "ORDER BY device_id, day";
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("code", paramcode.Trim());
+                cmd.Parameters.AddWithValue("ids", deviceids.ToArray());
+                // Npgsql 5.x的AddWithValue(DateTime)无视Kind按无时区timestamp发送,PG会按会话时区错位8小时,必须显式TimestampTz
+                cmd.Parameters.Add(new NpgsqlParameter("st", NpgsqlDbType.TimestampTz) { Value = stUtc });
+                cmd.Parameters.Add(new NpgsqlParameter("et", NpgsqlDbType.TimestampTz) { Value = etUtc });
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var day = reader.GetDateTime(1);
+                    if (day < dayFrom) continue; // 前移的基准日只参与差分不出行
+                    double? usage = reader.IsDBNull(2) ? null : reader.GetDouble(2);
+                    if (usage < 0) usage = null; // 表码回退(换表/清零)不计当日
+                    rows.Add(new DailyUsageRow
+                    {
+                        Day = day.ToString("yyyy-MM-dd"),
+                        DeviceId = Convert.ToInt64(reader.GetValue(0)),
+                        Value = usage
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), CATEGORY);
+            }
+            return rows;
         }
     }
 }
