@@ -220,6 +220,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddEventBusSetup();
 
 builder.Services.AddSingleton<PluginService>();
+builder.Services.AddSingleton<ConfigReloadNotifier>();  //设备/点表变更→广播插件配置更新(3秒去抖,C-4热刷新)
 
 // 遥测批量写入服务(Binary COPY写TimescaleDB遥测窄表,未配置连接串时不启用)
 builder.Services.AddSingleton<TelemetryPointMap>();  //点位映射解析器,写入器与最新值服务共用
@@ -229,6 +230,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryWriteServ
 // 最新值缓存服务(内存实时更新,批量刷Redis与telemetry_latest,实时查询不扫时序表)
 builder.Services.AddSingleton<TelemetryLatestService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelemetryLatestService>());
+builder.Services.AddSingleton<TelemetryQueryService>();  //遥测历史查询(原始30天/1h聚合,设备中心历史曲线与组态历史数据集)
 
 // 策略合并服务(三级scope逐字段合并,StrategyChangedEvent触发热重载)
 builder.Services.AddSingleton<StrategyMergeService>();

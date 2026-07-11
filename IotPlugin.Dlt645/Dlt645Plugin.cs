@@ -76,7 +76,8 @@ namespace IotPlugin.Dlt645
                 new PluginMetaBuilder.PluginCommandMeta("netdlt645timesync", "广播校时(向指令涉及设备所在的全部端点广播,C=08H无应答)"),
                 new PluginMetaBuilder.PluginCommandMeta("netdlt645read", "加速抄读(重置目标表抄读指令的下次发送时刻)")
             },
-            "点表寻址:ParamAddr=DI标识(2007版4字节/1997版2字节),表地址=DeviceInfo.DeviceAdr十进制左补零到12位BCD;DevicePort=0=DTU透传拨入");
+            "点表寻址:ParamAddr=DI标识(2007版4字节/1997版2字节),表地址=DeviceInfo.DeviceAdr十进制左补零到12位BCD;DevicePort=0=DTU透传拨入",
+            "dlt645");
 
         #region 启动/停止
 
@@ -661,7 +662,34 @@ namespace IotPlugin.Dlt645
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
                     break;
+                case PluginMessageEnum.配置更新:
+                    await RestartForConfigUpdateAsync();
+                    break;
             }
+        }
+
+        private readonly SemaphoreSlim _restartGate = new(1, 1);
+        private int _restartPending;
+
+        /// <summary>
+        /// 配置更新自重启(C-4:设备/点表/通道拓扑变更后全量重建;PluginStart无防重入护栏须闸门串行,
+        /// 重启期间再次到达的通知置位合并,由当前循环收尾补跑,不丢末次变更)
+        /// </summary>
+        private async Task RestartForConfigUpdateAsync()
+        {
+            Interlocked.Exchange(ref _restartPending, 1);
+            if (!await _restartGate.WaitAsync(0)) return;
+            try
+            {
+                while (Interlocked.Exchange(ref _restartPending, 0) == 1)
+                {
+                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    await PluginStop();
+                    await PluginStart(_config?.ToJson() ?? "");
+                }
+            }
+            catch (Exception ex) { LogHelper.Error(ex); }
+            finally { _restartGate.Release(); }
         }
 
         /// <summary>

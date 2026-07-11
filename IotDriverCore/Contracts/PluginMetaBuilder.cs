@@ -30,7 +30,9 @@ namespace IotDriverCore
         /// 宿主在DB plugin_config为空时用其中defaultConfig回填,完成本地文件到DB的一次性迁移)</param>
         /// <param name="commands">支持的控制ClassName清单</param>
         /// <param name="addressing">点表寻址说明文本(前端插件页展示)</param>
-        public static string BuildManifest(object currentConfig, IEnumerable<PluginCommandMeta> commands, string addressing)
+        /// <param name="fieldGroup">采集字段子集标识(modbus|dlt645|cjt188|s7|opcua,
+        /// 点表表单按驱动裁剪依据,空=不声明不裁剪)</param>
+        public static string BuildManifest(object currentConfig, IEnumerable<PluginCommandMeta> commands, string addressing, string fieldGroup = "")
         {
             var root = new JsonObject
             {
@@ -43,6 +45,7 @@ namespace IotDriverCore
                 }).ToArray()),
                 ["addressing"] = addressing
             };
+            if (!string.IsNullOrEmpty(fieldGroup)) root["fieldGroup"] = fieldGroup;
             return root.ToJsonString(SerializeOptions);
         }
 

@@ -128,6 +128,42 @@ namespace IotWebApi.Controllers
             TotalCount = list.IsZxxAny() ? list.Count : 0;
             return list;
         }
+
+        /// <summary>
+        /// 查询单设备单参数历史曲线(设备中心历史曲线tab/组态C-6历史数据集;
+        /// mode:auto=跨度≤48h且在30天原始保留窗内走原始点,否则1h聚合;raw/hour=显式指定;
+        /// 原始表仅保留30天,更早只有小时聚合)
+        /// </summary>
+        /// <param name="deviceid">设备ID</param>
+        /// <param name="paramcode">参数编码</param>
+        /// <param name="starttime">开始时间(本地时间,如2026-07-10 00:00:00)</param>
+        /// <param name="endtime">结束时间(本地时间)</param>
+        /// <param name="mode">查询模式(auto/raw/hour,缺省auto)</param>
+        /// <param name="queryService">遥测历史查询服务(DI注入)</param>
+        [HttpGet]
+        [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
+        public async Task<TelemetryQueryService.HistoryResult> GetDeviceHistory(long deviceid, string paramcode,
+            string starttime, string endtime, string mode,
+            [FromServices] TelemetryQueryService queryService)
+        {
+            Status = false;
+            if (!queryService.Enabled)
+            {
+                Message = "时序库未配置,历史查询不可用。";
+                return new TelemetryQueryService.HistoryResult();
+            }
+            if (!DateTime.TryParse(starttime, out var st) || !DateTime.TryParse(endtime, out var et) || et <= st)
+            {
+                Message = "时间范围无效。";
+                return new TelemetryQueryService.HistoryResult();
+            }
+            var result = await queryService.QueryAsync(deviceid, paramcode, st, et, mode ?? "auto");
+            Status = true;
+            TotalCount = result.Points.Count;
+            return result;
+        }
     }
 
     /// <summary>

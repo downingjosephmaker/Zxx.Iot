@@ -1,6 +1,7 @@
 ﻿using CenBoCommon.Zxx;
 using IotModel;
 using IotWebApi.Areas.Device.Models;
+using IotWebApi.Services;
 using Magicodes.ExporterAndImporter.Excel;
 using Microsoft.AspNetCore.Mvc;
 using NewLife;
@@ -16,6 +17,17 @@ namespace IotWebApi.Controllers
     [ControllSort("7-5")]
     public class DeviceInfoController : ControllerBaseApi
     {
+        private readonly ConfigReloadNotifier _configReload;
+
+        /// <summary>
+        /// 构造函数-获取依赖注入
+        /// </summary>
+        /// <param name="configReload">配置热刷新通知器(设备变更后去抖广播插件重建采集拓扑,C-4)</param>
+        public DeviceInfoController(ConfigReloadNotifier configReload)
+        {
+            _configReload = configReload;
+        }
+
         /// <summary>
         /// 设备新增
         /// </summary>
@@ -47,7 +59,11 @@ namespace IotWebApi.Controllers
             info.UpdateName = optmdl.UserName;
             info.TenantId = optmdl.TenantId;
             Status = DeviceInfoDAO.Instance.Insert(info);
-            if (Status) Message = "设备信息新增成功。";
+            if (Status)
+            {
+                Message = "设备信息新增成功。";
+                _configReload.Notify("设备新增");
+            }
 
             return Message;
         }
@@ -107,7 +123,11 @@ namespace IotWebApi.Controllers
                     }
                 }
 
-                if (Status) Message = "VRV设备信息新增成功。" + resultstr;
+                if (Status)
+                {
+                    Message = "VRV设备信息新增成功。" + resultstr;
+                    _configReload.Notify("VRV设备导入");
+                }
             }
 
             return Message;
@@ -137,7 +157,11 @@ namespace IotWebApi.Controllers
             info.UpdateName = optmdl.UserName;
             info.TenantId = optmdl.TenantId;
             Status = DeviceInfoDAO.Instance.Update(info);
-            if (Status) Message = "设备信息更新成功。";
+            if (Status)
+            {
+                Message = "设备信息更新成功。";
+                _configReload.Notify("设备修改");
+            }
 
             return Message;
         }
@@ -159,7 +183,11 @@ namespace IotWebApi.Controllers
             if (info != null)
             {
                 Status = DeviceInfoDAO.Instance.DeleteById(id);
-                if (Status) Message = "设备信息删除成功。";
+                if (Status)
+                {
+                    Message = "设备信息删除成功。";
+                    _configReload.Notify("设备删除");
+                }
             }
             return Message;
         }
@@ -433,7 +461,10 @@ namespace IotWebApi.Controllers
                 }
             }
             if (data.Status)
+            {
                 data.Message = "设备导入成功";
+                _configReload.Notify("设备批量导入");
+            }
 
             #endregion
 
@@ -530,7 +561,11 @@ namespace IotWebApi.Controllers
             if (updatelist.Count > 0)
             {
                 Status = DeviceParamDAO.Instance.UpdateColumns(updatelist, it => new { it.ExpandJson });
-                if (Status) Message = $"参数公式刷新成功！";
+                if (Status)
+                {
+                    Message = $"参数公式刷新成功！";
+                    _configReload.Notify("设备参数公式刷新");
+                }
             }
 
             return Message;

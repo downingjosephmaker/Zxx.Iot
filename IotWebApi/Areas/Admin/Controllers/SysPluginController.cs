@@ -139,6 +139,52 @@ namespace IotWebApi.Areas.Admin.Controllers
         }
 
         /// <summary>
+        /// 已启用插件的驱动认领清单(C-3点表按驱动裁剪:产品类型编码→采集字段子集fieldGroup+寻址说明;
+        /// 仅元数据投影不含配置凭据,点表配置页非超管也要用,故与GetSupportedCommands同口径仅[Token])
+        /// </summary>
+        [HttpPost]
+        [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Admin)]
+        public List<PluginDriverClaim> GetDriverClaims()
+        {
+            var result = new List<PluginDriverClaim>();
+            var plugins = SysPluginDAO.Instance.GetListBy(t => t.PluginStatus == 1);
+            if (!plugins.IsZxxAny()) return result;
+            foreach (var item in plugins)
+            {
+                var claim = new PluginDriverClaim
+                {
+                    PluginGuid = item.PluginGuid,
+                    PluginName = item.PluginName
+                };
+                if (!item.PluginConfig.IsZxxNullOrEmpty())
+                {
+                    try
+                    {
+                        var codes = JObject.Parse(item.PluginConfig)["DeviceTypeCodes"]?.Value<string>() ?? "";
+                        claim.DeviceTypeCodes = codes
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .ToList();
+                    }
+                    catch { /* 配置非法JSON时按未认领 */ }
+                }
+                if (!item.PluginManifest.IsZxxNullOrEmpty())
+                {
+                    try
+                    {
+                        var manifest = JObject.Parse(item.PluginManifest);
+                        claim.FieldGroup = manifest["fieldGroup"]?.Value<string>() ?? "";
+                        claim.Addressing = manifest["addressing"]?.Value<string>() ?? "";
+                    }
+                    catch { /* Manifest非法JSON时不裁剪 */ }
+                }
+                result.Add(claim);
+            }
+            return result;
+        }
+
+        /// <summary>
         /// 根据插件Guid删除(D11+补审修复:先删登记再卸载——
         /// 排队中的重载在闸门内重读DB已无此行即走卸载分支,不会把删除中的插件复活成孤儿实例)
         /// </summary>
@@ -581,6 +627,23 @@ namespace IotWebApi.Areas.Admin.Controllers
             }
         }
 
+    }
+
+    /// <summary>
+    /// 插件驱动认领(点表按驱动裁剪的元数据投影,不含任何配置凭据)
+    /// </summary>
+    public sealed class PluginDriverClaim
+    {
+        /// <summary>插件Guid</summary>
+        public string PluginGuid { get; set; } = "";
+        /// <summary>插件名称</summary>
+        public string PluginName { get; set; } = "";
+        /// <summary>采集字段子集标识(modbus|dlt645|cjt188|s7|opcua,空=未声明不裁剪)</summary>
+        public string FieldGroup { get; set; } = "";
+        /// <summary>点表寻址说明(表单提示文本)</summary>
+        public string Addressing { get; set; } = "";
+        /// <summary>认领的产品类型编码清单</summary>
+        public List<string> DeviceTypeCodes { get; set; } = new();
     }
 
 }

@@ -64,7 +64,8 @@ namespace IotPlugin.S7
             {
                 new PluginMetaBuilder.PluginCommandMeta("nets7write", "S7写点位(按参数编码定位点表,CollectWritable点位入每设备写队列由采集循环串行消费)")
             },
-            "点表寻址:CollectFuncCode 1=DB/2=M/3=I/4=Q区,ParamAddr=DB号×1000000+字节地址,CollectBitOffset位偏移;端点=DeviceIp:DevicePort,CPU型号按类型编码映射");
+            "点表寻址:CollectFuncCode 1=DB/2=M/3=I/4=Q区,ParamAddr=DB号×1000000+字节地址,CollectBitOffset位偏移;端点=DeviceIp:DevicePort,CPU型号按类型编码映射",
+            "s7");
 
         #region 启动/停止
 
@@ -651,7 +652,34 @@ namespace IotPlugin.S7
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
                     break;
+                case PluginMessageEnum.配置更新:
+                    await RestartForConfigUpdateAsync();
+                    break;
             }
+        }
+
+        private readonly SemaphoreSlim _restartGate = new(1, 1);
+        private int _restartPending;
+
+        /// <summary>
+        /// 配置更新自重启(C-4:设备/点表/通道拓扑变更后全量重建;PluginStart无防重入护栏须闸门串行,
+        /// 重启期间再次到达的通知置位合并,由当前循环收尾补跑,不丢末次变更)
+        /// </summary>
+        private async Task RestartForConfigUpdateAsync()
+        {
+            Interlocked.Exchange(ref _restartPending, 1);
+            if (!await _restartGate.WaitAsync(0)) return;
+            try
+            {
+                while (Interlocked.Exchange(ref _restartPending, 0) == 1)
+                {
+                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    await PluginStop();
+                    await PluginStart(_config?.ToJson() ?? "");
+                }
+            }
+            catch (Exception ex) { LogHelper.Error(ex); }
+            finally { _restartGate.Release(); }
         }
 
         /// <summary>

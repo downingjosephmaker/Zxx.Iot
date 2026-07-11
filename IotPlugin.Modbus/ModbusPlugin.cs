@@ -76,7 +76,8 @@ namespace IotPlugin.Modbus
             {
                 new PluginMetaBuilder.PluginCommandMeta("netmodbuswrite", "Modbus写点位(FC03保持寄存器经FC06/16下发,FC01线圈经FC05下发)")
             },
-            "点表寻址:DeviceTypeParam.collect_*列+ParamAddr,从站号=DeviceInfo.DeviceAdr;DevicePort>0=TCP拨出(MBAP),DevicePort=0=RTU over TCP拨入(DTU)");
+            "点表寻址:DeviceTypeParam.collect_*列+ParamAddr,从站号=DeviceInfo.DeviceAdr;DevicePort>0=TCP拨出(MBAP),DevicePort=0=RTU over TCP拨入(DTU)",
+            "modbus");
 
         #region 启动/停止
 
@@ -716,7 +717,34 @@ namespace IotPlugin.Modbus
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
                     break;
+                case PluginMessageEnum.配置更新:
+                    await RestartForConfigUpdateAsync();
+                    break;
             }
+        }
+
+        private readonly SemaphoreSlim _restartGate = new(1, 1);
+        private int _restartPending;
+
+        /// <summary>
+        /// 配置更新自重启(C-4:设备/点表/通道拓扑变更后全量重建;PluginStart无防重入护栏须闸门串行,
+        /// 重启期间再次到达的通知置位合并,由当前循环收尾补跑,不丢末次变更)
+        /// </summary>
+        private async Task RestartForConfigUpdateAsync()
+        {
+            Interlocked.Exchange(ref _restartPending, 1);
+            if (!await _restartGate.WaitAsync(0)) return;
+            try
+            {
+                while (Interlocked.Exchange(ref _restartPending, 0) == 1)
+                {
+                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    await PluginStop();
+                    await PluginStart(_config?.ToJson() ?? "");
+                }
+            }
+            catch (Exception ex) { LogHelper.Error(ex); }
+            finally { _restartGate.Release(); }
         }
 
         /// <summary>

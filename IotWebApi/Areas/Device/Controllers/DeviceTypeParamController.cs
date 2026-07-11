@@ -2,6 +2,7 @@
 using IotLog;
 using IotModel;
 using IotWebApi.Areas.Device.Models;
+using IotWebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using NewLife;
 using Newtonsoft.Json;
@@ -15,7 +16,18 @@ namespace IotWebApi.Controllers
     [ControllSort("7-2")]
     public class DeviceTypeParamController : ControllerBaseApi
     {
-        /// <summary> 
+        private readonly ConfigReloadNotifier _configReload;
+
+        /// <summary>
+        /// 构造函数-获取依赖注入
+        /// </summary>
+        /// <param name="configReload">配置热刷新通知器(点表变更后去抖广播插件重建采集拓扑,C-4)</param>
+        public DeviceTypeParamController(ConfigReloadNotifier configReload)
+        {
+            _configReload = configReload;
+        }
+
+        /// <summary>
         /// 设备类型参数批量保存
         /// </summary>
         /// <returns></returns>
@@ -60,7 +72,11 @@ namespace IotWebApi.Controllers
                         it.CreateName
                     });
                 });
-                if (Status) Message = "设备类型参数信息保存成功。";
+                if (Status)
+                {
+                    Message = "设备类型参数信息保存成功。";
+                    _configReload.Notify("点表保存");
+                }
             }
             return Message;
         }
@@ -78,7 +94,11 @@ namespace IotWebApi.Controllers
         {
             Message = "设备类型参数删除失败。";
             Status = DeviceTypeParamDAO.Instance.DeleteBy(t => t.SnowId == _SnowId);
-            if (Status) Message = "设备类型删除成功。";
+            if (Status)
+            {
+                Message = "设备类型删除成功。";
+                _configReload.Notify("点表删除");
+            }
             return Message;
         }
 
@@ -96,7 +116,11 @@ namespace IotWebApi.Controllers
             Status = false;
             Message = "设备类型参数删除失败。";
             Status = DeviceTypeParamDAO.Instance.DeleteBy(t => t.DeviceTypeCode == typecode);
-            if (Status) Message = "设备类型参数删除成功。";
+            if (Status)
+            {
+                Message = "设备类型参数删除成功。";
+                _configReload.Notify("点表按类型删除");
+            }
             return Message;
         }
 
@@ -114,7 +138,11 @@ namespace IotWebApi.Controllers
             Status = false;
             Message = "设备类型参数批量删除失败。";
             Status = DeviceTypeParamDAO.Instance.DeleteBy(t => ids.Contains(t.SnowId.ToString()));
-            if (Status) Message = "设备类型参数批量删除成功。";
+            if (Status)
+            {
+                Message = "设备类型参数批量删除成功。";
+                _configReload.Notify("点表批量删除");
+            }
             return Message;
         }
 
@@ -437,6 +465,7 @@ namespace IotWebApi.Controllers
                     {
                         data.Status = true;
                         data.Message = $"成功导入 {paramList.Count} 个参数配置";
+                        _configReload.Notify("点表模板导入");
                     }
                     else
                     {
@@ -501,7 +530,11 @@ namespace IotWebApi.Controllers
                         it.ExpandJson
                     });
                 });
-                if (Status) Message = "按设备类型批量增加设备参数信息保存成功。";
+                if (Status)
+                {
+                    Message = "按设备类型批量增加设备参数信息保存成功。";
+                    _configReload.Notify("点表下放设备参数");
+                }
             }
             return Message;
         }
