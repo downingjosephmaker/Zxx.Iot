@@ -8,6 +8,22 @@
 import { ElMessage } from "element-plus";
 import { nextTick } from "vue";
 import * as echarts from "echarts";
+import { getDeviceLatest, getDeviceHistory } from "@/api/iot/monitor";
+
+/** 本地时间格式化(yyyy-MM-dd HH:mm:ss)，GetDeviceHistory入参用 */
+const formatLocalTime = (d: Date): string => {
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
+/** IoT数据集：拉设备最新值并按勾选点位过滤 */
+const fetchIotLatestPoints = async (dataset: any) => {
+  const res = await getDeviceLatest(dataset.deviceId);
+  if (!res.Status) return null;
+  const points = JSON.parse(res.Result) as any[];
+  const codes = new Set((dataset.points || []).map((p: any) => p.ParamCode));
+  return codes.size ? points.filter(p => codes.has(p.ParamCode)) : points;
+};
 
 // ========================================
 // 图表主题配置
@@ -1421,7 +1437,21 @@ export const fetchTableData = async (component: any, datasetList: any) => {
     return null;
   }
 
-  if (dataset.type === 'api') {
+  if (dataset.type === 'iot') {
+    // IoT点位数据集：一行一个点位的最新值
+    const points = await fetchIotLatestPoints(dataset);
+    if (!points) return null;
+    const metaMap = new Map<string, any>(
+      (dataset.points || []).map((p: any) => [p.ParamCode, p])
+    );
+    return points.map((p: any) => ({
+      ParamCode: p.ParamCode,
+      ParamName: p.ParamName || metaMap.get(p.ParamCode)?.ParamName || p.ParamCode,
+      ParamValue: p.ValueStr ?? p.Value ?? "-",
+      ValueUnit: metaMap.get(p.ParamCode)?.ValueUnit || "",
+      CollectTime: p.Ts || ""
+    }));
+  } else if (dataset.type === 'api') {
     return null;
   } else if (dataset.type === 'mqtt') {
     return null;
@@ -1487,7 +1517,36 @@ export const fetchChartData = async (component: any, datasetList: any) => {
     return null;
   }
 
-  if (dataset.type === 'api') {
+  if (dataset.type === 'iot') {
+    // 历史模式：取第一个勾选点位的曲线({name:时间,value:数值}[])
+    if (dataset.mode === 'history' && dataset.points?.length) {
+      const end = new Date();
+      const start = new Date(
+        end.getTime() - (dataset.historyHours || 24) * 3600 * 1000
+      );
+      const res = await getDeviceHistory(
+        dataset.deviceId,
+        dataset.points[0].ParamCode,
+        formatLocalTime(start),
+        formatLocalTime(end),
+        dataset.historyMode || 'auto'
+      );
+      if (!res.Status) return null;
+      const history = JSON.parse(res.Result);
+      return (history.Points || [])
+        .filter((p: any) => p.Value !== null && p.Value !== undefined)
+        .map((p: any) => ({ name: p.Ts, value: p.Value }));
+    }
+    // 实时模式：每个点位最新值作为一项
+    const points = await fetchIotLatestPoints(dataset);
+    if (!points) return null;
+    return points
+      .filter((p: any) => p.Value !== null && p.Value !== undefined)
+      .map((p: any) => ({
+        name: p.ParamName || p.ParamCode,
+        value: p.Value
+      }));
+  } else if (dataset.type === 'api') {
     return null;
   } else if (dataset.type === 'mqtt') {
     return null;

@@ -47,6 +47,10 @@ import { ElMessage } from "element-plus";
 import { FullScreen } from "@element-plus/icons-vue";
 import scadaApi from "@/api/scada/project";
 import { fuxaMqttService } from "./core/fuxaMqttService";
+import {
+  IotDatasetRunner,
+  type IotPointValue
+} from "./core/DatasetRuntime";
 
 defineOptions({
   name: "ScadaRuntime"
@@ -95,6 +99,15 @@ const loadProject = async () => {
       rendered: renderComponent(comp)
     }));
 
+    // 5. 启动IoT点位数据集（最新值铺底+SignalR增量，驱动绑定组件刷新）
+    const iotDatasets = (projectJson.datasets || []).filter(
+      (d: any) => d.type === "iot"
+    );
+    if (iotDatasets.length) {
+      iotRunner = new IotDatasetRunner(iotDatasets, applyDatasetValues);
+      iotRunner.start();
+    }
+
     // 6. 连接MQTT（如果有设备配置）
     if (projectJson.devices?.length > 0) {
       await connectMqtt(projectJson.devices);
@@ -117,6 +130,34 @@ const loadProject = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+let iotRunner: IotDatasetRunner | null = null;
+
+/**
+ * IoT数据集值到达：刷新绑定该数据集的组件。
+ * 组件绑定形状 comp.dataBinding = { datasetId, dataPath|paramCode }，dataPath=点位编码。
+ */
+const applyDatasetValues = (
+  datasetId: string,
+  values: Record<string, IotPointValue>
+) => {
+  components.value = components.value.map((comp: any) => {
+    const binding = comp.dataBinding;
+    if (!binding || binding.datasetId !== datasetId) return comp;
+    const code = binding.dataPath || binding.paramCode;
+    const v = code ? values[code] : undefined;
+    if (v === undefined) return comp;
+    const next = {
+      ...comp,
+      properties: {
+        ...comp.properties,
+        text: `${v.value !== "" ? v.value : "-"}${v.unit || ""}`
+      }
+    };
+    next.rendered = renderComponent(next);
+    return next;
+  });
 };
 
 /**
@@ -200,6 +241,8 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("resize", autoScale);
   fuxaMqttService.disconnect();
+  iotRunner?.stop();
+  iotRunner = null;
 });
 </script>
 

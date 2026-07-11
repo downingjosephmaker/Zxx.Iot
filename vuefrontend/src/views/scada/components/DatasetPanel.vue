@@ -47,6 +47,43 @@ const testDeviceApi = async () => {
   >
     <div class="dataset-dialog-content">
       <el-tabs v-model="activeTab" type="border-card">
+        <!-- IoT设备点位配置(平台内置遥测通道,免手填URL) -->
+        <el-tab-pane label="IoT设备点位" name="iot">
+          <div class="dataset-config-section">
+            <div class="config-section">
+              <h4>基本信息</h4>
+              <el-form :model="iotConfig" label-width="100px" size="small">
+                <el-form-item label="数据集名称" required>
+                  <el-input
+                    v-model="iotConfig.name"
+                    placeholder="请输入数据集名称"
+                  />
+                </el-form-item>
+                <el-form-item label="描述">
+                  <el-input
+                    v-model="iotConfig.description"
+                    type="textarea"
+                    :rows="2"
+                    placeholder="请输入数据集描述"
+                  />
+                </el-form-item>
+              </el-form>
+            </div>
+
+            <div class="config-section">
+              <h4>设备点位绑定</h4>
+              <IotPointSelector :config="iotConfig" />
+            </div>
+
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+              title="实时模式：运行时以最新值铺底并经SignalR增量刷新；历史模式：按回看时长拉取遥测曲线(图表绑定用)"
+            />
+          </div>
+        </el-tab-pane>
+
         <!-- API接口配置 -->
         <el-tab-pane label="API接口" name="api">
           <div class="dataset-config-section">
@@ -813,6 +850,8 @@ const testDeviceApi = async () => {
 import { ref, reactive, computed, watch, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
 import { VideoPlay, Check, Refresh } from "@element-plus/icons-vue";
+import IotPointSelector from "./IotPointSelector.vue";
+import { getDeviceLatest } from "@/api/iot/monitor";
 
 // 组件属性
 interface Props {
@@ -832,8 +871,8 @@ const emit = defineEmits<{
   "test-dataset": [config: any];
 }>();
 
-// 响应式状态
-const activeTab = ref("api");
+// 响应式状态(默认停在IoT设备点位——平台内置通道免手填URL)
+const activeTab = ref("iot");
 const testing = ref(false);
 const fetchingToken = ref(false);
 const fetchingCustomToken = ref(false);
@@ -892,6 +931,19 @@ const formData = reactive({
   },
   testResult: null,
   lastTested: null
+});
+
+// IoT设备点位数据集配置(结构=core/DatasetRuntime.IotDatasetConfig)
+const iotConfig = reactive({
+  name: "",
+  description: "",
+  deviceId: null as number | null,
+  deviceName: "",
+  deviceTypeCode: "",
+  mode: "realtime" as "realtime" | "history",
+  points: [] as { ParamCode: string; ParamName?: string; ValueUnit?: string }[],
+  historyHours: 24,
+  historyMode: "auto" as "auto" | "raw" | "hour"
 });
 
 // MQTT配置
@@ -1030,6 +1082,21 @@ const saveConfig = () => {
   let config = null;
 
   switch (activeTab.value) {
+    case "iot":
+      if (!iotConfig.name) {
+        ElMessage.warning("请输入数据集名称");
+        return;
+      }
+      if (!iotConfig.deviceId || !iotConfig.points.length) {
+        ElMessage.warning("请选择绑定设备与至少一个点位");
+        return;
+      }
+      config = {
+        type: "iot",
+        id: props.dataset?.id || "",
+        ...JSON.parse(JSON.stringify(iotConfig))
+      };
+      break;
     case "api":
       // 合并认证头部到请求头中
       const authHeaders = buildAuthHeaders();
@@ -1079,6 +1146,32 @@ const saveConfig = () => {
 };
 
 const testDataset = async () => {
+  // IoT点位走平台真实接口测试，不进入下方模拟流程
+  if (activeTab.value === "iot") {
+    if (!iotConfig.deviceId) {
+      ElMessage.warning("请先选择绑定设备");
+      return;
+    }
+    testing.value = true;
+    try {
+      const data = await getDeviceLatest(iotConfig.deviceId);
+      if (!data.Status) throw new Error(data.Message || "查询失败");
+      const points = JSON.parse(data.Result) as { ParamCode: string }[];
+      const codes = new Set(iotConfig.points.map(p => p.ParamCode));
+      const hit = codes.size
+        ? points.filter(p => codes.has(p.ParamCode)).length
+        : points.length;
+      ElMessage.success(
+        `连接成功：设备共${points.length}个点位有最新值，命中已勾选点位${hit}个`
+      );
+    } catch (error) {
+      ElMessage.error("测试失败: " + (error as Error).message);
+    } finally {
+      testing.value = false;
+    }
+    return;
+  }
+
   testing.value = true;
   try {
     let testConfig = null;
@@ -1483,12 +1576,29 @@ const buildAuthHeaders = () => {
   return authHeaders;
 };
 
-// 监听props变化，初始化表单数据
+// 监听props变化，初始化表单数据(按类型切到对应tab回填)
 watch(
   () => props.dataset,
   newDataset => {
-    if (newDataset) {
-      Object.assign(formData, newDataset);
+    if (!newDataset) return;
+    if (newDataset.type === "iot") {
+      Object.assign(iotConfig, {
+        name: newDataset.name || "",
+        description: newDataset.description || "",
+        deviceId: newDataset.deviceId ?? null,
+        deviceName: newDataset.deviceName || "",
+        deviceTypeCode: newDataset.deviceTypeCode || "",
+        mode: newDataset.mode || "realtime",
+        points: [...(newDataset.points || [])],
+        historyHours: newDataset.historyHours || 24,
+        historyMode: newDataset.historyMode || "auto"
+      });
+      activeTab.value = "iot";
+      return;
+    }
+    Object.assign(formData, newDataset);
+    if (["api", "mqtt", "static"].includes(newDataset.type)) {
+      activeTab.value = newDataset.type;
     }
   },
   { immediate: true }
@@ -1554,14 +1664,17 @@ defineExpose({
     return { data: [], type: 'static' };
   },
 
-  // 获取所有数据集配置
+  // 获取所有数据集配置(面板内各tab当前已填配置的快照)
   getDatasets: () => {
-    return [
-      {
-        type: 'static',
-        data: staticJsonData.value
-      }
-    ];
+    const list: any[] = [];
+    if (formData.config.url || formData.config.deviceUrl) {
+      list.push({ type: "api", ...JSON.parse(JSON.stringify(formData)) });
+    }
+    list.push({ type: "static", data: staticJsonData.value });
+    if (iotConfig.deviceId) {
+      list.push({ type: "iot", ...JSON.parse(JSON.stringify(iotConfig)) });
+    }
+    return list;
   }
 });
 </script>

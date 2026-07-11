@@ -47,6 +47,10 @@ import * as utils4 from "./main/utils4";
 import * as utilsButton from "./main/utils-button";
 import * as utilsProject from "./main/utils-project";
 import { DEFAULT_PROJECT_DATA, getProjectId } from "./main/utils-project";
+import {
+  rehydrateDatasetList,
+  previewIotDataset
+} from "./main/utils-dataset";
 import scadaApi, { type ScadaProjectInfo } from "@/api/scada/project";
 
 import {
@@ -464,8 +468,8 @@ const handlePublishProject = async () => {
 /**
  * 从数据库加载项目
  */
-const loadProject = (projectId: string) =>
-  utilsProject.loadProject(
+const loadProject = async (projectId: string) => {
+  await utilsProject.loadProject(
     projectId,
     loading,
     projectInfo,
@@ -474,6 +478,9 @@ const loadProject = (projectId: string) =>
     redrawCanvas,
     nextTick
   );
+  // 持久化的数据集回灌编辑器列表(否则刷新后停留在mock数据,保存即丢)
+  rehydrateDatasetList(projectData, datasetList);
+};
 
 /**
  * 初始化新项目（已弃用 - 应从项目列表创建）
@@ -1172,6 +1179,9 @@ const previewDataBinding = async () => {
         status: "online",
         timestamp: new Date().toISOString()
       };
+    } else if (dataset.type === "iot") {
+      // IoT点位数据集走平台真实最新值
+      mockData = await previewIotDataset(dataset);
     } else if (dataset.type === "static") {
       // 使用静态数据
       mockData = dataset.data;
