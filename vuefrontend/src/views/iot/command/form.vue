@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import type { ProductCommandFormProps } from "./utils/types";
+import {
+  getSupportedCommands,
+  type PluginCommandInfo
+} from "@/api/iot/plugin";
 
 defineOptions({
   name: "ProductCommandForm"
@@ -23,16 +27,24 @@ const props = withDefaults(defineProps<ProductCommandFormProps>(), {
 const ruleFormRef = ref();
 const formValue = ref(props.formInline);
 
-/** 插件侧已实现的下行控制类型（RuleLinkageService 白名单同源） */
-const classNameOptions = [
-  "netmodbuswrite",
-  "netdlt645read",
-  "netdlt645timesync",
-  "netcjt188read",
-  "netcjt188valve",
-  "nets7write",
-  "netopcuawrite"
-];
+/** 已加载插件声明的下行控制类型(B-1.4单源白名单,替代硬编码;拉取失败时保留手输兜底) */
+const supportedCommands = ref<PluginCommandInfo[]>([]);
+getSupportedCommands().then(data => {
+  if (data.Status && data.Result) {
+    try {
+      supportedCommands.value = JSON.parse(data.Result);
+    } catch {
+      /* 数据异常时保持手输兜底 */
+    }
+  }
+});
+
+const classNameOptions = computed(() => {
+  const seen = new Set<string>();
+  return supportedCommands.value.filter(item =>
+    seen.has(item.ClassName) ? false : (seen.add(item.ClassName), true)
+  );
+});
 
 const rules = {
   DeviceTypeCode: [
@@ -120,10 +132,15 @@ defineExpose({ getRef });
       >
         <el-option
           v-for="item in classNameOptions"
-          :key="item"
-          :label="item"
-          :value="item"
-        />
+          :key="item.ClassName"
+          :label="item.ClassName"
+          :value="item.ClassName"
+        >
+          <span>{{ item.ClassName }}</span>
+          <span class="option-desc">
+            {{ item.Description }}（{{ item.PluginName }}）
+          </span>
+        </el-option>
       </el-select>
     </el-form-item>
 

@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import type { LinkageRuleFormProps } from "./utils/types";
+import {
+  getSupportedCommands,
+  type PluginCommandInfo
+} from "@/api/iot/plugin";
 
 defineOptions({
   name: "LinkageRuleForm"
@@ -30,6 +34,32 @@ const props = withDefaults(defineProps<LinkageRuleFormProps>(), {
 
 const ruleFormRef = ref();
 const formValue = ref(props.formInline);
+
+/** 已加载插件声明的控制命令(B-1.4单源白名单,下拉替代手输;拉取失败时保留手输兜底) */
+const supportedCommands = ref<PluginCommandInfo[]>([]);
+getSupportedCommands().then(data => {
+  if (data.Status && data.Result) {
+    try {
+      supportedCommands.value = JSON.parse(data.Result);
+    } catch {
+      /* 数据异常时保持手输兜底 */
+    }
+  }
+});
+
+const classNameOptions = computed(() => {
+  const seen = new Set<string>();
+  return supportedCommands.value.filter(item =>
+    seen.has(item.ClassName) ? false : (seen.add(item.ClassName), true)
+  );
+});
+
+const pluginOptions = computed(() => {
+  const seen = new Set<string>();
+  return supportedCommands.value.filter(item =>
+    seen.has(item.PluginGuid) ? false : (seen.add(item.PluginGuid), true)
+  );
+});
 
 const triggerOptions = [
   { label: "点位变化", value: 1 },
@@ -260,11 +290,26 @@ defineExpose({ getRef });
         prop="cmdConfig.ClassName"
         :rules="classNameRule"
       >
-        <el-input
+        <el-select
           v-model="formValue.cmdConfig.ClassName"
           placeholder="白名单控制类型，如 netmodbuswrite"
+          filterable
+          allow-create
           clearable
-        />
+          class="w-full"
+        >
+          <el-option
+            v-for="item in classNameOptions"
+            :key="item.ClassName"
+            :label="item.ClassName"
+            :value="item.ClassName"
+          >
+            <span>{{ item.ClassName }}</span>
+            <span class="option-desc">
+              {{ item.Description }}（{{ item.PluginName }}）
+            </span>
+          </el-option>
+        </el-select>
       </el-form-item>
       <el-form-item label="控制内容" prop="cmdConfig.ConContent">
         <el-input
@@ -274,12 +319,25 @@ defineExpose({ getRef });
           placeholder='控制内容JSON，如 {"ParamCode":"switch","ParamValue":"1"}'
         />
       </el-form-item>
-      <el-form-item label="目标插件Guid" prop="cmdConfig.PluginGuid">
-        <el-input
+      <el-form-item label="目标插件" prop="cmdConfig.PluginGuid">
+        <el-select
           v-model="formValue.cmdConfig.PluginGuid"
           placeholder="留空广播全部已加载插件"
+          filterable
+          allow-create
           clearable
-        />
+          class="w-full"
+        >
+          <el-option
+            v-for="item in pluginOptions"
+            :key="item.PluginGuid"
+            :label="item.PluginName"
+            :value="item.PluginGuid"
+          >
+            <span>{{ item.PluginName }}</span>
+            <span class="option-desc">{{ item.PluginGuid }}</span>
+          </el-option>
+        </el-select>
       </el-form-item>
       <el-form-item label="目标设备清单" prop="cmdConfig.DeviceIdsText">
         <el-input

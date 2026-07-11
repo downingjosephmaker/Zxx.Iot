@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed } from "vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
+import SchemaForm from "@/views/iot/components/SchemaForm.vue";
 import {
   getListByTypeCode,
   sendCommand,
@@ -23,84 +24,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
-/** JSON Schema 字段(仅支持 object.properties 一层，覆盖动态表单常见形态) */
-interface SchemaField {
-  name: string;
-  title: string;
-  type: "string" | "number" | "integer" | "boolean" | "enum";
-  enumValues?: Array<string | number>;
-  required: boolean;
-  defaultValue?: unknown;
-  description?: string;
-}
-
 const loading = ref(false);
 const sending = ref(false);
 const commandList = ref<ProductCommandItem[]>([]);
 const selectedId = ref<string>("");
-/** 动态表单值 */
+/** 动态表单值(SchemaForm按选中命令的ParamSchema补种缺省值、清理游离键) */
 const formModel = reactive<Record<string, unknown>>({});
-const dynamicFormRef = ref();
+const schemaFormRef = ref();
 
 const selectedCommand = computed(() =>
   commandList.value.find(c => String(c.SnowId) === selectedId.value)
 );
-
-/** 解析选中命令的 ParamSchema 为字段列表 */
-const schemaFields = computed<SchemaField[]>(() => {
-  const cmd = selectedCommand.value;
-  if (!cmd?.ParamSchema) return [];
-  let schema: any;
-  try {
-    schema = JSON.parse(cmd.ParamSchema);
-  } catch {
-    return [];
-  }
-  const props = schema?.properties;
-  if (!props || typeof props !== "object") return [];
-  const requiredList: string[] = Array.isArray(schema.required)
-    ? schema.required
-    : [];
-  return Object.keys(props).map(key => {
-    const def = props[key] ?? {};
-    const hasEnum = Array.isArray(def.enum) && def.enum.length > 0;
-    return {
-      name: key,
-      title: def.title || key,
-      type: hasEnum ? "enum" : def.type || "string",
-      enumValues: hasEnum ? def.enum : undefined,
-      required: requiredList.includes(key),
-      defaultValue: def.default,
-      description: def.description
-    } as SchemaField;
-  });
-});
-
-/** 选中命令变化时，用 schema 默认值重置动态表单 */
-watch(selectedId, () => {
-  Object.keys(formModel).forEach(k => delete formModel[k]);
-  schemaFields.value.forEach(f => {
-    formModel[f.name] =
-      f.defaultValue ??
-      (f.type === "boolean" ? false : f.type === "number" || f.type === "integer" ? 0 : "");
-  });
-});
-
-const dynamicRules = computed(() => {
-  const rules: Record<string, unknown[]> = {};
-  schemaFields.value.forEach(f => {
-    if (f.required) {
-      rules[f.name] = [
-        {
-          required: true,
-          message: `${f.title}不能为空`,
-          trigger: f.type === "enum" || f.type === "boolean" ? "change" : "blur"
-        }
-      ];
-    }
-  });
-  return rules;
-});
 
 /** 按 ConTemplate 的 {参数名} 占位填充表单值，生成最终下行内容 */
 function buildConContent(): string {
@@ -143,15 +77,9 @@ async function doSend() {
     return;
   }
   // 有 schema 字段时先校验动态表单
-  if (schemaFields.value.length && dynamicFormRef.value) {
-    const valid = await dynamicFormRef.value
-      .validate()
-      .then(() => true)
-      .catch(() => false);
-    if (!valid) {
-      message("请完善命令参数", { type: "warning" });
-      return;
-    }
+  if (schemaFormRef.value && !(await schemaFormRef.value.validate())) {
+    message("请完善命令参数", { type: "warning" });
+    return;
   }
   const conContent = buildConContent();
   sending.value = true;
@@ -238,53 +166,18 @@ defineExpose({ onSend, sending });
 
     <template v-if="selectedCommand">
       <el-divider content-position="left">命令参数</el-divider>
-      <el-form
-        v-if="schemaFields.length"
-        ref="dynamicFormRef"
+      <SchemaForm
+        ref="schemaFormRef"
+        :schema="selectedCommand.ParamSchema || ''"
         :model="formModel"
-        :rules="dynamicRules"
         label-width="110px"
       >
-        <el-form-item
-          v-for="field in schemaFields"
-          :key="field.name"
-          :label="field.title"
-          :prop="field.name"
-        >
-          <el-select
-            v-if="field.type === 'enum'"
-            v-model="formModel[field.name]"
-            :placeholder="field.description || '请选择'"
-            class="w-full"
-          >
-            <el-option
-              v-for="opt in field.enumValues"
-              :key="String(opt)"
-              :label="String(opt)"
-              :value="opt"
-            />
-          </el-select>
-          <el-switch
-            v-else-if="field.type === 'boolean'"
-            v-model="formModel[field.name]"
-          />
-          <el-input-number
-            v-else-if="field.type === 'number' || field.type === 'integer'"
-            v-model="formModel[field.name]"
-            :step="1"
-            controls-position="right"
-          />
-          <el-input
-            v-else
-            v-model="formModel[field.name]"
-            :placeholder="field.description || '请输入'"
-            clearable
-          />
-        </el-form-item>
-      </el-form>
-      <el-text v-else type="info" size="small">
-        该命令无参数，可直接下发。
-      </el-text>
+        <template #empty>
+          <el-text type="info" size="small">
+            该命令无参数，可直接下发。
+          </el-text>
+        </template>
+      </SchemaForm>
 
       <el-divider content-position="left">下行内容预览</el-divider>
       <el-input

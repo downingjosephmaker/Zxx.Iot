@@ -118,6 +118,17 @@ export default {
         title: "产品命令",
         showLink: true
       }
+    },
+    {
+      path: "/iot/plugin",
+      name: "IotPlugin",
+      component: () => import("@/views/iot/plugin/index.vue"),
+      meta: {
+        // 上传DLL等价远程代码执行,后端全端点仅超管可用(DenyIfNotSuperAdmin);
+        // 前端roles值无登录侧实证,不设meta.roles以免误锁,非超管进入会收到后端明确拒绝
+        title: "插件管理",
+        showLink: true
+      }
     }
   ]
 } satisfies RouteConfigsTable;
