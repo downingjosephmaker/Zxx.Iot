@@ -4,13 +4,22 @@ export default {
   path: "/iot",
   name: "IotManage",
   component: Layout,
-  redirect: "/iot/product",
+  redirect: "/iot/center",
   meta: {
     icon: "ep:cpu",
     title: "物联管理",
     rank: 3
   },
   children: [
+    {
+      path: "/iot/center",
+      name: "IotCenter",
+      component: () => import("@/views/iot/center/index.vue"),
+      meta: {
+        title: "设备中心",
+        showLink: true
+      }
+    },
     {
       path: "/iot/product",
       name: "IotProduct",
