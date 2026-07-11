@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import AddFill from "~icons/ri/add-circle-line";
 import Delete from "~icons/ep/delete";
 import type { DeviceTypeParamFormProps } from "./utils/types";
+import { getListByPage as getAlarmConfigPage } from "@/api/information/alarmConfiguration";
+import { getDriverClaims, type PluginDriverClaim } from "@/api/iot/plugin";
+import ProductTreeSelect from "../components/ProductTreeSelect.vue";
 
 defineOptions({
   name: "DeviceTypeParamForm"
@@ -58,32 +61,203 @@ const formValue = ref(props.formInline);
 
 const subChannelOptions = ["总路", "1路", "2路", "3路"];
 
-const funcCodeOptions = [
-  { value: 0, label: "0 不采集" },
-  { value: 1, label: "1 FC01读线圈" },
-  { value: 2, label: "2 FC02读离散输入" },
-  { value: 3, label: "3 FC03读保持寄存器" },
-  { value: 4, label: "4 FC04读输入寄存器" }
-];
-
-const dataTypeOptions = [
-  "int16",
-  "uint16",
-  "int32",
-  "uint32",
-  "int64",
-  "float32",
-  "float64",
-  "bcd",
-  "string",
-  "bool"
-];
-
 const byteOrderOptions = ["ABCD", "CDAB", "BADC", "DCBA"];
+
+/** 采集字段区显隐/label/选项规格，按认领驱动的fieldGroup切换(C-3) */
+interface CollectFieldSpec {
+  showFuncCode: boolean;
+  funcCodeLabel: string;
+  funcCodeOptions: { value: number; label: string }[];
+  showParamAddr: boolean;
+  paramAddrLabel: string;
+  paramAddrTip: string;
+  showDataType: boolean;
+  dataTypeOptions: string[];
+  dataTypePlaceholder: string;
+  showByteOrder: boolean;
+  showBitOffset: boolean;
+  bitOffsetTip: string;
+  showRegLength: boolean;
+  regLengthLabel: string;
+  regLengthTip: string;
+  regLengthMax: number;
+  showWritable: boolean;
+  writableTip: string;
+  showNodeId: boolean;
+  /** 明细字段是否受"功能码>0"门槛控制(opcua豁免) */
+  gateByFuncCode: boolean;
+}
+
+/** 默认=Modbus全量语义，同时是未认领产品的兜底展示 */
+const DEFAULT_SPEC: CollectFieldSpec = {
+  showFuncCode: true,
+  funcCodeLabel: "采集功能码",
+  funcCodeOptions: [
+    { value: 0, label: "0 不采集" },
+    { value: 1, label: "1 FC01读线圈" },
+    { value: 2, label: "2 FC02读离散输入" },
+    { value: 3, label: "3 FC03读保持寄存器" },
+    { value: 4, label: "4 FC04读输入寄存器" }
+  ],
+  showParamAddr: true,
+  paramAddrLabel: "参数地址",
+  paramAddrTip: "Modbus寄存器地址复用此列",
+  showDataType: true,
+  dataTypeOptions: [
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "int64",
+    "float32",
+    "float64",
+    "bcd",
+    "string",
+    "bool"
+  ],
+  dataTypePlaceholder: "留空=uint16",
+  showByteOrder: true,
+  showBitOffset: true,
+  bitOffsetTip: "-1整字取值，≥0按位取布尔",
+  showRegLength: true,
+  regLengthLabel: "占用寄存器数",
+  regLengthTip: "0按类型推导，bcd/string须显式",
+  regLengthMax: 125,
+  showWritable: true,
+  writableTip: "FC03保持寄存器经FC06/16下发",
+  showNodeId: true,
+  gateByFuncCode: true
+};
+
+const DLT645_SPEC: Partial<CollectFieldSpec> = {
+  funcCodeLabel: "是否采集",
+  funcCodeOptions: [
+    { value: 0, label: "0 不采集" },
+    { value: 1, label: "1 采集" }
+  ],
+  paramAddrLabel: "数据标识DI",
+  paramAddrTip: "DL/T645数据标识，十进制填写",
+  dataTypeOptions: ["bcd", "bcdsigned", "bin"],
+  dataTypePlaceholder: "留空=驱动默认",
+  showByteOrder: false,
+  showBitOffset: false,
+  regLengthLabel: "值域字节数",
+  regLengthTip: "0=取整个数据域",
+  regLengthMax: 250,
+  showWritable: false,
+  showNodeId: false
+};
+
+/** 各驱动字段子集(在默认规格上做差异覆盖) */
+const GROUP_SPECS: Record<string, Partial<CollectFieldSpec>> = {
+  modbus: { showNodeId: false },
+  dlt645: DLT645_SPEC,
+  cjt188: {
+    ...DLT645_SPEC,
+    showBitOffset: true,
+    bitOffsetTip: "值区内字节偏移，-1=从头"
+  },
+  s7: {
+    funcCodeLabel: "存储区",
+    funcCodeOptions: [
+      { value: 0, label: "0 不采集" },
+      { value: 1, label: "1 DB区" },
+      { value: 2, label: "2 M区" },
+      { value: 3, label: "3 I区" },
+      { value: 4, label: "4 Q区" }
+    ],
+    paramAddrLabel: "字节地址",
+    paramAddrTip: "DB区=DB号×1000000+字节地址，其余区直接填字节地址",
+    dataTypeOptions: [
+      "bool",
+      "byte",
+      "int16",
+      "uint16",
+      "int32",
+      "uint32",
+      "float32"
+    ],
+    dataTypePlaceholder: "留空=驱动默认",
+    showByteOrder: false,
+    bitOffsetTip: "bool类型位号0~7，其余填-1",
+    regLengthLabel: "占用字节数",
+    regLengthTip: "0按类型推导",
+    regLengthMax: 250,
+    writableTip: "写回原存储区地址",
+    showNodeId: false
+  },
+  opcua: {
+    showFuncCode: false,
+    showParamAddr: false,
+    showDataType: false,
+    showByteOrder: false,
+    showBitOffset: false,
+    showRegLength: false,
+    writableTip: "经OPC UA Write服务下发",
+    gateByFuncCode: false
+  }
+};
+
+/** 已启用插件的驱动认领清单(元数据，拉取失败不阻塞表单) */
+const driverClaims = ref<PluginDriverClaim[]>([]);
+
+/** 告警类型下拉(alarm_config字典，0=未挂接) */
+const alarmConfigOptions = ref<{ value: number; label: string }[]>([
+  { value: 0, label: "0 未挂接" }
+]);
+
+onMounted(async () => {
+  const [alarmData, claimData] = await Promise.all([
+    getAlarmConfigPage({ page: 1, pagesize: 1000, sconlist: [] }),
+    getDriverClaims().catch(() => null)
+  ]);
+  if (alarmData.Status) {
+    const list = JSON.parse(alarmData.Result) as {
+      Id: number;
+      EventType?: string;
+      AlarmGrade?: string;
+    }[];
+    alarmConfigOptions.value = [
+      { value: 0, label: "0 未挂接" },
+      ...list.map(t => ({
+        value: t.Id,
+        label: `${t.Id} ${t.EventType || "未命名"}（${t.AlarmGrade || "无等级"}）`
+      }))
+    ];
+  }
+  if (claimData?.Status) {
+    driverClaims.value = JSON.parse(claimData.Result) || [];
+  }
+});
+
+/** 认领当前产品编码的已启用驱动 */
+const matchedClaims = computed(() =>
+  driverClaims.value.filter(c =>
+    c.DeviceTypeCodes?.includes(formValue.value.DeviceTypeCode)
+  )
+);
+
+/** 多驱动认领且字段子集不一致 */
+const claimConflict = computed(
+  () => new Set(matchedClaims.value.map(c => c.FieldGroup || "")).size > 1
+);
+
+const activeClaim = computed(
+  () => matchedClaims.value.find(c => c.FieldGroup) ?? matchedClaims.value[0]
+);
+
+const spec = computed<CollectFieldSpec>(() => ({
+  ...DEFAULT_SPEC,
+  ...(GROUP_SPECS[activeClaim.value?.FieldGroup ?? ""] ?? {})
+}));
+
+const collectDetailVisible = computed(
+  () => !spec.value.gateByFuncCode || formValue.value.CollectFuncCode > 0
+);
 
 const rules = {
   DeviceTypeCode: [
-    { required: true, message: "产品类型编码不能为空", trigger: "blur" }
+    { required: true, message: "产品类型不能为空", trigger: "change" }
   ],
   ParamCode: [
     { required: true, message: "参数编码不能为空", trigger: "blur" }
@@ -123,13 +297,8 @@ defineExpose({ getRef });
 
     <el-row :gutter="16">
       <el-col :span="12">
-        <el-form-item label="产品类型编码" prop="DeviceTypeCode">
-          <el-input
-            v-model="formValue.DeviceTypeCode"
-            placeholder="如 dianbiao"
-            maxlength="30"
-            clearable
-          />
+        <el-form-item label="产品类型" prop="DeviceTypeCode">
+          <ProductTreeSelect v-model="formValue.DeviceTypeCode" />
         </el-form-item>
       </el-col>
       <el-col :span="12">
@@ -263,12 +432,30 @@ defineExpose({ getRef });
 
     <el-divider content-position="left">采集配置</el-divider>
 
+    <el-alert
+      v-if="claimConflict"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="claim-alert"
+      :title="`该产品被多个驱动认领（${matchedClaims.map(c => c.PluginName).join('、')}），字段展示按 ${activeClaim?.PluginName}，请核对点表语义`"
+    />
+    <el-alert
+      v-if="activeClaim?.Addressing"
+      type="info"
+      :closable="false"
+      show-icon
+      class="claim-alert"
+      :title="`驱动 ${activeClaim.PluginName} 寻址说明`"
+      :description="activeClaim.Addressing"
+    />
+
     <el-row :gutter="16">
-      <el-col :span="12">
-        <el-form-item label="采集功能码" prop="CollectFuncCode">
+      <el-col v-if="spec.showFuncCode" :span="12">
+        <el-form-item :label="spec.funcCodeLabel" prop="CollectFuncCode">
           <el-select v-model="formValue.CollectFuncCode" class="w-full">
             <el-option
-              v-for="item in funcCodeOptions"
+              v-for="item in spec.funcCodeOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"
@@ -276,28 +463,28 @@ defineExpose({ getRef });
           </el-select>
         </el-form-item>
       </el-col>
-      <el-col :span="12">
-        <el-form-item label="参数地址" prop="ParamAddr">
+      <el-col v-if="spec.showParamAddr" :span="12">
+        <el-form-item :label="spec.paramAddrLabel" prop="ParamAddr">
           <el-input-number
             v-model="formValue.ParamAddr"
             :min="0"
-            :max="1000000"
+            :max="2000000000"
             :step="1"
           />
-          <span class="form-tip">Modbus寄存器地址复用此列</span>
+          <span class="form-tip">{{ spec.paramAddrTip }}</span>
         </el-form-item>
       </el-col>
-      <template v-if="formValue.CollectFuncCode > 0">
-        <el-col :span="12">
+      <template v-if="collectDetailVisible">
+        <el-col v-if="spec.showDataType" :span="12">
           <el-form-item label="数据类型" prop="CollectDataType">
             <el-select
               v-model="formValue.CollectDataType"
-              placeholder="留空=uint16"
+              :placeholder="spec.dataTypePlaceholder"
               clearable
               class="w-full"
             >
               <el-option
-                v-for="item in dataTypeOptions"
+                v-for="item in spec.dataTypeOptions"
                 :key="item"
                 :label="item"
                 :value="item"
@@ -305,7 +492,7 @@ defineExpose({ getRef });
             </el-select>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col v-if="spec.showByteOrder" :span="12">
           <el-form-item label="字节序" prop="CollectByteOrder">
             <el-select
               v-model="formValue.CollectByteOrder"
@@ -322,7 +509,7 @@ defineExpose({ getRef });
             </el-select>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col v-if="spec.showBitOffset" :span="12">
           <el-form-item label="位偏移" prop="CollectBitOffset">
             <el-input-number
               v-model="formValue.CollectBitOffset"
@@ -330,28 +517,28 @@ defineExpose({ getRef });
               :max="63"
               :step="1"
             />
-            <span class="form-tip">-1整字取值，≥0按位取布尔</span>
+            <span class="form-tip">{{ spec.bitOffsetTip }}</span>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
-          <el-form-item label="占用寄存器数" prop="CollectRegLength">
+        <el-col v-if="spec.showRegLength" :span="12">
+          <el-form-item :label="spec.regLengthLabel" prop="CollectRegLength">
             <el-input-number
               v-model="formValue.CollectRegLength"
               :min="0"
-              :max="125"
+              :max="spec.regLengthMax"
               :step="1"
             />
-            <span class="form-tip">0按类型推导，bcd/string须显式</span>
+            <span class="form-tip">{{ spec.regLengthTip }}</span>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col v-if="spec.showWritable" :span="12">
           <el-form-item label="是否可写" prop="CollectWritable">
             <el-switch v-model="formValue.CollectWritable" />
-            <span class="form-tip">FC03保持寄存器经FC06/16下发</span>
+            <span class="form-tip">{{ spec.writableTip }}</span>
           </el-form-item>
         </el-col>
       </template>
-      <el-col :span="24">
+      <el-col v-if="spec.showNodeId" :span="24">
         <el-form-item label="采集节点标识" prop="CollectNodeId">
           <el-input
             v-model="formValue.CollectNodeId"
@@ -500,12 +687,19 @@ defineExpose({ getRef });
         </el-form-item>
       </el-col>
       <el-col v-if="formValue.IsAlarmSource" :span="12">
-        <el-form-item label="告警类型ID" prop="AlarmConfigId">
-          <el-input-number
+        <el-form-item label="告警类型" prop="AlarmConfigId">
+          <el-select
             v-model="formValue.AlarmConfigId"
-            :min="0"
-            :step="1"
-          />
+            filterable
+            class="w-full"
+          >
+            <el-option
+              v-for="item in alarmConfigOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
           <span class="form-tip">alarm_config字典，继承等级/通知/防抖</span>
         </el-form-item>
       </el-col>
@@ -518,6 +712,10 @@ defineExpose({ getRef });
   margin-left: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.claim-alert {
+  margin-bottom: 12px;
 }
 
 .status-values {

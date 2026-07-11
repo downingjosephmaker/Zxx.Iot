@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { DeviceFormProps } from "./utils/types";
+import DeviceSelect from "../components/DeviceSelect.vue";
 
 defineOptions({
   name: "DeviceInfoForm"
@@ -115,13 +116,13 @@ defineExpose({ getRef });
         </el-form-item>
       </el-col>
       <el-col :span="12">
-        <el-form-item label="上级设备ID" prop="ParentId">
-          <el-input-number
+        <el-form-item label="上级设备" prop="ParentId">
+          <DeviceSelect
             v-model="formValue.ParentId"
-            :min="0"
-            :step="1"
+            top-level
+            :exclude-id="formValue.DeviceId || 0"
+            placeholder="输入设备名称搜索，清空=顶级"
           />
-          <span class="form-tip">0=顶级设备</span>
         </el-form-item>
       </el-col>
       <el-col :span="12">

@@ -81,6 +81,24 @@ export const getSupportedCommands = () => {
   return http.request<Result>("post", "/SysPlugin/GetSupportedCommands");
 };
 
+/** 插件驱动认领(对应后端 PluginDriverClaim,C-3点表按驱动裁剪数据源,仅元数据登录即可读) */
+export interface PluginDriverClaim {
+  PluginGuid: string;
+  PluginName: string;
+  /** 采集字段子集标识(modbus|dlt645|cjt188|s7|opcua,空=未声明不裁剪) */
+  FieldGroup: string;
+  /** 点表寻址说明(表单提示文本) */
+  Addressing: string;
+  /** 认领的产品类型编码清单 */
+  DeviceTypeCodes: string[];
+}
+
+/** 已启用插件的驱动认领清单(产品类型编码→采集字段子集,点表表单按驱动裁剪依据) */
+export const getDriverClaims = () => {
+  storage.setItem("button", "查询" + button + "驱动认领");
+  return http.request<Result>("post", "/SysPlugin/GetDriverClaims");
+};
+
 /** 启用/禁用插件(启用即加载并启动,停用即Stop并卸载) */
 export const enablePlugin = (guid: string, pluginstatus: number) => {
   storage.setItem("button", (pluginstatus === 1 ? "启用" : "停用") + button);
@@ -137,6 +155,7 @@ export default {
   getInfoByGuid,
   getConfigSchema,
   getSupportedCommands,
+  getDriverClaims,
   enablePlugin,
   saveConfig,
   deletePlugin,

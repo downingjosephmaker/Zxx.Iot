@@ -73,7 +73,7 @@ function mergePoints(points: TelemetryPointItem[]) {
 async function loadDevices() {
   const data = await getListByPage({
     page: 1,
-    pagesize: 500,
+    pagesize: 50,
     sconlist: deviceKeyword.value
       ? [
           {
@@ -85,7 +85,13 @@ async function loadDevices() {
       : []
   });
   if (data.Status) {
-    deviceOptions.value = JSON.parse(data.Result);
+    const list: DeviceInfoItem[] = JSON.parse(data.Result);
+    // 已选设备并入选项，防远程搜索换词后label与详情卡丢失
+    const cur = selectedDevice.value;
+    if (cur && !list.some(d => d.DeviceId === cur.DeviceId)) {
+      list.unshift(cur);
+    }
+    deviceOptions.value = list;
   }
 }
 

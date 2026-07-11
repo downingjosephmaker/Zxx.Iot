@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { ref, watch } from "vue";
 import type { CollectStrategyFormProps } from "./utils/types";
+import ProductTreeSelect from "../components/ProductTreeSelect.vue";
+import DeviceSelect from "../components/DeviceSelect.vue";
 
 defineOptions({
   name: "CollectStrategyForm"
@@ -29,8 +31,12 @@ const scopeOptions = [
   { label: "点位（覆盖设备）", value: 3 }
 ];
 
-const scopeIdPlaceholder = computed(() =>
-  formValue.value.ScopeType === 1 ? "设备类型编码，如 dianbiao" : "设备ID"
+// 切换挂靠层级时清空挂靠对象，防止跨层级旧值残留(产品编码≠设备ID)
+watch(
+  () => formValue.value.ScopeType,
+  () => {
+    formValue.value.ScopeId = "";
+  }
 );
 
 const rules = {
@@ -67,12 +73,11 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="挂靠对象" prop="ScopeId">
-      <el-input
+      <ProductTreeSelect
+        v-if="formValue.ScopeType === 1"
         v-model="formValue.ScopeId"
-        :placeholder="scopeIdPlaceholder"
-        maxlength="50"
-        clearable
       />
+      <DeviceSelect v-else v-model="formValue.ScopeId" string-value />
     </el-form-item>
 
     <el-form-item
