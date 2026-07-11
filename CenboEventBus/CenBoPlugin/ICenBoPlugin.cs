@@ -39,6 +39,13 @@ namespace CenboEventBus
         [DisplayName("插件描述")]
         string PluginDesc { get; }
         /// <summary>
+        /// 插件自描述清单(JSON:configSchema配置表单schema/defaultConfig缺省配置/
+        /// commands控制命令清单/addressing寻址说明;宿主在上传或加载时持久化到
+        /// sys_plugin.plugin_manifest,前后端共用一份元数据;默认实现兼容旧插件)
+        /// </summary>
+        [DisplayName("插件自描述清单")]
+        string PluginManifest => "";
+        /// <summary>
         /// 初始化插件，注入事件总线
         /// </summary>
         void PluginInit(IEventBus<PluginEvent> eventBus);

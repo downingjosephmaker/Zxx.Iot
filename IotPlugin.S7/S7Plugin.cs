@@ -54,7 +54,37 @@ namespace IotPlugin.S7
         public string PluginGuid => "e1f7a3b9c5d6840e7fa18b9c2345e678";
         public string PluginModelPath => "";
 
+        /// <summary>
+        /// 插件自描述清单(B-1.3:配置schema+缺省配置+控制命令清单+寻址说明,
+        /// 宿主在上传/加载时持久化到sys_plugin.plugin_manifest)
+        /// </summary>
+        public string PluginManifest => PluginMetaBuilder.BuildManifest(
+            S7PluginConfig.Current,
+            new[]
+            {
+                new PluginMetaBuilder.PluginCommandMeta("nets7write", "S7写点位(按参数编码定位点表,CollectWritable点位入每设备写队列由采集循环串行消费)")
+            },
+            "点表寻址:CollectFuncCode 1=DB/2=M/3=I/4=Q区,ParamAddr=DB号×1000000+字节地址,CollectBitOffset位偏移;端点=DeviceIp:DevicePort,CPU型号按类型编码映射");
+
         #region 启动/停止
+
+        /// <summary>
+        /// 解析插件配置(B-1.1配置单轨化:DB plugin_config为唯一事实源;
+        /// 传入为空时回落本地Config文件仅作首次迁移来源,JSON解析失败返回null由启动失败兜底)
+        /// </summary>
+        private S7PluginConfig? LoadConfig(string _PluginConfig)
+        {
+            if (_PluginConfig.IsZxxNullOrEmpty()) return S7PluginConfig.Current;
+            try
+            {
+                return _PluginConfig.ToObject<S7PluginConfig>();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(ex);
+                return null;
+            }
+        }
 
         /// <summary>
         /// 启动插件:校验配置→加载绑定与点表→每设备拉起独立采集循环→启动心跳
@@ -63,7 +93,7 @@ namespace IotPlugin.S7
         {
             try
             {
-                _config = S7PluginConfig.Current;
+                _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
                     LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");

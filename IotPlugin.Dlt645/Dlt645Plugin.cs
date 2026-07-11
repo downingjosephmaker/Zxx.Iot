@@ -65,7 +65,38 @@ namespace IotPlugin.Dlt645
         public string PluginGuid => "c9d5e1f7a3b4628c5de96f7a0123c456";
         public string PluginModelPath => "";
 
+        /// <summary>
+        /// 插件自描述清单(B-1.3:配置schema+缺省配置+控制命令清单+寻址说明,
+        /// 宿主在上传/加载时持久化到sys_plugin.plugin_manifest)
+        /// </summary>
+        public string PluginManifest => PluginMetaBuilder.BuildManifest(
+            Dlt645PluginConfig.Current,
+            new[]
+            {
+                new PluginMetaBuilder.PluginCommandMeta("netdlt645timesync", "广播校时(向指令涉及设备所在的全部端点广播,C=08H无应答)"),
+                new PluginMetaBuilder.PluginCommandMeta("netdlt645read", "加速抄读(重置目标表抄读指令的下次发送时刻)")
+            },
+            "点表寻址:ParamAddr=DI标识(2007版4字节/1997版2字节),表地址=DeviceInfo.DeviceAdr十进制左补零到12位BCD;DevicePort=0=DTU透传拨入");
+
         #region 启动/停止
+
+        /// <summary>
+        /// 解析插件配置(B-1.1配置单轨化:DB plugin_config为唯一事实源;
+        /// 传入为空时回落本地Config文件仅作首次迁移来源,JSON解析失败返回null由启动失败兜底)
+        /// </summary>
+        private Dlt645PluginConfig? LoadConfig(string _PluginConfig)
+        {
+            if (_PluginConfig.IsZxxNullOrEmpty()) return Dlt645PluginConfig.Current;
+            try
+            {
+                return _PluginConfig.ToObject<Dlt645PluginConfig>();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(ex);
+                return null;
+            }
+        }
 
         /// <summary>
         /// 启动插件:校验配置→加载绑定与点表→拉起通道与引擎→入队抄读指令→启动心跳
@@ -74,7 +105,7 @@ namespace IotPlugin.Dlt645
         {
             try
             {
-                _config = Dlt645PluginConfig.Current;
+                _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
                     LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");

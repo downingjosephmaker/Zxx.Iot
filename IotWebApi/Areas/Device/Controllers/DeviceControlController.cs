@@ -19,15 +19,6 @@ namespace IotWebApi.Controllers
         private const string CONTROL_CATEGORY = "设备指令下发";
 
         /// <summary>
-        /// 下行控制类型白名单(与RuleLinkageService.CommandWhitelist同源;§6.3:仅允许既有协议控制类型)
-        /// </summary>
-        private static readonly HashSet<string> CommandWhitelist = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "netmodbuswrite", "netdlt645timesync", "netdlt645read", "netcjt188read", "netcjt188valve",
-            "nets7write", "netopcuawrite"
-        };
-
-        /// <summary>
         /// 手动下发设备命令
         /// </summary>
         /// <param name="para">下发参数</param>
@@ -66,9 +57,10 @@ namespace IotWebApi.Controllers
                 Message = "命令不存在或已停用。";
                 return Message;
             }
-            if (command.ClassName.IsZxxNullOrEmpty() || !CommandWhitelist.Contains(command.ClassName.Trim()))
+            // B-1.4白名单单源化:从已加载插件Manifest聚合(与RuleLinkageService同源),替代硬编码HashSet
+            if (!PluginService.IsCommandAllowed(command.ClassName))
             {
-                Message = $"控制类型[{command.ClassName}]不在白名单,已拒绝下发。";
+                Message = $"控制类型[{command.ClassName}]不在已加载插件声明的白名单,已拒绝下发。";
                 return Message;
             }
             if (para.ConContent.IsZxxNullOrEmpty())

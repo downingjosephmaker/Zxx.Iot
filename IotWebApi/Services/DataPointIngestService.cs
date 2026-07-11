@@ -219,6 +219,7 @@ namespace IotWebApi.Services
             var protocoldatas = new List<DeviceData>();
             var runstatedatas = new List<DeviceData>();
             var controlresults = new List<PluginControlResultMessage>();
+            var heartguids = new HashSet<string>();
 
             foreach (var evt in batch)
             {
@@ -238,13 +239,15 @@ namespace IotWebApi.Services
                         if (result != null) controlresults.Add(result);
                         break;
                     case PluginMessageEnum.心跳:
-                        LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{evt.PluginGuid}]心跳：{evt.Message.MessageJson}", Service_CATEGORY);
+                        if (!evt.PluginGuid.IsZxxNullOrEmpty()) heartguids.Add(evt.PluginGuid);
                         break;
                     default:
                         LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{evt.PluginGuid}]的【{evt.Message.MessageType}】消息暂无入库处理逻辑，已忽略。", Service_CATEGORY);
                         break;
                 }
             }
+
+            if (heartguids.Count > 0) WritePluginHeartbeat(heartguids);
 
             if (protocoldatas.IsZxxAny() || runstatedatas.IsZxxAny() || controlresults.IsZxxAny())
             {
@@ -253,6 +256,43 @@ namespace IotWebApi.Services
                 if (protocoldatas.IsZxxAny()) SaveProtocolData(protocoldatas, typelist);
                 if (runstatedatas.IsZxxAny()) SaveRunState(runstatedatas, typelist);
                 if (controlresults.IsZxxAny()) SaveControlResult(controlresults, typelist);
+            }
+        }
+
+        /// <summary>
+        /// 插件心跳节流窗口(每插件至多1次/分钟写库)
+        /// </summary>
+        private static readonly TimeSpan HeartWriteWindow = TimeSpan.FromMinutes(1);
+
+        /// <summary>
+        /// 每插件最近一次心跳落库时刻(仅消费线程访问,SingleReader无并发)
+        /// </summary>
+        private readonly Dictionary<string, DateTime> _lastHeartWrites = new();
+
+        /// <summary>
+        /// 插件心跳回写(B-1.5:回写sys_plugin.PluginHeartTime并即时恢复心跳状态,
+        /// 每插件节流1次/分钟;超时打标由SysPluginJob承担)
+        /// </summary>
+        private void WritePluginHeartbeat(HashSet<string> guids)
+        {
+            var now = DateTime.Now;
+            foreach (var guid in guids)
+            {
+                if (_lastHeartWrites.TryGetValue(guid, out var last) && now - last < HeartWriteWindow) continue;
+                try
+                {
+                    var plugin = SysPluginDAO.Instance.GetOneBy(t => t.PluginGuid == guid);
+                    if (plugin == null) continue;
+                    plugin.PluginHeartTime = now.ToDateTimeString();
+                    plugin.PluginHeartStatus = 0;
+                    plugin.ExpandObject = null;
+                    SysPluginDAO.Instance.UpdateColumns(plugin, it => new { it.PluginHeartTime, it.PluginHeartStatus });
+                    _lastHeartWrites[guid] = now;
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{guid}]心跳回写失败：{ex}", Service_CATEGORY);
+                }
             }
         }
 

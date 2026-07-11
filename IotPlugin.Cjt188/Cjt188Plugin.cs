@@ -76,7 +76,38 @@ namespace IotPlugin.Cjt188
         public string PluginGuid => "d0e6f2a8b4c5739d6ef07a8b1234d567";
         public string PluginModelPath => "";
 
+        /// <summary>
+        /// 插件自描述清单(B-1.3:配置schema+缺省配置+控制命令清单+寻址说明,
+        /// 宿主在上传/加载时持久化到sys_plugin.plugin_manifest)
+        /// </summary>
+        public string PluginManifest => PluginMetaBuilder.BuildManifest(
+            Cjt188PluginConfig.Current,
+            new[]
+            {
+                new PluginMetaBuilder.PluginCommandMeta("netcjt188valve", "阀控(受配置阀控白名单开关约束,ConContent={\"ValveState\":1开/0关})"),
+                new PluginMetaBuilder.PluginCommandMeta("netcjt188read", "加速抄读(重置目标表抄读指令的下次发送时刻)")
+            },
+            "点表寻址:ParamAddr=DI标识,表地址=DeviceInfo.DeviceAdr派生7字节BCD,表型T按类型编码映射;DevicePort=0=DTU透传拨入");
+
         #region 启动/停止
+
+        /// <summary>
+        /// 解析插件配置(B-1.1配置单轨化:DB plugin_config为唯一事实源;
+        /// 传入为空时回落本地Config文件仅作首次迁移来源,JSON解析失败返回null由启动失败兜底)
+        /// </summary>
+        private Cjt188PluginConfig? LoadConfig(string _PluginConfig)
+        {
+            if (_PluginConfig.IsZxxNullOrEmpty()) return Cjt188PluginConfig.Current;
+            try
+            {
+                return _PluginConfig.ToObject<Cjt188PluginConfig>();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(ex);
+                return null;
+            }
+        }
 
         /// <summary>
         /// 启动插件:校验配置→加载绑定与点表→拉起通道与引擎→入队抄读指令→启动心跳
@@ -85,7 +116,7 @@ namespace IotPlugin.Cjt188
         {
             try
             {
-                _config = Cjt188PluginConfig.Current;
+                _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
                     LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");

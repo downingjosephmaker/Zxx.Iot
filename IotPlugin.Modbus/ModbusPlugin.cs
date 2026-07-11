@@ -66,7 +66,37 @@ namespace IotPlugin.Modbus
         public string PluginGuid => "b8c4d0e6f2a3517b4cd85e6f9012b345";
         public string PluginModelPath => "";
 
+        /// <summary>
+        /// 插件自描述清单(B-1.3:配置schema+缺省配置+控制命令清单+寻址说明,
+        /// 宿主在上传/加载时持久化到sys_plugin.plugin_manifest)
+        /// </summary>
+        public string PluginManifest => PluginMetaBuilder.BuildManifest(
+            ModbusPluginConfig.Current,
+            new[]
+            {
+                new PluginMetaBuilder.PluginCommandMeta("netmodbuswrite", "Modbus写点位(FC03保持寄存器经FC06/16下发,FC01线圈经FC05下发)")
+            },
+            "点表寻址:DeviceTypeParam.collect_*列+ParamAddr,从站号=DeviceInfo.DeviceAdr;DevicePort>0=TCP拨出(MBAP),DevicePort=0=RTU over TCP拨入(DTU)");
+
         #region 启动/停止
+
+        /// <summary>
+        /// 解析插件配置(B-1.1配置单轨化:DB plugin_config为唯一事实源;
+        /// 传入为空时回落本地Config文件仅作首次迁移来源,JSON解析失败返回null由启动失败兜底)
+        /// </summary>
+        private ModbusPluginConfig? LoadConfig(string _PluginConfig)
+        {
+            if (_PluginConfig.IsZxxNullOrEmpty()) return ModbusPluginConfig.Current;
+            try
+            {
+                return _PluginConfig.ToObject<ModbusPluginConfig>();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(ex);
+                return null;
+            }
+        }
 
         /// <summary>
         /// 启动插件:校验配置→加载设备绑定与点表→按模式拉起服务端/客户端通道与指令引擎→
@@ -76,7 +106,7 @@ namespace IotPlugin.Modbus
         {
             try
             {
-                _config = ModbusPluginConfig.Current;
+                _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
                     LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");

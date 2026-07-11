@@ -83,6 +83,14 @@ namespace IotModel
         public string PluginConfig { get; set; }
 
         /// <summary>
+        /// 插件自描述清单(JSON:configSchema/defaultConfig/commands/addressing,
+        /// 上传或加载时反射ICenBoPlugin.PluginManifest持久化,前后端共用一份元数据)
+        /// </summary>
+        [DisplayName("插件自描述清单(JSON)")]
+        [SugarColumn(ColumnName = "plugin_manifest", IsNullable = true, ColumnDescription = "插件自描述清单(JSON)", ColumnDataType = "text")]
+        public string PluginManifest { get; set; }
+
+        /// <summary>
         /// 插件路径
         /// </summary>
         [DisplayName("插件路径")]

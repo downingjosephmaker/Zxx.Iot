@@ -54,7 +54,37 @@ namespace IotPlugin.OpcUa
         public string PluginGuid => "f2a8b4c0d6e7951fa8b29cad3456f789";
         public string PluginModelPath => "";
 
+        /// <summary>
+        /// 插件自描述清单(B-1.3:配置schema+缺省配置+控制命令清单+寻址说明,
+        /// 宿主在上传/加载时持久化到sys_plugin.plugin_manifest)
+        /// </summary>
+        public string PluginManifest => PluginMetaBuilder.BuildManifest(
+            OpcUaPluginConfig.Current,
+            new[]
+            {
+                new PluginMetaBuilder.PluginCommandMeta("netopcuawrite", "OPC UA写点位(按参数编码定位点表NodeId,入每设备写队列由会话循环串行消费)")
+            },
+            "点表寻址:ParamAddr=NodeId;端点=opc.tcp://DeviceIp:DevicePort,一台设备=一个OPC UA服务器");
+
         #region 启动/停止
+
+        /// <summary>
+        /// 解析插件配置(B-1.1配置单轨化:DB plugin_config为唯一事实源;
+        /// 传入为空时回落本地Config文件仅作首次迁移来源,JSON解析失败返回null由启动失败兜底)
+        /// </summary>
+        private OpcUaPluginConfig? LoadConfig(string _PluginConfig)
+        {
+            if (_PluginConfig.IsZxxNullOrEmpty()) return OpcUaPluginConfig.Current;
+            try
+            {
+                return _PluginConfig.ToObject<OpcUaPluginConfig>();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(ex);
+                return null;
+            }
+        }
 
         /// <summary>
         /// 启动插件:校验配置→构建应用配置(证书策略)→加载绑定→每设备拉起会话循环→启动心跳
@@ -63,7 +93,7 @@ namespace IotPlugin.OpcUa
         {
             try
             {
-                _config = OpcUaPluginConfig.Current;
+                _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
                     LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");

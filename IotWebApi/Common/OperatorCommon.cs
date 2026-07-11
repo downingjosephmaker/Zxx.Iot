@@ -3,6 +3,7 @@ using CenboEventBus;
 using IotModel;
 using IotWebApi.Services.Jobs;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 using System.Runtime.Loader;
 using System.Text;
 
@@ -307,14 +308,14 @@ namespace IotWebApi
         public static string SwaggerApiVersion = "1.0.0";
 
         /// <summary>
-        /// 存储已加载的插件字典，key为PluginGuid
+        /// 存储已加载的插件字典，key为PluginGuid(并发字典:装卸由PluginService闸门串行,读方无锁枚举)
         /// </summary>
-        public static Dictionary<string, ICenBoPlugin> DicPlugins = new();
+        public static ConcurrentDictionary<string, ICenBoPlugin> DicPlugins = new();
 
         /// <summary>
-        /// 存储每个插件的AssemblyLoadContext，key为PluginGuid
+        /// 存储每个插件的AssemblyLoadContext，key为PluginGuid(并发字典,同上)
         /// </summary>
-        public static Dictionary<string, AssemblyLoadContext> PluginLoadContexts = new();
+        public static ConcurrentDictionary<string, AssemblyLoadContext> PluginLoadContexts = new();
 
         private static Dictionary<string, string> _DicIotToken = new();
         /// <summary>

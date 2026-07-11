@@ -2929,15 +2929,22 @@ namespace IotModel
         /// <param name="where">条件表达式(可空)</param>
         /// <param name="isIgnore">是否为忽略模式(true=忽略这些列，false=只更新这些列)</param>
         /// <returns>更新是否成功</returns>
+        // 整表"读快照→改行→覆写"无原子性:并发UpdateColumns会以旧快照互相覆写对方的缓存列变更(DB正确而缓存回退,TTL内持续脏读)。
+        // 静态字段在泛型类中按闭合类型各一份,即按实体类型串行化;写方均在本进程内(单实例部署),进程内闸门即可闭合竞态。
+        private static readonly System.Threading.SemaphoreSlim _cacheRmwGate = new(1, 1);
+
         private async Task<bool> UpdateRedisCache(List<T> updateObjs, Expression<Func<T, T>> columns, Expression<Func<T, bool>> where = null, bool isIgnore = false)
         {
             bool res = false;
+            bool acquired = false;
             try
             {
                 if (RedisService == null)
                 {
                     return false;
                 }
+                await _cacheRmwGate.WaitAsync();
+                acquired = true;
 
                 // 读取Redis中已有的数据
                 var list = await GetListFromRedis();
@@ -3011,6 +3018,10 @@ namespace IotModel
                 // 发生异常时，清空缓存
                 await DeleteFromRedis();
                 res = false;
+            }
+            finally
+            {
+                if (acquired) _cacheRmwGate.Release();
             }
             return res;
         }

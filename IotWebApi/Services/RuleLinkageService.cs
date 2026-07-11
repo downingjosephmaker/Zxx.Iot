@@ -21,15 +21,6 @@ namespace IotWebApi.Services
         private const string Service_CATEGORY = "规则联动";
 
         /// <summary>
-        /// 命令白名单(§6.3:动作下发仅允许既有协议控制类型,阀控类默认由插件侧白名单再把一道关)
-        /// </summary>
-        private static readonly HashSet<string> CommandWhitelist = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "netmodbuswrite", "netdlt645timesync", "netdlt645read", "netcjt188read", "netcjt188valve",
-            "nets7write", "netopcuawrite"
-        };
-
-        /// <summary>
         /// 规则缓存刷新周期
         /// </summary>
         private static readonly TimeSpan ConfigTtl = TimeSpan.FromSeconds(60);
@@ -419,10 +410,11 @@ namespace IotWebApi.Services
         {
             var cfg = rule.ActionConfig?.ToObject<LinkageActionCommand>();
             if (cfg == null || cfg.ClassName.IsZxxNullOrEmpty() || cfg.ConContent.IsZxxNullOrEmpty()) return false;
-            if (!CommandWhitelist.Contains(cfg.ClassName.Trim()))
+            // B-1.4白名单单源化:从已加载插件Manifest聚合,替代硬编码HashSet(阀控类默认由插件侧白名单再把一道关)
+            if (!PluginService.IsCommandAllowed(cfg.ClassName))
             {
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
-                    $"规则[{rule.SnowId}]的控制类型[{cfg.ClassName}]不在白名单,已拒绝下发", Service_CATEGORY);
+                    $"规则[{rule.SnowId}]的控制类型[{cfg.ClassName}]不在已加载插件声明的白名单,已拒绝下发", Service_CATEGORY);
                 return false;
             }
             var deviceids = cfg.DeviceIds.IsZxxAny() ? cfg.DeviceIds : new List<int> { triggerdeviceid };

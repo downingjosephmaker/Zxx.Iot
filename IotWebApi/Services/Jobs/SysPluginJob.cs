@@ -51,7 +51,8 @@ namespace IotWebApi.Services.Jobs
         }
 
         /// <summary>
-        /// 插件心跳检测，超时标记异常
+        /// 插件心跳检测(B-1.5:超时标记异常,恢复置回正常;状态无变化不写库;
+        /// PluginHeartTime由DataPointIngestService消费心跳消息回写)
         /// </summary>
         private async Task CheckPluginHeartbeatAsync()
         {
@@ -59,12 +60,14 @@ namespace IotWebApi.Services.Jobs
             var now = DateTime.Now;
             foreach (var plugin in plugins)
             {
-                if ((now - plugin.PluginHeartTime.ToZxxDateTime()).TotalMinutes > 5)
-                {
-                    plugin.PluginHeartStatus = 1;
-                    SysPluginDAO.Instance.UpdateColumns(plugin, it => new { it.PluginHeartStatus });
-                    LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{plugin.PluginName}]心跳超时", "插件心跳");
-                }
+                bool stale = (now - plugin.PluginHeartTime.ToZxxDateTime()).TotalMinutes > 5;
+                int expected = stale ? 1 : 0;
+                if (plugin.PluginHeartStatus == expected) continue;
+                plugin.PluginHeartStatus = expected;
+                plugin.ExpandObject = null;
+                SysPluginDAO.Instance.UpdateColumns(plugin, it => new { it.PluginHeartStatus });
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName,
+                    stale ? $"插件[{plugin.PluginName}]心跳超时" : $"插件[{plugin.PluginName}]心跳恢复", "插件心跳");
             }
             await Task.CompletedTask;
         }
