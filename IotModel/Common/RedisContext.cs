@@ -1,6 +1,5 @@
 ﻿using CenBoCommon.Zxx;
 using NewLife.Log;
-using NewLife.Serialization;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;

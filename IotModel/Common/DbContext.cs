@@ -72,47 +72,6 @@ namespace IotModel
                             {
                                 p.IsNullable = true;
                             }
-
-                            // PostgreSQL 方言适配：实体统一按 MySQL/TiDB 方言声明(bigint/int 带 Length、bit、tinyint)，
-                            // 这些在 PG 下会拼出 bigint(20) 等非法 DDL(42601)。此处按库统一改写列类型，一处解决全仓映射，
-                            // 不改任何实体定义。仅在 CodeFirst 显式指定 DataType 时生效，未显式指定的走 SqlSugar 默认 C# 类型映射。
-                            if (DbType == SqlSugar.DbType.PostgreSQL && !string.IsNullOrEmpty(p.DataType))
-                            {
-                                var dt = p.DataType.Trim().ToLower();
-                                switch (dt)
-                                {
-                                    case "bigint":
-                                    case "int":
-                                    case "integer":
-                                    case "smallint":
-                                        // PG 整数类型不接受长度，清空 Length 避免拼出 int(11)/bigint(20)
-                                        p.Length = 0;
-                                        p.DataType = dt == "int" ? "int4" : (dt == "bigint" ? "int8" : (dt == "smallint" ? "int2" : "int4"));
-                                        break;
-                                    case "tinyint":
-                                        // PG 无 tinyint，用 smallint(int2) 承载
-                                        p.Length = 0;
-                                        p.DataType = "int2";
-                                        break;
-                                    case "bit":
-                                        // 实体里 bit 用于承载 bool/0-1，PG 用 bool
-                                        p.Length = 0;
-                                        p.DataType = "bool";
-                                        break;
-                                    case "datetime":
-                                        p.Length = 0;
-                                        p.DataType = "timestamp";
-                                        break;
-                                    case "double":
-                                        p.Length = 0;
-                                        p.DataType = "float8";
-                                        break;
-                                    case "float":
-                                        p.Length = 0;
-                                        p.DataType = "float4";
-                                        break;
-                                }
-                            }
                         },
                         EntityNameService = (x, p) => //处理表名
                         {
@@ -275,7 +234,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Split
     {
-        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
+        public static DbType _DbType = DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 
@@ -326,7 +285,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Custom
     {
-        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
+        public static DbType _DbType = DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 
@@ -728,9 +687,6 @@ namespace IotModel
         private bool IsUseRedisCache = false;
         private readonly string typename = typeof(T).Name;
 
-        // 实体是否参与租户级数据隔离（实现 ITenantEntity）
-        private static readonly bool IsTenantScopedEntity = typeof(ITenantEntity).IsAssignableFrom(typeof(T));
-
         //数据验证
         private readonly EntityValidator<T> _validator = new EntityValidator<T>();
 
@@ -762,55 +718,7 @@ namespace IotModel
                 SqlSugarHelper.SqlSugar = "";
                 SqlSugarHelper.SqlError = SugarSqlFormat.FormatParam(exp.Sql, exp.Parametres);
             };
-            ApplyTenantScope(db);
             return db;
-        }
-
-        /// <summary>
-        /// 租户级数据隔离（SQL 路径）：对实现 ITenantEntity 的实体自动追加 TenantId 查询过滤，
-        /// 并在插入时回填 TenantId（实体已显式赋值时不覆盖）。
-        /// 仅在存在用户上下文（TenantScope.CurrentTenantId 有值）时生效，后台任务/插件无上下文，行为不变。
-        /// CopyNew 不继承 QueryFilter 与 DataExecuting，必须在每个新实例上挂载（同上方 AOP 钩子）。
-        /// </summary>
-        private static void ApplyTenantScope(ISqlSugarClient db)
-        {
-            if (!IsTenantScopedEntity) return;
-            var tenantId = TenantScope.CurrentTenantId;
-            if (tenantId == null) return;
-            // 超管全局豁免：不追加 TenantId 过滤，看全部租户数据（沿用旧 IsSystem 语义）。
-            if (TenantScope.CurrentIsSystem) return;
-
-            // 查询过滤：可见集 IN（当前租户 + 所有子孙，决策 B1 父见子孙）。
-            // 未装配子孙集时 CurrentVisibleTenantIds 退化为 [CurrentTenantId]，只见自己。
-            var visibleIds = TenantScope.CurrentVisibleTenantIds;
-            db.QueryFilter.AddTableFilter<ITenantEntity>(it => visibleIds.Contains(it.TenantId));
-            db.Aop.DataExecuting = (value, entityInfo) =>
-            {
-                // 插入回填仍以单值当前租户为准：一条数据只归属一个租户，非子孙集。
-                if (entityInfo.OperationType == DataFilterType.InsertByObject
-                    && entityInfo.PropertyName == nameof(ITenantEntity.TenantId)
-                    && entityInfo.EntityValue is ITenantEntity entity
-                    && entity.TenantId == 0)
-                {
-                    entityInfo.SetValue(tenantId.Value);
-                }
-            };
-        }
-
-        /// <summary>
-        /// 租户级数据隔离（缓存路径）：[EntityCache] 全表缓存绕过 SQL 过滤器，
-        /// 在缓存读取出口按 TenantScope 过滤；无用户上下文时原样返回全表。
-        /// </summary>
-        private static List<T> FilterTenantScope(List<T> list)
-        {
-            if (!IsTenantScopedEntity) return list;
-            var tenantId = TenantScope.CurrentTenantId;
-            if (tenantId == null || !list.IsZxxAny()) return list;
-            // 超管全局豁免：缓存出口不过滤，返回全表（与 SQL 路径一致）。
-            if (TenantScope.CurrentIsSystem) return list;
-            // 与 SQL 路径一致：按可见集（当前+子孙）过滤缓存出口。
-            var visibleIds = TenantScope.CurrentVisibleTenantIds;
-            return list.Where(x => visibleIds.Contains(((ITenantEntity)x).TenantId)).ToList();
         }
 
         private IDatabase RedisService
@@ -907,26 +815,6 @@ namespace IotModel
                 if (initMethod != null)
                 {
                     initMethod.Invoke(_fullEntityContext, new object[] { new object[] { this } });
-                }
-            }
-        }
-
-        /// <summary>
-        /// 种子期显式主键直插：OffIdentity 写入固定 ID 后同步 PG 自增序列。
-        /// PG 的 serial 序列不因显式插值推进，不同步则运行期首次自增插入撞种子主键；
-        /// MySQL/TiDB 显式插值自动推进 AUTO_INCREMENT，无需处理。
-        /// </summary>
-        protected void SeedOffIdentity(List<T> list)
-        {
-            Db.Insertable(list).OffIdentity().ExecuteCommand();
-            if (DbType == DbType.PostgreSQL)
-            {
-                var entityinfo = Db.EntityMaintenance.GetEntityInfo<T>();
-                var idcol = entityinfo.Columns.FirstOrDefault(t => t.IsIdentity);
-                if (idcol != null)
-                {
-                    Db.Ado.ExecuteCommand(
-                        $"SELECT setval(pg_get_serial_sequence('{entityinfo.DbTableName}', '{idcol.DbColumnName}'), (SELECT MAX(\"{idcol.DbColumnName}\") FROM \"{entityinfo.DbTableName}\"))");
                 }
             }
         }
@@ -1285,10 +1173,12 @@ namespace IotModel
         /// 记录刚执行的 SQL（Info 级）。
         /// 在 DbContext&lt;T&gt; 的每个方法执行 SQL 后调用，
         /// 自动带上 DAO 类名、方法名，TraceId 由 LogContext 自动注入。
+        /// 受 LogBootstrap.EnableSqlLog 开关控制（appsettings LogConfig:EnableSqlLog），
+        /// 关闭时不写 "SQL执行" 追踪日志以减少日志量；SQL 错误日志不受影响。
         /// </summary>
         private void LogSql(string sql, [System.Runtime.CompilerServices.CallerMemberName] string method = "")
         {
-            if (!string.IsNullOrEmpty(sql))
+            if (LogBootstrap.EnableSqlLog && !string.IsNullOrEmpty(sql))
             {
                 LogHelper.SysLogWrite(typename, method, sql, "SQL执行");
             }
@@ -1383,19 +1273,17 @@ namespace IotModel
         private List<T> EnsureCacheLoaded()
         {
             var allList = GetListFromRedis().Result;
-            if (allList.IsZxxAny()) return FilterTenantScope(allList);
+            if (allList.IsZxxAny()) return allList;
 
-            // 缓存空：从数据库查全表（不带任何 Where 条件）。
-            // 缓存体是全租户共享的，必须 ClearFilter 取无租户过滤的真全表——
-            // 普通租户请求触发回填时若带过滤，会把租户子集当全表写入 Redis；隔离由出口 FilterTenantScope 负责。
+            // 缓存空：从数据库查全表（不带任何 Where 条件）
             List<T> freshData;
             if (IsSplitTable)
             {
-                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
+                freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
             }
             else
             {
-                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
+                freshData = GetOperDb().Queryable<T>().ToList();
             }
             LogSql(sqlSugar);
 
@@ -1412,7 +1300,7 @@ namespace IotModel
                     LogSqlError(ex);
                 }
             }
-            return FilterTenantScope(freshData);
+            return freshData;
         }
 
         /// <summary>
@@ -2513,7 +2401,6 @@ namespace IotModel
             // 为本次事务创建独立连接实例，同时通过 _transactionDb 让事务内的所有
             // GetOperDb() 调用都使用此同一实例，确保事务一致性。
             var newDb = Db.CopyNew();
-            ApplyTenantScope(newDb);
             _transactionDb.Value = newDb;
             try
             {
@@ -2771,17 +2658,15 @@ namespace IotModel
                 var cacheData = valuestr.HasValue ? valuestr.ToString().ToObject<List<T>>() : null;
                 int cacheCount = cacheData?.Count ?? 0;
 
-                // 从数据库获取记录数。ClearFilter 与缓存体同口径（真全表）：
-                // 若带租户过滤，普通租户请求触发校验时子集计数必与全表缓存不一致，
-                // 会反复误清正确缓存并用过滤后的子集回填，形成持续污染。
+                // 从数据库获取记录数
                 int dbCount = 0;
                 if (IsSplitTable)
                 {
-                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().Count();
+                    dbCount = GetOperDb().Queryable<T>().SplitTable().Count();
                 }
                 else
                 {
-                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().Count();
+                    dbCount = GetOperDb().Queryable<T>().Count();
                 }
 
                 // 如果数量不一致，清除缓存
@@ -2790,15 +2675,15 @@ namespace IotModel
                     LogHelper.SysLogWrite(nameof(DbContext<T>), "VerifyCacheCount", $"缓存验证: {typename} 缓存数量({cacheCount})与数据库数量({dbCount})不一致，清除缓存", "缓存校验");
                     await DeleteFromRedis();
 
-                    // 获取最新数据并缓存（同 EnsureCacheLoaded 回填口径：无租户过滤的真全表）
+                    // 获取最新数据并缓存
                     List<T> freshData;
                     if (IsSplitTable)
                     {
-                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
+                        freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
                     }
                     else
                     {
-                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
+                        freshData = GetOperDb().Queryable<T>().ToList();
                     }
 
                     if (freshData.IsZxxAny())
@@ -2933,22 +2818,15 @@ namespace IotModel
         /// <param name="where">条件表达式(可空)</param>
         /// <param name="isIgnore">是否为忽略模式(true=忽略这些列，false=只更新这些列)</param>
         /// <returns>更新是否成功</returns>
-        // 整表"读快照→改行→覆写"无原子性:并发UpdateColumns会以旧快照互相覆写对方的缓存列变更(DB正确而缓存回退,TTL内持续脏读)。
-        // 静态字段在泛型类中按闭合类型各一份,即按实体类型串行化;写方均在本进程内(单实例部署),进程内闸门即可闭合竞态。
-        private static readonly System.Threading.SemaphoreSlim _cacheRmwGate = new(1, 1);
-
         private async Task<bool> UpdateRedisCache(List<T> updateObjs, Expression<Func<T, T>> columns, Expression<Func<T, bool>> where = null, bool isIgnore = false)
         {
             bool res = false;
-            bool acquired = false;
             try
             {
                 if (RedisService == null)
                 {
                     return false;
                 }
-                await _cacheRmwGate.WaitAsync();
-                acquired = true;
 
                 // 读取Redis中已有的数据
                 var list = await GetListFromRedis();
@@ -3022,10 +2900,6 @@ namespace IotModel
                 // 发生异常时，清空缓存
                 await DeleteFromRedis();
                 res = false;
-            }
-            finally
-            {
-                if (acquired) _cacheRmwGate.Release();
             }
             return res;
         }

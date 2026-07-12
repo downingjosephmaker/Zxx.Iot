@@ -22,9 +22,6 @@
 	  <Reference Include="NewLife.Core">
 	    <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
 	  </Reference>
-	  <Reference Include="XCode">
-	    <HintPath>..\ZhjngkLib\XCode.dll</HintPath>
-	  </Reference>
 	</ItemGroup>
 
 </Project>

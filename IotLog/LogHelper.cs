@@ -1,16 +1,15 @@
-using Serilog;
 using System;
 
 namespace IotLog
 {
     /// <summary>
-    /// 日志助手（兼容旧 CenboNew.ServiceLog.LogHelper）。
+    /// 日志助手（兼容旧 IotLog.LogHelper）。
     /// <para>对外签名与旧版完全一致，调用点零改动：
     ///   <c>LogHelper.SysLogWrite(className, methodName, message, datatype)</c>
     ///   <c>LogHelper.ErrorLogWrite(className, methodName, message, datatype)</c>
     /// </para>
     /// <para>内部不再写 SQLite/XTrace，统一转发给 <see cref="LogBootstrap.Logger"/>（Serilog）。
-    /// 日志产物：&lt;应用目录&gt;/Logs/{appName}-{date}.log（全量）、{appName}-error-{date}.log（错误分流）。</para>
+    /// 日志产物：&lt;应用目录&gt;/Logs/app-{date}.log（全量）、error-{date}.log（错误分流）。</para>
     /// </summary>
     public class LogHelper
     {
@@ -75,36 +74,10 @@ namespace IotLog
             return $"{className}.{methodName}";
         }
 
-        // ===== 单参数重载：方便从 XTrace.WriteLine/WriteException 快速迁移 =====
-        // 自动用调用方的类名做 SourceContext（通过 [CallerFilePath] 推导文件名作为上下文）
-        // 用法：原 XTrace.WriteLine(msg) → LogHelper.Info(msg)；原 XTrace.WriteException(ex) → LogHelper.Error(ex)
-
-        /// <summary>写信息日志（单参数，方便迁移 XTrace.WriteLine）</summary>
-        public static void Info(string message, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
-        {
-            try
-            {
-                LogBootstrap.Logger.ForContext("SourceContext", memberName)
-                              .Information("{Message}", message);
-            }
-            catch { }
-        }
-
-        /// <summary>写错误日志（单参数，方便迁移 XTrace.WriteException）</summary>
-        public static void Error(Exception exception, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
-        {
-            try
-            {
-                LogBootstrap.Logger.ForContext("SourceContext", memberName)
-                              .Error(exception, "{Message}", exception.Message);
-            }
-            catch { }
-        }
-
         /// <summary>
         /// 开启日志链路作用域（TraceId 上下文）。
         /// <para>返回的 IDisposable 在 Dispose 前，当前异步上下文内的所有 LogHelper 调用都会自动携带该 TraceId
-        /// 和 Action（由 LogBootstrap 的 Enrich.FromLogContext 实现，配合输出模板的 {Trace}/{Action} 字段）。</para>
+        /// 和 Action（由 LogBootstrap 的 Enrich.FromLogContext 实现，配合输出模板的 {TraceId}/{Action} 字段）。</para>
         /// <para>典型用法（业务链路入口处）：</para>
         /// <code>
         /// using var scope = LogHelper.BeginScope($"MQA-{SnowModel.Instance.NewId()}", "AlarmDataChuLi");

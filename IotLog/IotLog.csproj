@@ -6,10 +6,10 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <RootNamespace>CenboNew.ServiceLog</RootNamespace>
-    <!-- 故意沿用旧命名空间：让现有 280+ 处 using CenboNew.ServiceLog 零改动切换 -->
+    <RootNamespace>IotLog</RootNamespace>
+    <!-- 故意沿用旧命名空间：让现有 280+ 处 using IotLog 零改动切换 -->
     <AssemblyName>Zhjngk.ServiceLog</AssemblyName>
-    <Description>Serilog 版统一日志库（兼容替换 CenboNew.ServiceLog）</Description>
+    <Description>Serilog 版统一日志库（兼容替换 IotLog）</Description>
   </PropertyGroup>
 
   <ItemGroup>

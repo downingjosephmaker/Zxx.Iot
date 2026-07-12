@@ -1,7 +1,7 @@
 namespace IotLog
 {
     /// <summary>
-    /// 日志输出（兼容旧 CenboNew.ServiceLog.ConsleWrite）。
+    /// 日志输出（兼容旧 IotLog.ConsleWrite）。
     /// <para>对外签名与旧版完全一致，遍布各服务项目的 <c>ConsleWrite.ConsleWriteLine(...)</c>
     /// 调用零改动。内部仅转发给 <see cref="LogHelper"/>（走 Serilog）。</para>
     /// <para>不再手写 Console.Write：控制台/文件输出统一由 <see cref="LogBootstrap"/> 的
@@ -33,7 +33,7 @@ namespace IotLog
     }
 
     /// <summary>
-    /// 日志类型枚举（兼容旧 CenboNew.ServiceLog.LOG_TYPE）
+    /// 日志类型枚举（兼容旧 IotLog.LOG_TYPE）
     /// </summary>
     public enum LOG_TYPE
     {

@@ -6,17 +6,17 @@ using System.Threading;
 namespace IotLog
 {
     /// <summary>
-    /// 采集服务的请求级追踪上下文（供采集服务/插件等非 Web 进程复用）。
+    /// 采集服务的请求级追踪上下文（从 Service.4G_ZT 提升到 Zhjngk.ServiceLog 供所有采集服务复用）。
     /// <para>同时操作两套 AsyncLocal，确保 Trace 贯穿"接收设备数据→解析处理→上报WebApi"全流程：</para>
     /// <para>1. Serilog LogContext.PushProperty —— 让 LogHelper 的日志自动带上 Trace（Enrich.FromLogContext 读取）</para>
-    /// <para>2. 内部 AsyncLocal —— 让 HTTP 上报侧能读到 Trace 注入到 trace-id header</para>
+    /// <para>2. 内部 AsyncLocal —— 让 HttpHelper.AttachTraceId 能读到 Trace 注入到 trace-id header</para>
     /// <para>两者都是 AsyncLocal，自动跨 await / Task.Run 传递。</para>
     /// </summary>
     public static class ServiceTraceContext
     {
         private static readonly AsyncLocal<string> _traceId = new AsyncLocal<string>();
 
-        /// <summary>当前逻辑调用链的 Trace（供 HTTP 上报侧读取注入 trace-id header）</summary>
+        /// <summary>当前逻辑调用链的 Trace（供 HttpHelper.AttachTraceId 读取）</summary>
         public static string CurrentTraceId
         {
             get => _traceId.Value;
@@ -25,7 +25,7 @@ namespace IotLog
 
         /// <summary>
         /// 建立 Trace 作用域。同时注入 Serilog LogContext 和内部 AsyncLocal，
-        /// using 块内所有日志（LogHelper）和 HTTP 上报调用都自动携带 Trace。
+        /// using 块内所有日志（LogHelper）和 HttpHelper 调用都自动携带 Trace。
         /// </summary>
         /// <param name="traceId">要设置的 Trace</param>
         /// <returns>用 using 释放的 IDisposable</returns>
@@ -114,7 +114,7 @@ namespace IotLog
         }
 
         /// <summary>
-        /// 模式2专用：为主动下发/定时采集/轮询的指令生成 Trace。
+        /// 模式2专用：为主动下发/定时采集/轮询的 CmdInfo 生成 Trace。
         /// 格式："yyyyMMddHHmmssfff-设备类型-设备ID"（下发时刻产生）。
         /// </summary>
         public static string BuildForPolling(int devType, int deviceId)
@@ -123,9 +123,9 @@ namespace IotLog
         }
 
         /// <summary>
-        /// 模式3专用：为控制链路拆出的单设备指令生成 Trace。
+        /// 模式3专用：为 MQTT 控制拆出的单设备指令生成 Trace。
         /// 格式："Controller-yyyyMMddHHmmssfff-设备类型-设备ID"，
-        /// 前缀（Controller-时间）来自上游 traceId，设备类型+ID 在拆单设备时补上。
+        /// 前缀（Controller-时间）来自上游 NBModel.traceId，设备类型+ID 在拆单设备时补上。
         /// </summary>
         public static string BuildForControl(string upstreamTraceId, int devType, int deviceId)
         {

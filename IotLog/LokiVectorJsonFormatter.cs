@@ -1,6 +1,5 @@
 using Serilog.Events;
 using Serilog.Formatting;
-using System;
 using System.IO;
 using System.Text;
 
@@ -8,8 +7,8 @@ namespace IotLog
 {
     /// <summary>
     /// 把 Serilog LogEvent 序列化成与 Vector 处理 Docker 采集日志后等价的 JSON 结构。
-    /// <para>背景：Docker 部署的 WebApi 经 Vector 解析 OutputTemplate 文本 → JSON 编码 → 推 Loki，
-    /// Loki-Ui 前端按此 JSON 结构显示。独立进程（采集服务等）不走 Docker/Vector，由 Loki sink 直推，
+    /// <para>背景：Docker 部署的 ZhjngkWebApi 经 Vector 解析 OutputTemplate 文本 → JSON 编码 → 推 Loki，
+    /// Loki-Ui 前端按此 JSON 结构显示。Service.4G_ZT 是独立进程、不走 Docker/Vector，由 Loki sink 直推，
     /// 需要本 formatter 直接输出等价 JSON，使其日志与 Docker 采集的应用在 Loki 里完全同构。</para>
     /// <para>对齐 Vector 的字段（见 infra/vector/vector.toml parse transform）：
     /// ts / level / app / category / trace / api / caller / message / source_type</para>
@@ -30,7 +29,7 @@ namespace IotLog
             // level 归一化：Information→INFO, Warning→WARN, Error→ERROR, Debug→DEBUG
             // 与 Vector 的 starts_with 逻辑等价
             WriteField(sb, "level", NormalizeLevel(logEvent.Level));
-            WriteField(sb, "level", NormalizeLevel(logEvent.Level));
+            WriteField(sb, "detected_level", NormalizeLevel(logEvent.Level));
 
             // 属性字段（小写键名，对齐 Vector JSON；属性缺失时输出空字符串）
             WriteProp(sb, "app", logEvent, "App");
