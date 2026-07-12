@@ -16,8 +16,22 @@ namespace IotPlugin.Dlt645
     /// CollectFuncCode>0即启用采集,值为BCD原始数字串经ParamFormula定标;
     /// 广播校时经设备控制消息netdlt645timesync触发,平台定时任务待接)
     /// </summary>
-    public class Dlt645Plugin : ICenBoPlugin
+    public class Dlt645Plugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托Dlt645Simulator) =====
+        private readonly Sim.Dlt645Simulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
         private IEventBus<PluginEvent>? _eventBus;
         private Dlt645PluginConfig? _config;
         private TimerX? _heartTimer;
