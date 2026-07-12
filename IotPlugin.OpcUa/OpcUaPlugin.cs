@@ -82,7 +82,7 @@ namespace IotPlugin.OpcUa
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("OpcUaPlugin", "LoadConfig", ex.ToString(), "OpcUa插件");
                 return null;
             }
         }
@@ -97,22 +97,22 @@ namespace IotPlugin.OpcUa
                 _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
-                    LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "PluginStart", $"{PluginName}：配置加载失败，插件启动失败。", "OpcUa插件");
                     return false;
                 }
                 if (_config.DeviceTypeCodes.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：未配置设备类型编码，插件不启用。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "PluginStart", $"{PluginName}：未配置设备类型编码，插件不启用。", "OpcUa插件");
                     return false;
                 }
                 if (_config.CollectCycleMs <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：配置参数存在非正数，插件启动失败。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "PluginStart", $"{PluginName}：配置参数存在非正数，插件启动失败。", "OpcUa插件");
                     return false;
                 }
                 if (!RefreshBindings(out var err))
                 {
-                    LogHelper.Info($"{PluginName}：初始化设备失败，{err}");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "PluginStart", $"{PluginName}：初始化设备失败，{err}", "OpcUa插件");
                     return false;
                 }
 
@@ -129,12 +129,12 @@ namespace IotPlugin.OpcUa
 
                 _heartTimer?.Dispose();
                 _heartTimer = new TimerX(HeartBeatDown, null, 5_000, _config.HeartSecond * 1_000);
-                LogHelper.Info($"{PluginName}：插件启动成功，{bindings.Count}台服务器。");
+                LogHelper.SysLogWrite("OpcUaPlugin", "PluginStart", $"{PluginName}：插件启动成功，{bindings.Count}台服务器。", "OpcUa插件");
                 return true;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("OpcUaPlugin", "PluginStart", ex.ToString(), "OpcUa插件");
                 return false;
             }
         }
@@ -151,7 +151,7 @@ namespace IotPlugin.OpcUa
                 _cts = null;
                 lock (_bindingLock) { _deviceMap = new Dictionary<int, OpcUaDeviceBinding>(); }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "PluginStop", ex.ToString(), "OpcUa插件"); }
             return true;
         }
 
@@ -228,7 +228,7 @@ namespace IotPlugin.OpcUa
         public async Task SendMessageAsync(PluginMessage mess)
         {
             try { _eventBus?.Publish(new PluginEvent(PluginGuid, mess)); }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "SendMessageAsync", ex.ToString(), "OpcUa插件"); }
         }
 
         #endregion
@@ -264,12 +264,12 @@ namespace IotPlugin.OpcUa
             {
                 if (device.DeviceIp.IsZxxNullOrEmpty() || device.DevicePort <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP或端口，跳过。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "RefreshBindings", $"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP或端口，跳过。", "OpcUa插件");
                     continue;
                 }
                 if (!pointmap.TryGetValue(device.DeviceTypeCode, out var points) || !points.IsZxxAny())
                 {
-                    LogHelper.Info($"{PluginName}：类型[{device.DeviceTypeCode}]无NodeId点表配置，设备[{device.DeviceId}]跳过。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "RefreshBindings", $"{PluginName}：类型[{device.DeviceTypeCode}]无NodeId点表配置，设备[{device.DeviceId}]跳过。", "OpcUa插件");
                     continue;
                 }
                 devicemap[device.DeviceId] = new OpcUaDeviceBinding
@@ -286,7 +286,7 @@ namespace IotPlugin.OpcUa
             }
 
             lock (_bindingLock) { _deviceMap = devicemap; }
-            LogHelper.Info($"{PluginName}：服务器映射初始化完成，{devicemap.Count}台。");
+            LogHelper.SysLogWrite("OpcUaPlugin", "RefreshBindings", $"{PluginName}：服务器映射初始化完成，{devicemap.Count}台。", "OpcUa插件");
             return true;
         }
 
@@ -309,14 +309,14 @@ namespace IotPlugin.OpcUa
                     var endpoint = CoreClientUtils.SelectEndpoint(_appConfig, url, useSecurity: false);
                     var identity = _config!.UserName.IsZxxNullOrEmpty()
                         ? new UserIdentity(new AnonymousIdentityToken())
-                        : new UserIdentity(_config.UserName, _config.Password);
+                        : new UserIdentity(_config.UserName, System.Text.Encoding.UTF8.GetBytes(_config.Password ?? ""));
                     session = await Session.Create(_appConfig, new ConfiguredEndpoint(null, endpoint,
                         EndpointConfiguration.Create(_appConfig)), false, PluginName,
                         (uint)_config.SessionTimeoutMs, identity, null);
 
                     backoff.Reset();
                     binding.Online = true;
-                    LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}({url})]会话建立。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "RunDeviceLoopAsync", $"{PluginName}：服务器[{binding.Device.DeviceId}({url})]会话建立。", "OpcUa插件");
                     PublishRunState(binding, 2);
 
                     if (_config.CollectMode == 2)
@@ -337,14 +337,14 @@ namespace IotPlugin.OpcUa
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]通信异常，{ex.Message}");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "RunDeviceLoopAsync", $"{PluginName}：服务器[{binding.Device.DeviceId}]通信异常，{ex.Message}", "OpcUa插件");
                 }
                 finally
                 {
                     if (binding.Online)
                     {
                         binding.Online = false;
-                        LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]会话断开。");
+                        LogHelper.SysLogWrite("OpcUaPlugin", "RunDeviceLoopAsync", $"{PluginName}：服务器[{binding.Device.DeviceId}]会话断开。", "OpcUa插件");
                         PublishRunState(binding, 0);
                     }
                     try { session?.Close(); session?.Dispose(); } catch { }
@@ -389,13 +389,13 @@ namespace IotPlugin.OpcUa
                             });
                         }
                     }
-                    catch (Exception ex) { LogHelper.Error(ex); }
+                    catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "RunSubscription", ex.ToString(), "OpcUa插件"); }
                 };
                 subscription.AddItem(item);
             }
             session.AddSubscription(subscription);
             subscription.Create();
-            LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]订阅建立，{binding.Points.Count}个监控项。");
+            LogHelper.SysLogWrite("OpcUaPlugin", "RunSubscription", $"{PluginName}：服务器[{binding.Device.DeviceId}]订阅建立，{binding.Points.Count}个监控项。", "OpcUa插件");
         }
 
         /// <summary>
@@ -460,18 +460,18 @@ namespace IotPlugin.OpcUa
                     {
                         success = true;
                         message = "写入成功";
-                        LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。");
+                        LogHelper.SysLogWrite("OpcUaPlugin", "DrainWriteQueue", $"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。", "OpcUa插件");
                     }
                     else
                     {
                         message = $"服务器拒绝写入：{(results.Count > 0 ? results[0].ToString() : "无状态码")}";
-                        LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]被拒，{message}");
+                        LogHelper.SysLogWrite("OpcUaPlugin", "DrainWriteQueue", $"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]被拒，{message}", "OpcUa插件");
                     }
                 }
                 catch (Exception ex)
                 {
                     message = $"写入异常：{ex.Message}";
-                    LogHelper.Info($"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "DrainWriteQueue", $"{PluginName}：服务器[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}", "OpcUa插件");
                 }
                 _ = PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, success, message);
             }
@@ -573,7 +573,7 @@ namespace IotPlugin.OpcUa
                     MessageJson = new List<DeviceData> { data }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "PublishValues", ex.ToString(), "OpcUa插件"); }
         }
 
         /// <summary>
@@ -660,7 +660,7 @@ namespace IotPlugin.OpcUa
                     }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "PublishRunState", ex.ToString(), "OpcUa插件"); }
         }
 
         #endregion
@@ -675,7 +675,7 @@ namespace IotPlugin.OpcUa
             switch (mess.MessageType)
             {
                 case PluginMessageEnum.心跳:
-                    LogHelper.Info($"{PluginName}：收到心跳。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "ReceiveMessageAsync", $"{PluginName}：收到心跳。", "OpcUa插件");
                     break;
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
@@ -701,12 +701,12 @@ namespace IotPlugin.OpcUa
             {
                 while (Interlocked.Exchange(ref _restartPending, 0) == 1)
                 {
-                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    LogHelper.SysLogWrite("OpcUaPlugin", "RestartForConfigUpdateAsync", $"{PluginName}：收到配置更新，重建采集拓扑。", "OpcUa插件");
                     await PluginStop();
                     await PluginStart(_config?.ToJson() ?? "");
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "RestartForConfigUpdateAsync", ex.ToString(), "OpcUa插件"); }
             finally { _restartGate.Release(); }
         }
 
@@ -718,25 +718,25 @@ namespace IotPlugin.OpcUa
         {
             if (messagejson.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                LogHelper.SysLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息为空。", "OpcUa插件");
                 return;
             }
             OpcUaControlCommand? command;
             try { command = messagejson.ToObject<OpcUaControlCommand>(); }
-            catch (Exception ex) { LogHelper.Error(ex); return; }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", ex.ToString(), "OpcUa插件"); return; }
             if (command == null || command.ConContent.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                LogHelper.SysLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息格式无效。", "OpcUa插件");
                 return;
             }
             if (!string.Equals(command.ClassName?.Trim(), "netopcuawrite", StringComparison.OrdinalIgnoreCase))
             {
-                LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                LogHelper.SysLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", $"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。", "OpcUa插件");
                 return;
             }
             NetOpcUaWrite? model;
             try { model = command.ConContent.ToObject<NetOpcUaWrite>(); }
-            catch { LogHelper.Info($"{PluginName}：NetOpcUaWrite解析失败。"); return; }
+            catch { LogHelper.SysLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", $"{PluginName}：NetOpcUaWrite解析失败。", "OpcUa插件"); return; }
             if (model == null || model.ParamCode.IsZxxNullOrEmpty()) return;
 
             foreach (var deviceid in command.DeviceIds.Distinct())
@@ -765,7 +765,7 @@ namespace IotPlugin.OpcUa
                     Point = point,
                     ParamValue = model.ParamValue
                 });
-                LogHelper.Info($"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。");
+                LogHelper.SysLogWrite("OpcUaPlugin", "HandleDeviceControlAsync", $"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。", "OpcUa插件");
             }
         }
 

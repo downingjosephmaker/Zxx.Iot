@@ -94,7 +94,7 @@ namespace IotPlugin.Modbus
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("ModbusPlugin", "LoadConfig", ex.ToString(), "Modbus插件");
                 return null;
             }
         }
@@ -110,22 +110,22 @@ namespace IotPlugin.Modbus
                 _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
-                    LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：配置加载失败，插件启动失败。", "Modbus插件");
                     return false;
                 }
                 if (_config.DeviceTypeCodes.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：未配置设备类型编码，插件不启用。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：未配置设备类型编码，插件不启用。", "Modbus插件");
                     return false;
                 }
                 if (_config.SendIntervalMs <= 0 || _config.CmdTimeoutSeconds <= 0 || _config.CollectCycleMs <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：配置参数存在非正数，插件启动失败。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：配置参数存在非正数，插件启动失败。", "Modbus插件");
                     return false;
                 }
                 if (!RefreshBindings(out var err))
                 {
-                    LogHelper.Info($"{PluginName}：初始化设备失败，{err}");
+                    LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：初始化设备失败，{err}", "Modbus插件");
                     return false;
                 }
 
@@ -141,7 +141,7 @@ namespace IotPlugin.Modbus
                 {
                     if (_config.NetPort <= 0)
                     {
-                        LogHelper.Info($"{PluginName}：存在RTU拨入设备但NetPort未配置，相关设备不采集。");
+                        LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：存在RTU拨入设备但NetPort未配置，相关设备不采集。", "Modbus插件");
                     }
                     else
                     {
@@ -204,12 +204,12 @@ namespace IotPlugin.Modbus
 
                 _heartTimer?.Dispose();
                 _heartTimer = new TimerX(HeartBeatDown, null, 5_000, _config.HeartSecond * 1_000);
-                LogHelper.Info($"{PluginName}：插件启动成功。");
+                LogHelper.SysLogWrite("ModbusPlugin", "PluginStart", $"{PluginName}：插件启动成功。", "Modbus插件");
                 return true;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("ModbusPlugin", "PluginStart", ex.ToString(), "Modbus插件");
                 return false;
             }
         }
@@ -244,7 +244,7 @@ namespace IotPlugin.Modbus
                     _endpointMap = new Dictionary<string, List<ModbusDeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "PluginStop", ex.ToString(), "Modbus插件"); }
             return true;
         }
 
@@ -270,7 +270,7 @@ namespace IotPlugin.Modbus
         public async Task SendMessageAsync(PluginMessage mess)
         {
             try { _eventBus?.Publish(new PluginEvent(PluginGuid, mess)); }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "SendMessageAsync", ex.ToString(), "Modbus插件"); }
         }
 
         #endregion
@@ -308,12 +308,12 @@ namespace IotPlugin.Modbus
             {
                 if (device.DeviceIp.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "RefreshBindings", $"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。", "Modbus插件");
                     continue;
                 }
                 if (!pointmap.TryGetValue(device.DeviceTypeCode, out var points) || !points.IsZxxAny())
                 {
-                    LogHelper.Info($"{PluginName}：类型[{device.DeviceTypeCode}]无Modbus点表配置，设备[{device.DeviceId}]跳过。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "RefreshBindings", $"{PluginName}：类型[{device.DeviceTypeCode}]无Modbus点表配置，设备[{device.DeviceId}]跳过。", "Modbus插件");
                     continue;
                 }
                 bool tcpmode = device.DevicePort > 0;
@@ -344,7 +344,7 @@ namespace IotPlugin.Modbus
                 _deviceMap = devicemap;
                 _endpointMap = endpointmap;
             }
-            LogHelper.Info($"{PluginName}：设备映射初始化完成，{devicemap.Count}台设备，{endpointmap.Count}个端点。");
+            LogHelper.SysLogWrite("ModbusPlugin", "RefreshBindings", $"{PluginName}：设备映射初始化完成，{devicemap.Count}台设备，{endpointmap.Count}个端点。", "Modbus插件");
             return true;
         }
 
@@ -461,12 +461,12 @@ namespace IotPlugin.Modbus
             }
             if (endpoint == null)
             {
-                LogHelper.Info($"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。");
+                LogHelper.SysLogWrite("ModbusPlugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。", "Modbus插件");
                 return null;
             }
             consumed = end;
             while (consumed < data.Length && (data[consumed] == 0x0D || data[consumed] == 0x0A)) consumed++;
-            LogHelper.Info($"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。");
+            LogHelper.SysLogWrite("ModbusPlugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。", "Modbus插件");
             return endpoint;
         }
 
@@ -489,7 +489,7 @@ namespace IotPlugin.Modbus
                 {
                     if (!ModbusFrameHelper.TryParseTcp(buffer, out _, out slave, out func, out data))
                     {
-                        LogHelper.Info($"{PluginName}：MBAP帧解析失败，来自{endpoint}，{buffer.ToHex()}");
+                        LogHelper.SysLogWrite("ModbusPlugin", "OnFrame", $"{PluginName}：MBAP帧解析失败，来自{endpoint}，{buffer.ToHex()}", "Modbus插件");
                         return;
                     }
                 }
@@ -497,7 +497,7 @@ namespace IotPlugin.Modbus
                 {
                     if (!ModbusFrameHelper.TryParseRtu(buffer, out slave, out func, out data))
                     {
-                        LogHelper.Info($"{PluginName}：CRC校验失败，来自{endpoint}，{buffer.ToHex()}");
+                        LogHelper.SysLogWrite("ModbusPlugin", "OnFrame", $"{PluginName}：CRC校验失败，来自{endpoint}，{buffer.ToHex()}", "Modbus插件");
                         return;
                     }
                 }
@@ -505,7 +505,7 @@ namespace IotPlugin.Modbus
                 var cmd = engine.MatchResponse(endpoint, buffer);
                 if (cmd == null)
                 {
-                    LogHelper.Info($"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}");
+                    LogHelper.SysLogWrite("ModbusPlugin", "OnFrame", $"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}", "Modbus插件");
                     return;
                 }
 
@@ -513,7 +513,7 @@ namespace IotPlugin.Modbus
                 if ((func & 0x80) != 0)
                 {
                     byte errcode = data.Length > 0 ? data[0] : (byte)0;
-                    LogHelper.Info($"{PluginName}：设备[{cmd.DeviceId}]返回异常码{errcode}，功能码{func & 0x7F}。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "OnFrame", $"{PluginName}：设备[{cmd.DeviceId}]返回异常码{errcode}，功能码{func & 0x7F}。", "Modbus插件");
                     if (cmd.CmdKind == DriverCommand.KindControl)
                     {
                         PublishControlResult(cmd, false, $"设备返回异常码{errcode}");
@@ -525,7 +525,7 @@ namespace IotPlugin.Modbus
                 // 控制回执(FC06/16应答为地址回显,匹配即成功)
                 if (cmd.CmdKind == DriverCommand.KindControl)
                 {
-                    LogHelper.Info($"{PluginName}：写控制回执成功，设备[{cmd.DeviceId}]。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "OnFrame", $"{PluginName}：写控制回执成功，设备[{cmd.DeviceId}]。", "Modbus插件");
                     PublishControlResult(cmd, true, "控制成功");
                     engine.Remove(cmd);
                     engine.AccelerateCollect(endpoint, cmd.DeviceAddr);
@@ -540,7 +540,7 @@ namespace IotPlugin.Modbus
                 Array.Copy(data, 1, payload, 0, bytecount);
                 _ = Task.Run(() => PublishBatchData(batch, payload));
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "OnFrame", ex.ToString(), "Modbus插件"); }
         }
 
         /// <summary>
@@ -580,7 +580,7 @@ namespace IotPlugin.Modbus
                     MessageJson = new List<DeviceData> { data }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "PublishBatchData", ex.ToString(), "Modbus插件"); }
         }
 
         /// <summary>
@@ -695,9 +695,9 @@ namespace IotPlugin.Modbus
                     MessageType = PluginMessageEnum.运行状态,
                     MessageJson = datalist.ToJson()
                 });
-                LogHelper.Info($"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}台设备。");
+                LogHelper.SysLogWrite("ModbusPlugin", "PublishRunStateByEndpoint", $"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}台设备。", "Modbus插件");
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "PublishRunStateByEndpoint", ex.ToString(), "Modbus插件"); }
         }
 
         #endregion
@@ -712,7 +712,7 @@ namespace IotPlugin.Modbus
             switch (mess.MessageType)
             {
                 case PluginMessageEnum.心跳:
-                    LogHelper.Info($"{PluginName}：收到心跳。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "ReceiveMessageAsync", $"{PluginName}：收到心跳。", "Modbus插件");
                     break;
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
@@ -738,12 +738,12 @@ namespace IotPlugin.Modbus
             {
                 while (Interlocked.Exchange(ref _restartPending, 0) == 1)
                 {
-                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    LogHelper.SysLogWrite("ModbusPlugin", "RestartForConfigUpdateAsync", $"{PluginName}：收到配置更新，重建采集拓扑。", "Modbus插件");
                     await PluginStop();
                     await PluginStart(_config?.ToJson() ?? "");
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "RestartForConfigUpdateAsync", ex.ToString(), "Modbus插件"); }
             finally { _restartGate.Release(); }
         }
 
@@ -755,25 +755,25 @@ namespace IotPlugin.Modbus
         {
             if (messagejson.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                LogHelper.SysLogWrite("ModbusPlugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息为空。", "Modbus插件");
                 return;
             }
             ModbusControlCommand? command;
             try { command = messagejson.ToObject<ModbusControlCommand>(); }
-            catch (Exception ex) { LogHelper.Error(ex); return; }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "HandleDeviceControlAsync", ex.ToString(), "Modbus插件"); return; }
             if (command == null || command.ConContent.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                LogHelper.SysLogWrite("ModbusPlugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息格式无效。", "Modbus插件");
                 return;
             }
             if (!string.Equals(command.ClassName?.Trim(), "netmodbuswrite", StringComparison.OrdinalIgnoreCase))
             {
-                LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                LogHelper.SysLogWrite("ModbusPlugin", "HandleDeviceControlAsync", $"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。", "Modbus插件");
                 return;
             }
             NetModbusWrite? model;
             try { model = command.ConContent.ToObject<NetModbusWrite>(); }
-            catch { LogHelper.Info($"{PluginName}：NetModbusWrite解析失败。"); return; }
+            catch { LogHelper.SysLogWrite("ModbusPlugin", "HandleDeviceControlAsync", $"{PluginName}：NetModbusWrite解析失败。", "Modbus插件"); return; }
             if (model == null || model.ParamCode.IsZxxNullOrEmpty()) return;
 
             foreach (var deviceid in command.DeviceIds.Distinct())
@@ -836,7 +836,7 @@ namespace IotPlugin.Modbus
                     CommandId = command.CommandId,
                     ClassName = "NetModbusWrite"
                 });
-                LogHelper.Info($"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。");
+                LogHelper.SysLogWrite("ModbusPlugin", "HandleDeviceControlAsync", $"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。", "Modbus插件");
             }
         }
 

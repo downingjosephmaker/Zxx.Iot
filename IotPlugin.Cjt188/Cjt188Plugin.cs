@@ -105,7 +105,7 @@ namespace IotPlugin.Cjt188
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("Cjt188Plugin", "LoadConfig", ex.ToString(), "CJT188插件");
                 return null;
             }
         }
@@ -120,22 +120,22 @@ namespace IotPlugin.Cjt188
                 _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
-                    LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：配置加载失败，插件启动失败。", "CJT188插件");
                     return false;
                 }
                 if (_config.DeviceTypeCodes.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：未配置设备类型编码，插件不启用。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：未配置设备类型编码，插件不启用。", "CJT188插件");
                     return false;
                 }
                 if (_config.SendIntervalMs <= 0 || _config.CmdTimeoutSeconds <= 0 || _config.CollectCycleMs <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：配置参数存在非正数，插件启动失败。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：配置参数存在非正数，插件启动失败。", "CJT188插件");
                     return false;
                 }
                 if (!RefreshBindings(out var err))
                 {
-                    LogHelper.Info($"{PluginName}：初始化设备失败，{err}");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：初始化设备失败，{err}", "CJT188插件");
                     return false;
                 }
 
@@ -150,7 +150,7 @@ namespace IotPlugin.Cjt188
                 {
                     if (_config.NetPort <= 0)
                     {
-                        LogHelper.Info($"{PluginName}：存在DTU拨入设备但NetPort未配置，相关设备不采集。");
+                        LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：存在DTU拨入设备但NetPort未配置，相关设备不采集。", "CJT188插件");
                     }
                     else
                     {
@@ -221,12 +221,12 @@ namespace IotPlugin.Cjt188
 
                 _heartTimer?.Dispose();
                 _heartTimer = new TimerX(HeartBeatDown, null, 5_000, _config.HeartSecond * 1_000);
-                LogHelper.Info($"{PluginName}：插件启动成功。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "PluginStart", $"{PluginName}：插件启动成功。", "CJT188插件");
                 return true;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("Cjt188Plugin", "PluginStart", ex.ToString(), "CJT188插件");
                 return false;
             }
         }
@@ -261,7 +261,7 @@ namespace IotPlugin.Cjt188
                     _endpointMap = new Dictionary<string, List<Cjt188DeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "PluginStop", ex.ToString(), "CJT188插件"); }
             return true;
         }
 
@@ -287,7 +287,7 @@ namespace IotPlugin.Cjt188
         public async Task SendMessageAsync(PluginMessage mess)
         {
             try { _eventBus?.Publish(new PluginEvent(PluginGuid, mess)); }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "SendMessageAsync", ex.ToString(), "CJT188插件"); }
         }
 
         #endregion
@@ -325,12 +325,12 @@ namespace IotPlugin.Cjt188
             {
                 if (device.DeviceIp.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "RefreshBindings", $"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。", "CJT188插件");
                     continue;
                 }
                 if (!pointmap.TryGetValue(device.DeviceTypeCode, out var points) || !points.IsZxxAny())
                 {
-                    LogHelper.Info($"{PluginName}：类型[{device.DeviceTypeCode}]无DI点表配置，设备[{device.DeviceId}]跳过。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "RefreshBindings", $"{PluginName}：类型[{device.DeviceTypeCode}]无DI点表配置，设备[{device.DeviceId}]跳过。", "CJT188插件");
                     continue;
                 }
                 bool tcpmode = device.DevicePort > 0;
@@ -363,7 +363,7 @@ namespace IotPlugin.Cjt188
                 _deviceMap = devicemap;
                 _endpointMap = endpointmap;
             }
-            LogHelper.Info($"{PluginName}：水表映射初始化完成，{devicemap.Count}块表，{endpointmap.Count}个端点。");
+            LogHelper.SysLogWrite("Cjt188Plugin", "RefreshBindings", $"{PluginName}：水表映射初始化完成，{devicemap.Count}块表，{endpointmap.Count}个端点。", "CJT188插件");
             return true;
         }
 
@@ -472,12 +472,12 @@ namespace IotPlugin.Cjt188
             }
             if (endpoint == null)
             {
-                LogHelper.Info($"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。", "CJT188插件");
                 return null;
             }
             consumed = end;
             while (consumed < data.Length && (data[consumed] == 0x0D || data[consumed] == 0x0A)) consumed++;
-            LogHelper.Info($"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。");
+            LogHelper.SysLogWrite("Cjt188Plugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。", "CJT188插件");
             return endpoint;
         }
 
@@ -496,21 +496,21 @@ namespace IotPlugin.Cjt188
                 if (engine == null) return;
                 if (!Cjt188FrameHelper.TryParseFrame(buffer, out _, out _, out _, out var data))
                 {
-                    LogHelper.Info($"{PluginName}：帧校验失败，来自{endpoint}，{buffer.ToHex()}");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "OnFrame", $"{PluginName}：帧校验失败，来自{endpoint}，{buffer.ToHex()}", "CJT188插件");
                     return;
                 }
 
                 var cmd = engine.MatchResponse(endpoint, buffer);
                 if (cmd == null)
                 {
-                    LogHelper.Info($"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "OnFrame", $"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}", "CJT188插件");
                     return;
                 }
 
                 // 阀控回执(C=84H,匹配即成功)
                 if (cmd.CmdKind == DriverCommand.KindControl)
                 {
-                    LogHelper.Info($"{PluginName}：阀控回执成功，表[{cmd.DeviceId}]。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "OnFrame", $"{PluginName}：阀控回执成功，表[{cmd.DeviceId}]。", "CJT188插件");
                     PublishControlResult(cmd, true, "阀控成功");
                     engine.Remove(cmd);
                     return;
@@ -519,7 +519,7 @@ namespace IotPlugin.Cjt188
                 if (cmd.Tag is not ReadContext context) return;
                 _ = Task.Run(() => PublishReadData(cmd.DeviceId, context, data));
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "OnFrame", ex.ToString(), "CJT188插件"); }
         }
 
         /// <summary>
@@ -548,7 +548,7 @@ namespace IotPlugin.Cjt188
                 ushort di = (ushort)(data[0] | (data[1] << 8));
                 if (di != context.Di)
                 {
-                    LogHelper.Info($"{PluginName}：表[{deviceid}]应答DI[{di:X4}]与请求[{context.Di:X4}]不符，丢弃。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "PublishReadData", $"{PluginName}：表[{deviceid}]应答DI[{di:X4}]与请求[{context.Di:X4}]不符，丢弃。", "CJT188插件");
                     return;
                 }
                 var valuearea = new byte[data.Length - 3];
@@ -580,7 +580,7 @@ namespace IotPlugin.Cjt188
                     MessageJson = new List<DeviceData> { devicedata }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "PublishReadData", ex.ToString(), "CJT188插件"); }
         }
 
         /// <summary>
@@ -675,9 +675,9 @@ namespace IotPlugin.Cjt188
                     MessageType = PluginMessageEnum.运行状态,
                     MessageJson = datalist.ToJson()
                 });
-                LogHelper.Info($"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}块表。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "PublishRunStateByEndpoint", $"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}块表。", "CJT188插件");
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "PublishRunStateByEndpoint", ex.ToString(), "CJT188插件"); }
         }
 
         #endregion
@@ -692,7 +692,7 @@ namespace IotPlugin.Cjt188
             switch (mess.MessageType)
             {
                 case PluginMessageEnum.心跳:
-                    LogHelper.Info($"{PluginName}：收到心跳。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "ReceiveMessageAsync", $"{PluginName}：收到心跳。", "CJT188插件");
                     break;
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
@@ -718,12 +718,12 @@ namespace IotPlugin.Cjt188
             {
                 while (Interlocked.Exchange(ref _restartPending, 0) == 1)
                 {
-                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "RestartForConfigUpdateAsync", $"{PluginName}：收到配置更新，重建采集拓扑。", "CJT188插件");
                     await PluginStop();
                     await PluginStart(_config?.ToJson() ?? "");
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "RestartForConfigUpdateAsync", ex.ToString(), "CJT188插件"); }
             finally { _restartGate.Release(); }
         }
 
@@ -735,15 +735,15 @@ namespace IotPlugin.Cjt188
         {
             if (messagejson.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息为空。", "CJT188插件");
                 return;
             }
             Cjt188ControlCommand? command;
             try { command = messagejson.ToObject<Cjt188ControlCommand>(); }
-            catch (Exception ex) { LogHelper.Error(ex); return; }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "HandleDeviceControlAsync", ex.ToString(), "CJT188插件"); return; }
             if (command == null)
             {
-                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息格式无效。", "CJT188插件");
                 return;
             }
             switch (command.ClassName?.Trim().ToLowerInvariant())
@@ -755,7 +755,7 @@ namespace IotPlugin.Cjt188
                     AccelerateRead(command);
                     break;
                 default:
-                    LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "HandleDeviceControlAsync", $"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。", "CJT188插件");
                     break;
             }
         }
@@ -768,7 +768,7 @@ namespace IotPlugin.Cjt188
         {
             if (!_config!.EnableValveControl)
             {
-                LogHelper.Info($"{PluginName}：阀控白名单未开启，拒绝执行，CommandId={command.CommandId}。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "HandleValveControlAsync", $"{PluginName}：阀控白名单未开启，拒绝执行，CommandId={command.CommandId}。", "CJT188插件");
                 foreach (var deviceid in command.DeviceIds.Distinct())
                 {
                     await PublishControlResultAsync(command.CommandId, deviceid, "", false, "阀控白名单未开启");
@@ -777,7 +777,7 @@ namespace IotPlugin.Cjt188
             }
             NetCjt188Valve? model;
             try { model = command.ConContent.ToObject<NetCjt188Valve>(); }
-            catch { LogHelper.Info($"{PluginName}：NetCjt188Valve解析失败。"); return; }
+            catch { LogHelper.SysLogWrite("Cjt188Plugin", "HandleValveControlAsync", $"{PluginName}：NetCjt188Valve解析失败。", "CJT188插件"); return; }
             if (model == null) return;
 
             foreach (var deviceid in command.DeviceIds.Distinct())
@@ -810,7 +810,7 @@ namespace IotPlugin.Cjt188
                     CommandId = command.CommandId,
                     ClassName = "NetCjt188Valve"
                 });
-                LogHelper.Info($"{PluginName}：阀控入队，表[{deviceid}]{(model.ValveState == 1 ? "开阀" : "关阀")}。");
+                LogHelper.SysLogWrite("Cjt188Plugin", "HandleValveControlAsync", $"{PluginName}：阀控入队，表[{deviceid}]{(model.ValveState == 1 ? "开阀" : "关阀")}。", "CJT188插件");
             }
         }
 
@@ -826,7 +826,7 @@ namespace IotPlugin.Cjt188
                     if (!_deviceMap.TryGetValue(deviceid, out var binding)) continue;
                     var engine = binding.IsTcpMode ? _clientEngine : _serverEngine;
                     engine?.AccelerateCollect(binding.Endpoint, binding.Device.DeviceAdr);
-                    LogHelper.Info($"{PluginName}：加速抄读，表[{deviceid}]。");
+                    LogHelper.SysLogWrite("Cjt188Plugin", "AccelerateRead", $"{PluginName}：加速抄读，表[{deviceid}]。", "CJT188插件");
                 }
             }
         }

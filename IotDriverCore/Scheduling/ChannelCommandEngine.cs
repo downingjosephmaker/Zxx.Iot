@@ -253,7 +253,7 @@ namespace IotDriverCore
             {
                 // 引擎停止，正常退出
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ChannelCommandEngine", "RunSendLoopAsync", ex.ToString(), "驱动核心"); }
             finally
             {
                 lock (_workerLock)
@@ -283,15 +283,15 @@ namespace IotDriverCore
                 }
                 bool ok = false;
                 try { ok = _transport.Send(endpoint, cmd.Payload); }
-                catch (Exception ex) { LogHelper.Error(ex); }
+                catch (Exception ex) { LogHelper.ErrorLogWrite("ChannelCommandEngine", "TrySend", ex.ToString(), "驱动核心"); }
                 if (!ok)
                 {
                     lock (_cmdLock) { cmd.State = 0; }
                     return;
                 }
-                LogHelper.Info($"通道[{endpoint}]{(cmd.CmdKind == DriverCommand.KindControl ? "控制" : "采集")}指令：{cmd.Payload.ToHex()}，设备[{cmd.DeviceId}]");
+                LogHelper.SysLogWrite("ChannelCommandEngine", "TrySend", $"通道[{endpoint}]{(cmd.CmdKind == DriverCommand.KindControl ? "控制" : "采集")}指令：{cmd.Payload.ToHex()}，设备[{cmd.DeviceId}]", "驱动核心");
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("ChannelCommandEngine", "TrySend", ex.ToString(), "驱动核心"); }
         }
 
         /// <summary>
@@ -313,7 +313,7 @@ namespace IotDriverCore
                 if (t.RetryLimit > t.TimeoutCount)
                 {
                     t.NextSendTime = now;
-                    LogHelper.Info($"通道[{t.Endpoint}]控制指令超时重试，设备[{t.DeviceId}] addr[{t.DeviceAddr}]");
+                    LogHelper.SysLogWrite("ChannelCommandEngine", "ProcessTimeouts", $"通道[{t.Endpoint}]控制指令超时重试，设备[{t.DeviceId}] addr[{t.DeviceAddr}]", "驱动核心");
                     continue;
                 }
                 t.State = 3;

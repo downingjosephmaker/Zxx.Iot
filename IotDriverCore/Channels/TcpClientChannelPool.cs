@@ -115,7 +115,7 @@ namespace IotDriverCore
                     entry.Stream = client.GetStream();
                     entry.Online = true;
                     entry.Backoff.Reset();
-                    LogHelper.Info($"TCP客户端通道：{entry.Endpoint}连接建立。");
+                    LogHelper.SysLogWrite("TcpClientChannelPool", "RunClientLoopAsync", $"TCP客户端通道：{entry.Endpoint}连接建立。", "驱动核心");
                     SessionOpened?.Invoke(entry.Endpoint);
 
                     var buffer = new byte[4096];
@@ -126,13 +126,13 @@ namespace IotDriverCore
                         var frame = new byte[count];
                         Array.Copy(buffer, frame, count);
                         try { FrameReceived?.Invoke(entry.Endpoint, frame); }
-                        catch (Exception ex) { LogHelper.Error(ex); }
+                        catch (Exception ex) { LogHelper.ErrorLogWrite("TcpClientChannelPool", "RunClientLoopAsync", ex.ToString(), "驱动核心"); }
                     }
                 }
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    LogHelper.Info($"TCP客户端通道：{entry.Endpoint}连接异常，{ex.Message}");
+                    LogHelper.SysLogWrite("TcpClientChannelPool", "RunClientLoopAsync", $"TCP客户端通道：{entry.Endpoint}连接异常，{ex.Message}", "驱动核心");
                 }
                 finally
                 {
@@ -142,9 +142,9 @@ namespace IotDriverCore
                     entry.Client = null;
                     if (wasonline)
                     {
-                        LogHelper.Info($"TCP客户端通道：{entry.Endpoint}连接断开。");
+                        LogHelper.SysLogWrite("TcpClientChannelPool", "RunClientLoopAsync", $"TCP客户端通道：{entry.Endpoint}连接断开。", "驱动核心");
                         try { SessionClosed?.Invoke(entry.Endpoint); }
-                        catch (Exception ex) { LogHelper.Error(ex); }
+                        catch (Exception ex) { LogHelper.ErrorLogWrite("TcpClientChannelPool", "RunClientLoopAsync", ex.ToString(), "驱动核心"); }
                     }
                 }
                 if (token.IsCancellationRequested) break;
@@ -181,7 +181,7 @@ namespace IotDriverCore
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("TcpClientChannelPool", "Send", ex.ToString(), "驱动核心");
                 return false;
             }
         }

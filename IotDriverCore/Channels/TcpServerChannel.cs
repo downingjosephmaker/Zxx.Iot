@@ -118,7 +118,7 @@ namespace IotDriverCore
                 if (!_server.Active)
                 {
                     _server.Start();
-                    LogHelper.Info($"TCP通道[{_port}]启动成功。");
+                    LogHelper.SysLogWrite("TcpServerChannel", "Start", $"TCP通道[{_port}]启动成功。", "驱动核心");
                 }
                 if ((RegistrationResolver != null || IdleTimeoutSeconds > 0) && _watchCts == null)
                 {
@@ -129,7 +129,7 @@ namespace IotDriverCore
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("TcpServerChannel", "Start", ex.ToString(), "驱动核心");
                 return false;
             }
         }
@@ -157,7 +157,7 @@ namespace IotDriverCore
                     _lastActivity.Clear();
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "Stop", ex.ToString(), "驱动核心"); }
         }
 
         public void Dispose() => Stop();
@@ -181,7 +181,7 @@ namespace IotDriverCore
                         {
                             _pending.Remove(kv.Key);
                             kicks.Add(kv.Value.Session);
-                            LogHelper.Info($"TCP通道[{_port}]：{kv.Key}注册超时踢除。");
+                            LogHelper.SysLogWrite("TcpServerChannel", "WatchLoopAsync", $"TCP通道[{_port}]：{kv.Key}注册超时踢除。", "驱动核心");
                         }
                         if (IdleTimeoutSeconds > 0)
                         {
@@ -191,7 +191,7 @@ namespace IotDriverCore
                                 if (_sessions.TryGetValue(kv.Key, out var session))
                                 {
                                     kicks.Add(session);
-                                    LogHelper.Info($"TCP通道[{_port}]：{kv.Key}空闲超时踢除。");
+                                    LogHelper.SysLogWrite("TcpServerChannel", "WatchLoopAsync", $"TCP通道[{_port}]：{kv.Key}空闲超时踢除。", "驱动核心");
                                 }
                                 _lastActivity.Remove(kv.Key);
                             }
@@ -207,7 +207,7 @@ namespace IotDriverCore
             {
                 // 通道停止，正常退出
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "WatchLoopAsync", ex.ToString(), "驱动核心"); }
         }
 
         #endregion
@@ -239,17 +239,17 @@ namespace IotDriverCore
                 if (RegistrationResolver != null)
                 {
                     lock (_netLock) { _pending[remotekey] = (session, DateTime.Now); }
-                    LogHelper.Info($"TCP通道[{_port}]：{remotekey}连入，等待注册包(限时{RegistrationTimeoutSeconds}秒)。");
+                    LogHelper.SysLogWrite("TcpServerChannel", "OnAccept", $"TCP通道[{_port}]：{remotekey}连入，等待注册包(限时{RegistrationTimeoutSeconds}秒)。", "驱动核心");
                     return;
                 }
 
                 string ip = NormalizeIp(session.Remote.Address);
                 string key = EndpointResolver?.Invoke(ip) ?? remotekey;
                 BindSession(key, remotekey, session);
-                LogHelper.Info($"TCP通道[{_port}]：{key}连接建立(来源{remotekey})。");
+                LogHelper.SysLogWrite("TcpServerChannel", "OnAccept", $"TCP通道[{_port}]：{key}连接建立(来源{remotekey})。", "驱动核心");
                 SessionOpened?.Invoke(key);
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "OnAccept", ex.ToString(), "驱动核心"); }
         }
 
         /// <summary>
@@ -296,10 +296,10 @@ namespace IotDriverCore
                     }
                 }
                 if (closedkey == null) return;
-                LogHelper.Info($"TCP通道[{_port}]：{closedkey}连接断开。");
+                LogHelper.SysLogWrite("TcpServerChannel", "OnSessionDisposed", $"TCP通道[{_port}]：{closedkey}连接断开。", "驱动核心");
                 SessionClosed?.Invoke(closedkey);
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "OnSessionDisposed", ex.ToString(), "驱动核心"); }
         }
 
         /// <summary>
@@ -312,7 +312,7 @@ namespace IotDriverCore
                 if (sender is not NetSession session) return;
                 try { session.Dispose(); } catch { }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "OnError", ex.ToString(), "驱动核心"); }
         }
 
         /// <summary>
@@ -336,12 +336,12 @@ namespace IotDriverCore
                         var key = RegistrationResolver(buffer, out int consumed);
                         if (key.IsZxxNullOrEmpty())
                         {
-                            LogHelper.Info($"TCP通道[{_port}]：{remotekey}未认证数据丢弃，{buffer.ToHex()}");
+                            LogHelper.SysLogWrite("TcpServerChannel", "OnReceived", $"TCP通道[{_port}]：{remotekey}未认证数据丢弃，{buffer.ToHex()}", "驱动核心");
                             return;
                         }
                         lock (_netLock) { _pending.Remove(remotekey); }
                         BindSession(key!, remotekey, pend.Session);
-                        LogHelper.Info($"TCP通道[{_port}]：{remotekey}注册成功→{key}。");
+                        LogHelper.SysLogWrite("TcpServerChannel", "OnReceived", $"TCP通道[{_port}]：{remotekey}注册成功→{key}。", "驱动核心");
                         SessionOpened?.Invoke(key!);
                         // 注册包与首帧业务数据粘连:剩余字节回灌
                         if (consumed >= 0 && consumed < buffer.Length)
@@ -363,7 +363,7 @@ namespace IotDriverCore
                 string resolvedkey = EndpointResolver?.Invoke(ip) ?? remotekey;
                 Deliver(resolvedkey, buffer);
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("TcpServerChannel", "OnReceived", ex.ToString(), "驱动核心"); }
         }
 
         /// <summary>
@@ -403,7 +403,7 @@ namespace IotDriverCore
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("TcpServerChannel", "Send", ex.ToString(), "驱动核心");
                 return false;
             }
         }

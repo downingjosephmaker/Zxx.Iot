@@ -94,7 +94,7 @@ namespace IotPlugin.Dlt645
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("Dlt645Plugin", "LoadConfig", ex.ToString(), "DLT645插件");
                 return null;
             }
         }
@@ -109,22 +109,22 @@ namespace IotPlugin.Dlt645
                 _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
-                    LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：配置加载失败，插件启动失败。", "DLT645插件");
                     return false;
                 }
                 if (_config.DeviceTypeCodes.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：未配置设备类型编码，插件不启用。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：未配置设备类型编码，插件不启用。", "DLT645插件");
                     return false;
                 }
                 if (_config.SendIntervalMs <= 0 || _config.CmdTimeoutSeconds <= 0 || _config.CollectCycleMs <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：配置参数存在非正数，插件启动失败。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：配置参数存在非正数，插件启动失败。", "DLT645插件");
                     return false;
                 }
                 if (!RefreshBindings(out var err))
                 {
-                    LogHelper.Info($"{PluginName}：初始化设备失败，{err}");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：初始化设备失败，{err}", "DLT645插件");
                     return false;
                 }
 
@@ -139,7 +139,7 @@ namespace IotPlugin.Dlt645
                 {
                     if (_config.NetPort <= 0)
                     {
-                        LogHelper.Info($"{PluginName}：存在DTU拨入设备但NetPort未配置，相关设备不采集。");
+                        LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：存在DTU拨入设备但NetPort未配置，相关设备不采集。", "DLT645插件");
                     }
                     else
                     {
@@ -210,12 +210,12 @@ namespace IotPlugin.Dlt645
 
                 _heartTimer?.Dispose();
                 _heartTimer = new TimerX(HeartBeatDown, null, 5_000, _config.HeartSecond * 1_000);
-                LogHelper.Info($"{PluginName}：插件启动成功。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "PluginStart", $"{PluginName}：插件启动成功。", "DLT645插件");
                 return true;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("Dlt645Plugin", "PluginStart", ex.ToString(), "DLT645插件");
                 return false;
             }
         }
@@ -250,7 +250,7 @@ namespace IotPlugin.Dlt645
                     _endpointMap = new Dictionary<string, List<Dlt645DeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "PluginStop", ex.ToString(), "DLT645插件"); }
             return true;
         }
 
@@ -276,7 +276,7 @@ namespace IotPlugin.Dlt645
         public async Task SendMessageAsync(PluginMessage mess)
         {
             try { _eventBus?.Publish(new PluginEvent(PluginGuid, mess)); }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "SendMessageAsync", ex.ToString(), "DLT645插件"); }
         }
 
         #endregion
@@ -316,12 +316,12 @@ namespace IotPlugin.Dlt645
             {
                 if (device.DeviceIp.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "RefreshBindings", $"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。", "DLT645插件");
                     continue;
                 }
                 if (!pointmap.TryGetValue(device.DeviceTypeCode, out var points) || !points.IsZxxAny())
                 {
-                    LogHelper.Info($"{PluginName}：类型[{device.DeviceTypeCode}]无DI点表配置，设备[{device.DeviceId}]跳过。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "RefreshBindings", $"{PluginName}：类型[{device.DeviceTypeCode}]无DI点表配置，设备[{device.DeviceId}]跳过。", "DLT645插件");
                     continue;
                 }
                 bool tcpmode = device.DevicePort > 0;
@@ -354,7 +354,7 @@ namespace IotPlugin.Dlt645
                 _deviceMap = devicemap;
                 _endpointMap = endpointmap;
             }
-            LogHelper.Info($"{PluginName}：电表映射初始化完成，{devicemap.Count}块表，{endpointmap.Count}个端点。");
+            LogHelper.SysLogWrite("Dlt645Plugin", "RefreshBindings", $"{PluginName}：电表映射初始化完成，{devicemap.Count}块表，{endpointmap.Count}个端点。", "DLT645插件");
             return true;
         }
 
@@ -446,12 +446,12 @@ namespace IotPlugin.Dlt645
             }
             if (endpoint == null)
             {
-                LogHelper.Info($"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册ID[{regid}]未匹配任何设备网关编号，等待注册超时。", "DLT645插件");
                 return null;
             }
             consumed = end;
             while (consumed < data.Length && (data[consumed] == 0x0D || data[consumed] == 0x0A)) consumed++;
-            LogHelper.Info($"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。");
+            LogHelper.SysLogWrite("Dlt645Plugin", "ResolveDtuRegistration", $"{PluginName}：DTU注册[{regid}]绑定端点[{endpoint}]。", "DLT645插件");
             return endpoint;
         }
 
@@ -470,14 +470,14 @@ namespace IotPlugin.Dlt645
                 if (engine == null) return;
                 if (!Dlt645FrameHelper.TryParseFrame(buffer, out _, out var code, out var data))
                 {
-                    LogHelper.Info($"{PluginName}：帧校验失败，来自{endpoint}，{buffer.ToHex()}");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "OnFrame", $"{PluginName}：帧校验失败，来自{endpoint}，{buffer.ToHex()}", "DLT645插件");
                     return;
                 }
 
                 var cmd = engine.MatchResponse(endpoint, buffer);
                 if (cmd == null)
                 {
-                    LogHelper.Info($"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "OnFrame", $"{PluginName}：未匹配到等待指令，来自{endpoint}，{buffer.ToHex()}", "DLT645插件");
                     return;
                 }
 
@@ -485,14 +485,14 @@ namespace IotPlugin.Dlt645
                 if ((code & 0x40) != 0)
                 {
                     byte errcode = data.Length > 0 ? data[0] : (byte)0;
-                    LogHelper.Info($"{PluginName}：表[{cmd.DeviceId}]返回异常码{errcode}。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "OnFrame", $"{PluginName}：表[{cmd.DeviceId}]返回异常码{errcode}。", "DLT645插件");
                     return;
                 }
 
                 if (cmd.Tag is not DeviceTypeParam point) return;
                 _ = Task.Run(() => PublishPointData(cmd.DeviceId, point, data));
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "OnFrame", ex.ToString(), "DLT645插件"); }
         }
 
         /// <summary>
@@ -521,7 +521,7 @@ namespace IotPlugin.Dlt645
                 uint di = Dlt645FrameHelper.ReadDi(data, binding.Is1997);
                 if (di != unchecked((uint)point.ParamAddr))
                 {
-                    LogHelper.Info($"{PluginName}：表[{deviceid}]应答DI[{di:X8}]与请求[{point.ParamAddr:X8}]不符，丢弃。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "PublishPointData", $"{PluginName}：表[{deviceid}]应答DI[{di:X8}]与请求[{point.ParamAddr:X8}]不符，丢弃。", "DLT645插件");
                     return;
                 }
                 var valuebytes = new byte[data.Length - dilen];
@@ -544,7 +544,7 @@ namespace IotPlugin.Dlt645
                     MessageJson = new List<DeviceData> { devicedata }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "PublishPointData", ex.ToString(), "DLT645插件"); }
         }
 
         /// <summary>
@@ -640,9 +640,9 @@ namespace IotPlugin.Dlt645
                     MessageType = PluginMessageEnum.运行状态,
                     MessageJson = datalist.ToJson()
                 });
-                LogHelper.Info($"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}块表。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "PublishRunStateByEndpoint", $"{PluginName}：{endpoint}{(state == 2 ? "上线" : "离线")}，涉及{datalist.Count}块表。", "DLT645插件");
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "PublishRunStateByEndpoint", ex.ToString(), "DLT645插件"); }
         }
 
         #endregion
@@ -657,7 +657,7 @@ namespace IotPlugin.Dlt645
             switch (mess.MessageType)
             {
                 case PluginMessageEnum.心跳:
-                    LogHelper.Info($"{PluginName}：收到心跳。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "ReceiveMessageAsync", $"{PluginName}：收到心跳。", "DLT645插件");
                     break;
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
@@ -683,12 +683,12 @@ namespace IotPlugin.Dlt645
             {
                 while (Interlocked.Exchange(ref _restartPending, 0) == 1)
                 {
-                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "RestartForConfigUpdateAsync", $"{PluginName}：收到配置更新，重建采集拓扑。", "DLT645插件");
                     await PluginStop();
                     await PluginStart(_config?.ToJson() ?? "");
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "RestartForConfigUpdateAsync", ex.ToString(), "DLT645插件"); }
             finally { _restartGate.Release(); }
         }
 
@@ -700,15 +700,15 @@ namespace IotPlugin.Dlt645
         {
             if (messagejson.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息为空。", "DLT645插件");
                 return;
             }
             Dlt645ControlCommand? command;
             try { command = messagejson.ToObject<Dlt645ControlCommand>(); }
-            catch (Exception ex) { LogHelper.Error(ex); return; }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "HandleDeviceControlAsync", ex.ToString(), "DLT645插件"); return; }
             if (command == null)
             {
-                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息格式无效。", "DLT645插件");
                 return;
             }
             switch (command.ClassName?.Trim().ToLowerInvariant())
@@ -720,7 +720,7 @@ namespace IotPlugin.Dlt645
                     AccelerateRead(command);
                     break;
                 default:
-                    LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "HandleDeviceControlAsync", $"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。", "DLT645插件");
                     break;
             }
         }
@@ -754,7 +754,7 @@ namespace IotPlugin.Dlt645
                     CommandId = command.CommandId,
                     ClassName = "NetDlt645TimeSync"
                 });
-                LogHelper.Info($"{PluginName}：广播校时入队，端点[{kv.Key}]。");
+                LogHelper.SysLogWrite("Dlt645Plugin", "BroadcastTimeSync", $"{PluginName}：广播校时入队，端点[{kv.Key}]。", "DLT645插件");
             }
         }
 
@@ -770,7 +770,7 @@ namespace IotPlugin.Dlt645
                     if (!_deviceMap.TryGetValue(deviceid, out var binding)) continue;
                     var engine = binding.IsTcpMode ? _clientEngine : _serverEngine;
                     engine?.AccelerateCollect(binding.Endpoint, binding.Device.DeviceAdr);
-                    LogHelper.Info($"{PluginName}：加速抄读，表[{deviceid}]。");
+                    LogHelper.SysLogWrite("Dlt645Plugin", "AccelerateRead", $"{PluginName}：加速抄读，表[{deviceid}]。", "DLT645插件");
                 }
             }
         }

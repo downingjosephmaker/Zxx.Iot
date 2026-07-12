@@ -82,7 +82,7 @@ namespace IotPlugin.S7
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("S7Plugin", "LoadConfig", ex.ToString(), "S7插件");
                 return null;
             }
         }
@@ -97,22 +97,22 @@ namespace IotPlugin.S7
                 _config = LoadConfig(_PluginConfig);
                 if (_config == null)
                 {
-                    LogHelper.Info($"{PluginName}：配置加载失败，插件启动失败。");
+                    LogHelper.SysLogWrite("S7Plugin", "PluginStart", $"{PluginName}：配置加载失败，插件启动失败。", "S7插件");
                     return false;
                 }
                 if (_config.DeviceTypeCodes.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：未配置设备类型编码，插件不启用。");
+                    LogHelper.SysLogWrite("S7Plugin", "PluginStart", $"{PluginName}：未配置设备类型编码，插件不启用。", "S7插件");
                     return false;
                 }
                 if (_config.CollectCycleMs <= 0 || _config.MaxBatchBytes <= 0)
                 {
-                    LogHelper.Info($"{PluginName}：配置参数存在非正数，插件启动失败。");
+                    LogHelper.SysLogWrite("S7Plugin", "PluginStart", $"{PluginName}：配置参数存在非正数，插件启动失败。", "S7插件");
                     return false;
                 }
                 if (!RefreshBindings(out var err))
                 {
-                    LogHelper.Info($"{PluginName}：初始化设备失败，{err}");
+                    LogHelper.SysLogWrite("S7Plugin", "PluginStart", $"{PluginName}：初始化设备失败，{err}", "S7插件");
                     return false;
                 }
 
@@ -127,12 +127,12 @@ namespace IotPlugin.S7
 
                 _heartTimer?.Dispose();
                 _heartTimer = new TimerX(HeartBeatDown, null, 5_000, _config.HeartSecond * 1_000);
-                LogHelper.Info($"{PluginName}：插件启动成功，{bindings.Count}台PLC。");
+                LogHelper.SysLogWrite("S7Plugin", "PluginStart", $"{PluginName}：插件启动成功，{bindings.Count}台PLC。", "S7插件");
                 return true;
             }
             catch (Exception ex)
             {
-                LogHelper.Error(ex);
+                LogHelper.ErrorLogWrite("S7Plugin", "PluginStart", ex.ToString(), "S7插件");
                 return false;
             }
         }
@@ -149,7 +149,7 @@ namespace IotPlugin.S7
                 _cts = null;
                 lock (_bindingLock) { _deviceMap = new Dictionary<int, S7DeviceBinding>(); }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "PluginStop", ex.ToString(), "S7插件"); }
             return true;
         }
 
@@ -175,7 +175,7 @@ namespace IotPlugin.S7
         public async Task SendMessageAsync(PluginMessage mess)
         {
             try { _eventBus?.Publish(new PluginEvent(PluginGuid, mess)); }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "SendMessageAsync", ex.ToString(), "S7插件"); }
         }
 
         #endregion
@@ -212,12 +212,12 @@ namespace IotPlugin.S7
             {
                 if (device.DeviceIp.IsZxxNullOrEmpty())
                 {
-                    LogHelper.Info($"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。");
+                    LogHelper.SysLogWrite("S7Plugin", "RefreshBindings", $"{PluginName}：设备[{device.DeviceId}({device.DeviceName})]未配置IP，跳过。", "S7插件");
                     continue;
                 }
                 if (!pointmap.TryGetValue(device.DeviceTypeCode, out var points) || !points.IsZxxAny())
                 {
-                    LogHelper.Info($"{PluginName}：类型[{device.DeviceTypeCode}]无S7点表配置，设备[{device.DeviceId}]跳过。");
+                    LogHelper.SysLogWrite("S7Plugin", "RefreshBindings", $"{PluginName}：类型[{device.DeviceTypeCode}]无S7点表配置，设备[{device.DeviceId}]跳过。", "S7插件");
                     continue;
                 }
                 devicemap[device.DeviceId] = new S7DeviceBinding
@@ -235,7 +235,7 @@ namespace IotPlugin.S7
             }
 
             lock (_bindingLock) { _deviceMap = devicemap; }
-            LogHelper.Info($"{PluginName}：PLC映射初始化完成，{devicemap.Count}台。");
+            LogHelper.SysLogWrite("S7Plugin", "RefreshBindings", $"{PluginName}：PLC映射初始化完成，{devicemap.Count}台。", "S7插件");
             return true;
         }
 
@@ -267,7 +267,7 @@ namespace IotPlugin.S7
             var batches = BuildBatches(binding);
             if (!batches.Any())
             {
-                LogHelper.Info($"{PluginName}：设备[{binding.Device.DeviceId}]无有效采集批次。");
+                LogHelper.SysLogWrite("S7Plugin", "RunDeviceLoopAsync", $"{PluginName}：设备[{binding.Device.DeviceId}]无有效采集批次。", "S7插件");
                 return;
             }
             while (!token.IsCancellationRequested)
@@ -281,7 +281,7 @@ namespace IotPlugin.S7
                     await plc.OpenAsync(token);
                     backoff.Reset();
                     binding.Online = true;
-                    LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}({binding.Device.DeviceIp})]连接建立。");
+                    LogHelper.SysLogWrite("S7Plugin", "RunDeviceLoopAsync", $"{PluginName}：PLC[{binding.Device.DeviceId}({binding.Device.DeviceIp})]连接建立。", "S7插件");
                     PublishRunState(binding, 2);
 
                     while (!token.IsCancellationRequested && plc.IsConnected)
@@ -316,14 +316,14 @@ namespace IotPlugin.S7
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]通信异常，{ex.Message}");
+                    LogHelper.SysLogWrite("S7Plugin", "RunDeviceLoopAsync", $"{PluginName}：PLC[{binding.Device.DeviceId}]通信异常，{ex.Message}", "S7插件");
                 }
                 finally
                 {
                     if (binding.Online)
                     {
                         binding.Online = false;
-                        LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]连接断开。");
+                        LogHelper.SysLogWrite("S7Plugin", "RunDeviceLoopAsync", $"{PluginName}：PLC[{binding.Device.DeviceId}]连接断开。", "S7插件");
                         PublishRunState(binding, 0);
                     }
                     try { plc?.Close(); } catch { }
@@ -456,14 +456,14 @@ namespace IotPlugin.S7
                         }
                         success = true;
                         message = "写入成功";
-                        LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。");
+                        LogHelper.SysLogWrite("S7Plugin", "DrainWriteQueueAsync", $"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]值[{request.ParamValue}]成功。", "S7插件");
                     }
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     message = $"写入异常：{ex.Message}";
-                    LogHelper.Info($"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}");
+                    LogHelper.SysLogWrite("S7Plugin", "DrainWriteQueueAsync", $"{PluginName}：PLC[{binding.Device.DeviceId}]写点位[{request.Point.ParamCode}]失败，{ex.Message}", "S7插件");
                 }
                 await PublishControlResultAsync(request.CommandId, binding.Device.DeviceId, binding.Device.DeviceName, success, message);
             }
@@ -632,7 +632,7 @@ namespace IotPlugin.S7
                     }.ToJson()
                 });
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "PublishRunState", ex.ToString(), "S7插件"); }
         }
 
         #endregion
@@ -647,7 +647,7 @@ namespace IotPlugin.S7
             switch (mess.MessageType)
             {
                 case PluginMessageEnum.心跳:
-                    LogHelper.Info($"{PluginName}：收到心跳。");
+                    LogHelper.SysLogWrite("S7Plugin", "ReceiveMessageAsync", $"{PluginName}：收到心跳。", "S7插件");
                     break;
                 case PluginMessageEnum.设备控制:
                     await HandleDeviceControlAsync(mess.MessageJson);
@@ -673,12 +673,12 @@ namespace IotPlugin.S7
             {
                 while (Interlocked.Exchange(ref _restartPending, 0) == 1)
                 {
-                    LogHelper.Info($"{PluginName}：收到配置更新，重建采集拓扑。");
+                    LogHelper.SysLogWrite("S7Plugin", "RestartForConfigUpdateAsync", $"{PluginName}：收到配置更新，重建采集拓扑。", "S7插件");
                     await PluginStop();
                     await PluginStart(_config?.ToJson() ?? "");
                 }
             }
-            catch (Exception ex) { LogHelper.Error(ex); }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "RestartForConfigUpdateAsync", ex.ToString(), "S7插件"); }
             finally { _restartGate.Release(); }
         }
 
@@ -690,25 +690,25 @@ namespace IotPlugin.S7
         {
             if (messagejson.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息为空。");
+                LogHelper.SysLogWrite("S7Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息为空。", "S7插件");
                 return;
             }
             S7ControlCommand? command;
             try { command = messagejson.ToObject<S7ControlCommand>(); }
-            catch (Exception ex) { LogHelper.Error(ex); return; }
+            catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "HandleDeviceControlAsync", ex.ToString(), "S7插件"); return; }
             if (command == null || command.ConContent.IsZxxNullOrEmpty())
             {
-                LogHelper.Info($"{PluginName}：设备控制消息格式无效。");
+                LogHelper.SysLogWrite("S7Plugin", "HandleDeviceControlAsync", $"{PluginName}：设备控制消息格式无效。", "S7插件");
                 return;
             }
             if (!string.Equals(command.ClassName?.Trim(), "nets7write", StringComparison.OrdinalIgnoreCase))
             {
-                LogHelper.Info($"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。");
+                LogHelper.SysLogWrite("S7Plugin", "HandleDeviceControlAsync", $"{PluginName}：不支持的控制类型[{command.ClassName}]，CommandId={command.CommandId}。", "S7插件");
                 return;
             }
             NetS7Write? model;
             try { model = command.ConContent.ToObject<NetS7Write>(); }
-            catch { LogHelper.Info($"{PluginName}：NetS7Write解析失败。"); return; }
+            catch { LogHelper.SysLogWrite("S7Plugin", "HandleDeviceControlAsync", $"{PluginName}：NetS7Write解析失败。", "S7插件"); return; }
             if (model == null || model.ParamCode.IsZxxNullOrEmpty()) return;
 
             foreach (var deviceid in command.DeviceIds.Distinct())
@@ -737,7 +737,7 @@ namespace IotPlugin.S7
                     Point = point,
                     ParamValue = model.ParamValue
                 });
-                LogHelper.Info($"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。");
+                LogHelper.SysLogWrite("S7Plugin", "HandleDeviceControlAsync", $"{PluginName}：写点位入队，设备[{deviceid}]参数[{model.ParamCode}]值[{model.ParamValue}]。", "S7插件");
             }
         }
 
