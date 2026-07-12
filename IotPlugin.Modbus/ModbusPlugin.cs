@@ -15,8 +15,22 @@ namespace IotPlugin.Modbus
     /// 服务端等DTU拨入(按DeviceIp归一端点);点表寻址取DeviceTypeParam的collect_*列+ParamAddr,
     /// 从站号取DeviceInfo.DeviceAdr,倍率经ParamFormula公式引擎;DTU注册包路由待M3.5透传接入)
     /// </summary>
-    public class ModbusPlugin : ICenBoPlugin
+    public class ModbusPlugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托ModbusSimulator) =====
+        private readonly Sim.ModbusSimulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
         private IEventBus<PluginEvent>? _eventBus;
         private ModbusPluginConfig? _config;
         private TimerX? _heartTimer;
