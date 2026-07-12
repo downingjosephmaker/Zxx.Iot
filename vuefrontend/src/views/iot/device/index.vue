@@ -4,6 +4,7 @@ import { type FormInstance } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useDeviceInfo } from "./utils/hook";
+import SimDialog from "./sim-dialog.vue";
 import AddFill from "~icons/ri/add-circle-line";
 import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
@@ -39,6 +40,7 @@ const {
   openImportDialog,
   handleDelete,
   handleToggleCollection,
+  simDialogRef,
   handleOpenSim,
   onbatchDel,
   onSelectionCancel
@@ -220,6 +222,7 @@ const {
         </template>
       </PureTableBar>
     </div>
+    <SimDialog ref="simDialogRef" />
   </div>
 </template>
 

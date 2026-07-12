@@ -505,9 +505,11 @@ export function useDeviceInfo(tableRef: Ref) {
     }
   }
 
-  /** 打开模拟弹窗(Task 10 实现弹窗内容) */
+  const simDialogRef = ref();
+
+  /** 打开模拟弹窗 */
   function handleOpenSim(row: DeviceInfoItem) {
-    // TODO(Task 10): 打开模拟配置/控制弹窗
+    simDialogRef.value?.open(row);
   }
 
   async function onbatchDel() {
@@ -550,6 +552,7 @@ export function useDeviceInfo(tableRef: Ref) {
     openImportDialog,
     handleDelete,
     handleToggleCollection,
+    simDialogRef,
     handleOpenSim,
     onbatchDel,
     onSelectionCancel
