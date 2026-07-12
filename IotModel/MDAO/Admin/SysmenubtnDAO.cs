@@ -27,19 +27,6 @@ namespace IotModel
                 // 菜单-按钮关系种子数据(menu_id/button_id 组合为业务主键,值与原始种子完全一致)
                 var list = new List<SysMenuBtn>
                 {
-                    new SysMenuBtn { SnowId = 7238808208716861445, MenuId = "10010", ButtonId = 10, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808208716861441, MenuId = "10010", ButtonId = 4, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808208716861442, MenuId = "10010", ButtonId = 2, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808208716861443, MenuId = "10010", ButtonId = 3, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808208716861444, MenuId = "10010", ButtonId = 11, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808225443745796, MenuId = "10011", ButtonId = 10, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808225443745793, MenuId = "10011", ButtonId = 2, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808225443745794, MenuId = "10011", ButtonId = 4, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808225443745795, MenuId = "10011", ButtonId = 3, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7238808225443745797, MenuId = "10011", ButtonId = 11, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7254696332256874498, MenuId = "10012", ButtonId = 3, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7254696332256874497, MenuId = "10012", ButtonId = 2, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
-                    new SysMenuBtn { SnowId = 7254696332256874496, MenuId = "10012", ButtonId = 4, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
                     new SysMenuBtn { SnowId = 7256959027433705474, MenuId = "10015", ButtonId = 2, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
                     new SysMenuBtn { SnowId = 7256959027433705475, MenuId = "10015", ButtonId = 3, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },
                     new SysMenuBtn { SnowId = 7256959027433705473, MenuId = "10015", ButtonId = 4, MbSort = 0, CreateId = 1, CreateTime = createTime, CreateName = "开发管理员", UpdateId = 1, UpdateTime = updateTime, UpdateName = "开发管理员" },

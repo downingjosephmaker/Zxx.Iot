@@ -72,9 +72,7 @@ export interface DeviceInfoItem {
   ExpandObject?: ExpandDeviceInfo;
   TenantId?: number;
   /** 列表增强列 */
-  UnitName?: string;
-  BuildName?: string;
-  DeptName?: string;
+  TenantName?: string;
   DeviceTypeName?: string;
   CreateId?: number;
   CreateTime?: string;
@@ -84,7 +82,7 @@ export interface DeviceInfoItem {
   UpdateName?: string;
 }
 
-/** 分页查询(返回含单位/建筑/部门/类型名称的增强行) */
+/** 分页查询(返回含租户/类型名称的增强行) */
 export const getListByPage = (data?: QueryTableParams) => {
   storage.setItem("button", "查询" + button);
   return http.request<ResultTable>("post", "/DeviceInfo/GetListByPage", {
@@ -92,7 +90,7 @@ export const getListByPage = (data?: QueryTableParams) => {
   });
 };
 
-/** 新增(服务端注入审计列与UnitId,DeviceGuid查重,树字段DAO计算) */
+/** 新增(服务端注入审计列与TenantId,DeviceGuid查重,树字段DAO计算) */
 export const insert = (data?: object) => {
   storage.setItem("button", "新增" + button);
   return http.request<Result>("post", "/DeviceInfo/Insert", {

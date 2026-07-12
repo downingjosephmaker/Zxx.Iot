@@ -80,6 +80,9 @@ namespace IotModel
                     }
                 }, db =>
                 {
+                    // 租户隔离：查询过滤 + 插入回填（覆盖直接使用 Db 做联表等自定义查询的路径）
+                    TenantIsolation.Attach(db);
+
                     db.Aop.OnLogExecuted = (sql, pars) =>
                     {
                         // 直接写入 SqlSugarHelper 的 AsyncLocal，DbContext<T>.sqlSugar 读同一个值
@@ -687,6 +690,9 @@ namespace IotModel
         private bool IsUseRedisCache = false;
         private readonly string typename = typeof(T).Name;
 
+        // T 是否租户隔离实体(ITenantEntity)：缓存出口内存过滤的判定依据
+        private static readonly bool IsTenantEntity = typeof(ITenantEntity).IsAssignableFrom(typeof(T));
+
         //数据验证
         private readonly EntityValidator<T> _validator = new EntityValidator<T>();
 
@@ -718,6 +724,8 @@ namespace IotModel
                 SqlSugarHelper.SqlSugar = "";
                 SqlSugarHelper.SqlError = SugarSqlFormat.FormatParam(exp.Sql, exp.Parametres);
             };
+            // CopyNew 同样不继承过滤器：租户隔离逐实例挂载
+            TenantIsolation.Attach(db);
             return db;
         }
 
@@ -1229,7 +1237,7 @@ namespace IotModel
                 // 启用缓存时：从 Redis 全表数据内存过滤，不查数据库
                 if (IsUseRedisCache)
                 {
-                    var allList = EnsureCacheLoaded();
+                    var allList = FilterTenantScope(EnsureCacheLoaded());
                     var compiled = wheres.Compile();
                     return allList.FirstOrDefault(x =>
                     {
@@ -1286,8 +1294,24 @@ namespace IotModel
         }
 
         /// <summary>
+        /// 缓存出口的租户过滤：Redis 持有全表快照，返回调用方前按当前租户上下文过滤，
+        /// 与 SQL 侧 QueryFilter 同谓词（tenant_id=0 平台共享 或 落在可见集；超管/无上下文豁免）。
+        /// </summary>
+        private List<T> FilterTenantScope(List<T> list)
+        {
+            if (!IsTenantEntity || TenantIsolation.FilterOff || !list.IsZxxAny()) return list;
+            var visible = TenantScope.CurrentVisibleTenantIds;
+            return list.Where(x =>
+            {
+                var id = ((ITenantEntity)x).TenantId;
+                return id == 0 || visible.Contains(id);
+            }).ToList();
+        }
+
+        /// <summary>
         /// 确保 Redis 已加载全表数据。缓存空时从数据库查全表写入 Redis。
-        /// 所有查询方法（GetOneBy/GetListBy 等）在缓存分支开头调用此方法。
+        /// 所有查询方法（GetOneBy/GetListBy 等）在缓存分支开头调用此方法，
+        /// 且必须经 FilterTenantScope 过滤后再交给调用方（缓存内容是全租户快照）。
         /// </summary>
         /// <returns>Redis 中的全表数据（空列表表示无数据或缓存不可用）</returns>
         private List<T> EnsureCacheLoaded()
@@ -1295,15 +1319,16 @@ namespace IotModel
             var allList = GetListFromRedis().Result;
             if (allList.IsZxxAny()) return allList;
 
-            // 缓存空：从数据库查全表（不带任何 Where 条件）
+            // 缓存空：从数据库查全表（不带任何 Where 条件）；ClearFilter 绕过租户过滤器，
+            // 缓存必须持有全租户快照，否则先到请求的租户会把自己的子集写成"全表"
             List<T> freshData;
             if (IsSplitTable)
             {
-                freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
+                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
             }
             else
             {
-                freshData = GetOperDb().Queryable<T>().ToList();
+                freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
             }
             LogSql(sqlSugar);
 
@@ -1331,10 +1356,10 @@ namespace IotModel
         {
             try
             {
-                // 启用缓存时：EnsureCacheLoaded 已确保全表加载，直接返回
+                // 启用缓存时：EnsureCacheLoaded 已确保全表加载，出口按租户过滤后返回
                 if (IsUseRedisCache)
                 {
-                    return EnsureCacheLoaded();
+                    return FilterTenantScope(EnsureCacheLoaded());
                 }
 
                 // 从数据库获取
@@ -1373,7 +1398,7 @@ namespace IotModel
                 // 启用缓存时：从 Redis 全表数据内存过滤，不查数据库
                 if (IsUseRedisCache)
                 {
-                    var allList = EnsureCacheLoaded();
+                    var allList = FilterTenantScope(EnsureCacheLoaded());
                     var predicate = wheres.Compile();
                     return allList.Where(x =>
                     {
@@ -1420,7 +1445,7 @@ namespace IotModel
                 // 启用缓存时：从 Redis 全表数据内存过滤，不查数据库
                 if (IsUseRedisCache)
                 {
-                    var allList = EnsureCacheLoaded();
+                    var allList = FilterTenantScope(EnsureCacheLoaded());
                     try
                     {
                         return model.GetListBy(allList);
@@ -1476,7 +1501,7 @@ namespace IotModel
                 // 启用缓存时：从 Redis 全表数据内存分页，不查数据库
                 if (IsUseRedisCache)
                 {
-                    var allList = EnsureCacheLoaded();
+                    var allList = FilterTenantScope(EnsureCacheLoaded());
                     try
                     {
                         var dataitem = model.GetListByPage(allList);
@@ -1537,7 +1562,7 @@ namespace IotModel
                 // 启用缓存时：从 Redis 全表数据内存计数，不查数据库
                 if (IsUseRedisCache)
                 {
-                    var allList = EnsureCacheLoaded();
+                    var allList = FilterTenantScope(EnsureCacheLoaded());
                     var predicate = wheres.Compile();
                     return allList.Count(x =>
                     {
@@ -2421,6 +2446,8 @@ namespace IotModel
             // 为本次事务创建独立连接实例，同时通过 _transactionDb 让事务内的所有
             // GetOperDb() 调用都使用此同一实例，确保事务一致性。
             var newDb = Db.CopyNew();
+            // 事务专用连接同样挂载租户隔离（CopyNew 不继承过滤器）
+            TenantIsolation.Attach(newDb);
             _transactionDb.Value = newDb;
             try
             {
@@ -2678,15 +2705,15 @@ namespace IotModel
                 var cacheData = valuestr.HasValue ? valuestr.ToString().ToObject<List<T>>() : null;
                 int cacheCount = cacheData?.Count ?? 0;
 
-                // 从数据库获取记录数
+                // 从数据库获取记录数（ClearFilter 绕过租户过滤器：缓存是全租户快照，须与全表计数对账）
                 int dbCount = 0;
                 if (IsSplitTable)
                 {
-                    dbCount = GetOperDb().Queryable<T>().SplitTable().Count();
+                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().Count();
                 }
                 else
                 {
-                    dbCount = GetOperDb().Queryable<T>().Count();
+                    dbCount = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().Count();
                 }
 
                 // 如果数量不一致，清除缓存
@@ -2695,15 +2722,15 @@ namespace IotModel
                     LogHelper.SysLogWrite(nameof(DbContext<T>), "VerifyCacheCount", $"缓存验证: {typename} 缓存数量({cacheCount})与数据库数量({dbCount})不一致，清除缓存", "缓存校验");
                     await DeleteFromRedis();
 
-                    // 获取最新数据并缓存
+                    // 获取最新数据并缓存（ClearFilter 同上：缓存全租户快照）
                     List<T> freshData;
                     if (IsSplitTable)
                     {
-                        freshData = GetOperDb().Queryable<T>().SplitTable().ToList();
+                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().SplitTable().ToList();
                     }
                     else
                     {
-                        freshData = GetOperDb().Queryable<T>().ToList();
+                        freshData = GetOperDb().Queryable<T>().ClearFilter<ITenantEntity>().ToList();
                     }
 
                     if (freshData.IsZxxAny())

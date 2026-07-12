@@ -21,7 +21,7 @@ namespace IotWebApi.Services
 
     /// <summary>
     /// 告警屏蔽引擎(§9.4:在"告警产生之后、入库通知之前"过滤;
-    /// 六种屏蔽对象(全局/单位/建筑/设备类型/单设备/告警等级)×三种模式(永久/一次性/周期窗)×
+    /// 六种屏蔽对象(全局/租户/建筑/设备类型/单设备/告警等级)×三种模式(永久/一次性/周期窗)×
     /// 三种动作(完全屏蔽/静默/降级);ExpireAt到期自动失效防"忘了解除";
     /// 多条规则命中时取动作最重者(完全屏蔽>静默>降级);告警恢复事件不参与屏蔽)
     /// </summary>
@@ -100,7 +100,7 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
-        /// 屏蔽对象匹配(1全局/2单位/4设备类型/5单设备/6告警等级)
+        /// 屏蔽对象匹配(1全局/2租户/4设备类型/5单设备/6告警等级)
         /// </summary>
         private static bool MatchScope(AlarmMask mask, AlarmFireInfo fire, DeviceInfo device)
         {

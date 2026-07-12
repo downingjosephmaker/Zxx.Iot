@@ -52,23 +52,6 @@ namespace IotWebApi
 
                 //从数据库获取角色信息
                 model._Sysrole = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == model._Sysuser.RoleId);
-
-                //从数据库获取权限建筑/单位
-                var _SysrelList = SysRelatedDAO.Instance.GetListBy(t => t.UserId == model.UserID);
-                if (_SysrelList.IsZxxAny())
-                {
-                    foreach (var item in _SysrelList)
-                    {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == item.TenantId);
-                        if (unit != null)
-                        {
-                            if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);
-                        }
-                    }
-                }
-
-                //缓存权限单位ID
-                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.TenantId));
             }
 
             return model;
@@ -93,7 +76,6 @@ namespace IotWebApi
                 model = new OperatorModel
                 {
                     IsSystem = false,
-                    DepartSelectLevel = 2,
                     SourceType = "Web",
                     TenantId = _Sysuser.TenantId,
                     UserID = _Sysuser.UserId,
@@ -103,32 +85,15 @@ namespace IotWebApi
                 //从数据库获取用户信息
                 model._Sysuser = _Sysuser;
 
-                //单位名从租户表关联查(sys_user.unit_name 冗余列已删)
+                //租户名从租户表关联查
                 if (_Sysuser.TenantId > 0)
                 {
-                    var unitinfo = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _Sysuser.TenantId);
-                    if (unitinfo != null) model.UnitName = unitinfo.UnitName;
+                    var tenantinfo = TenantInfoDAO.Instance.GetOneBy(t => t.TenantId == _Sysuser.TenantId);
+                    if (tenantinfo != null) model.TenantName = tenantinfo.TenantName;
                 }
 
                 //从数据库获取角色信息
                 model._Sysrole = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == model._Sysuser.RoleId);
-
-                //从数据库获取权限建筑/单位
-                var _SysrelList = SysRelatedDAO.Instance.GetListBy(t => t.UserId == model.UserID);
-                if (_SysrelList.IsZxxAny())
-                {
-                    foreach (var item in _SysrelList)
-                    {
-                        var unit = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == item.TenantId);
-                        if (unit != null)
-                        {
-                            if (!model._UnitAllList.Contains(unit)) model._UnitAllList.Add(unit);
-                        }
-                    }
-                }
-
-                //缓存权限单位ID
-                if (model._UnitAllList.Count > 0) model._UnitIdList.AddRange(model._UnitAllList.Select(t => t.TenantId));
             }
 
             return model;

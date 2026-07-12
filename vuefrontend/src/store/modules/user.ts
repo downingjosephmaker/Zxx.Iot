@@ -25,10 +25,10 @@ export const useUserStore = defineStore("pure-user", {
     avatar: storage.getItem<DataInfo<number>>(userKey)?.avatar ?? "",
     // 用户名
     username: storage.getItem<DataInfo<number>>(userKey)?.username ?? "",
-    // 单位名称
-    unitname: storage.getItem<DataInfo<number>>(userKey)?.unitname ?? "",
-    // 单位ID
-    unitId: storage.getItem<DataInfo<number>>(userKey)?.unitId ?? "",
+    // 租户名称
+    tenantname: storage.getItem<DataInfo<number>>(userKey)?.tenantname ?? "",
+    // 租户ID
+    tenantId: storage.getItem<DataInfo<number>>(userKey)?.tenantId ?? "",
     // 昵称
     nickname: storage.getItem<DataInfo<number>>(userKey)?.nickname ?? "",
     // 页面级别权限
@@ -54,13 +54,13 @@ export const useUserStore = defineStore("pure-user", {
       this.username = username;
     },
 
-    /** 存储默认单位名称*/
-    SET_UNITNAME(unitname: string) {
-      this.unitname = unitname;
+    /** 存储默认租户名称*/
+    SET_TENANTNAME(tenantname: string) {
+      this.tenantname = tenantname;
     },
-    /** 存储单位ID */
-    SET_UNITID(unitId: string) {
-      this.unitId = unitId;
+    /** 存储租户ID */
+    SET_TENANTID(tenantId: string) {
+      this.tenantId = tenantId;
     },
     /** 存储昵称 */
     SET_NICKNAME(nickname: string) {
@@ -101,14 +101,14 @@ export const useUserStore = defineStore("pure-user", {
               const result = JSON.parse(datas.Result);
               storage.setItem("token", result.LoginToken);
 
-              // 创建包含UnitAllCount的token对象
+              // 创建token对象
               const tokenData = {
                 /** 用户名 */
                 username: result.UserName,
-                /** 默认单位 */
-                unitname: result.UnitName,
-                /** 单位ID */
-                unitId: result.UnitId || "",
+                /** 默认租户 */
+                tenantname: result.TenantName,
+                /** 租户ID */
+                tenantId: result.TenantId || "",
                 /** 当前登陆用户的角色 */
                 roles: result.roles || [],
                 /** `token` */
@@ -116,18 +116,11 @@ export const useUserStore = defineStore("pure-user", {
                 /** 用于调用刷新`accessToken`的接口时所需的`token` */
                 refreshToken: result.LoginToken,
                 /** `accessToken`的软过期时间（后端TokenExpireTime，到点走无感刷新换签） */
-                expires: result.TokenExpireTime || "",
-                /** 单位总数 */
-                UnitAllCount: result.UnitAllCount || 0
+                expires: result.TokenExpireTime || ""
               };
 
               // 保存token数据
               setToken(tokenData);
-
-              // 确保user-info中也包含UnitAllCount
-              const userInfo = storage.getItem("user-info") || {};
-              userInfo.UnitAllCount = result.UnitAllCount || 0;
-              storage.setItem("user-info", userInfo);
 
               storageSession().setItem("is-system", {
                 data: result.IsSystem
@@ -151,14 +144,14 @@ export const useUserStore = defineStore("pure-user", {
             if (datas.Status) {
               const result = JSON.parse(datas.Result);
               storage.setItem("token", result.LoginToken);
-              // 创建包含UnitAllCount的token对象
+              // 创建token对象
               const tokenData = {
                 /** 用户名 */
                 username: result.UserName,
-                /** 默认单位 */
-                unitname: result.UnitName,
-                /** 单位ID */
-                unitId: result.UnitId || "",
+                /** 默认租户 */
+                tenantname: result.TenantName,
+                /** 租户ID */
+                tenantId: result.TenantId || "",
                 /** 当前登陆用户的角色 */
                 roles: result.roles || [],
                 /** `token` */
@@ -166,18 +159,11 @@ export const useUserStore = defineStore("pure-user", {
                 /** 用于调用刷新`accessToken`的接口时所需的`token` */
                 refreshToken: result.LoginToken,
                 /** `accessToken`的软过期时间（后端TokenExpireTime，到点走无感刷新换签） */
-                expires: result.TokenExpireTime || "",
-                /** 单位总数 */
-                UnitAllCount: result.UnitAllCount || 0
+                expires: result.TokenExpireTime || ""
               };
 
               // 保存token数据
               setToken(tokenData);
-
-              // 确保user-info中也包含UnitAllCount
-              const userInfo = storage.getItem("user-info") || {};
-              userInfo.UnitAllCount = result.UnitAllCount || 0;
-              storage.setItem("user-info", userInfo);
 
               storageSession().setItem("is-system", {
                 data: result.IsSystem
@@ -210,7 +196,7 @@ export const useUserStore = defineStore("pure-user", {
       } finally {
         // 无论接口调用成功还是失败，都清理本地状态并跳转登录页
         this.username = "";
-        this.unitname = "";
+        this.tenantname = "";
         this.roles = [];
         this.permissions = [];
         removeToken();
@@ -222,7 +208,7 @@ export const useUserStore = defineStore("pure-user", {
     /** 前端登出（不调用接口） */
     logOut2() {
       this.username = "";
-      this.unitname = "";
+      this.tenantname = "";
       this.roles = [];
       this.permissions = [];
       removeToken();

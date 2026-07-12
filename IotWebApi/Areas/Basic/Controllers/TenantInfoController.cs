@@ -1,35 +1,33 @@
 using CenBoCommon.Zxx;
 using Microsoft.AspNetCore.Mvc;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 using IotModel;
-using IotWebApi.Areas.Basic.Models;
 using IotWebApi.Services.Jobs;
 
 namespace IotWebApi.Controllers
 {
-    /// <summary> 
-    /// 单位基本信息
+    /// <summary>
+    /// 租户信息
     /// </summary>
     [ApiController]
     [ControllSort("5-11")]
-    public class BasicunitinfoController : ControllerBaseApi
+    public class TenantInfoController : ControllerBaseApi
     {
-        /// <summary> 
-        /// 单位基本信息批量保存
+        /// <summary>
+        /// 租户信息批量保存
         /// </summary>
         /// <returns></returns>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Basic)]
-        public string SaveBatch(List<BasicunitInfoEntity> list)
+        public string SaveBatch(List<TenantInfo> list)
         {
-            Message = "单位基本信息保存失败。";
+            Message = "租户信息保存失败。";
             if (list.IsZxxAny())
             {
                 var optmdl = Request.GetToken();
-                List<BasicunitInfoEntity> insertlist = new List<BasicunitInfoEntity>();
-                List<BasicunitInfoEntity> updatelist = new List<BasicunitInfoEntity>();
+                List<TenantInfo> insertlist = new List<TenantInfo>();
+                List<TenantInfo> updatelist = new List<TenantInfo>();
                 DateTime time = DateTime.Now;
                 foreach (var item in list)
                 {
@@ -53,13 +51,13 @@ namespace IotWebApi.Controllers
                 Status = true;
                 foreach (var item in insertlist)
                 {
-                    if (!BasicunitInfoDAO.Instance.Insert(item)) { Status = false; break; }
+                    if (!TenantInfoDAO.Instance.Insert(item)) { Status = false; break; }
                 }
                 if (Status)
                 {
                     foreach (var item in updatelist)
                     {
-                        if (!BasicunitInfoDAO.Instance.Update(item)) { Status = false; break; }
+                        if (!TenantInfoDAO.Instance.Update(item)) { Status = false; break; }
                     }
                 }
                 if (Status)
@@ -68,18 +66,16 @@ namespace IotWebApi.Controllers
                     {
                         Task.Run(() =>
                         {
-                            var unitlist = BasicunitInfoDAO.Instance.GetList();
-                            if (unitlist.IsZxxAny())
+                            var tenantlist = TenantInfoDAO.Instance.GetList();
+                            if (tenantlist.IsZxxAny())
                             {
                                 var comfortAlllist = DeviceComfortDAO.Instance.GetList();
                                 List<DeviceComfort> comfortlist = new List<DeviceComfort>();
-                                foreach (var item in unitlist)
+                                foreach (var item in tenantlist)
                                 {
-                                    bool isnew = true;
-                                    if (!comfortAlllist.IsZxxAny())
-                                    {
-                                        if (comfortAlllist.Any(t => t.TenantId == item.TenantId)) isnew = false;
-                                    }
+                                    // 已有舒适度配置的租户跳过（旧代码此处逻辑反转，会重复播种）
+                                    bool isnew = !comfortAlllist.IsZxxAny()
+                                        || !comfortAlllist.Any(t => t.TenantId == item.TenantId);
                                     if (isnew)
                                     {
                                         DeviceComfort xiaji = new DeviceComfort
@@ -120,7 +116,7 @@ namespace IotWebApi.Controllers
                             }
                         });
                     }
-                    Message = "单位基本信息保存成功。";
+                    Message = "租户信息保存成功。";
                 }
             }
             return Message;
@@ -129,36 +125,36 @@ namespace IotWebApi.Controllers
         /// <summary>
         /// 根据主键删除
         /// </summary>
-        /// <param name="_UnitId">主键</param>
+        /// <param name="_TenantId">主键</param>
         /// <returns></returns>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Basic)]
-        public string DeleteByPk(int _UnitId)
+        public string DeleteByPk(int _TenantId)
         {
-            Message = "单位基本信息删除失败。";
-            // 级联删除：按祖先链 full_code 含 |UnitId| 一次删整棵子树（照搬旧 BuildInfo 范式）
-            var self = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _UnitId);
+            Message = "租户信息删除失败。";
+            // 级联删除：按祖先链 full_code 含 |TenantId| 一次删整棵子树
+            var self = TenantInfoDAO.Instance.GetOneBy(t => t.TenantId == _TenantId);
             int parentId = self?.ParentId ?? 0;
-            Status = BasicunitInfoDAO.Instance.DeleteBy(t => t.FullCode.Contains($"|{_UnitId}|"));
+            Status = TenantInfoDAO.Instance.DeleteBy(t => t.FullCode.Contains($"|{_TenantId}|"));
             if (Status)
             {
                 // 若父级已无其它子节点，回填 has_child=false
                 if (parentId > 0)
                 {
-                    var parent = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == parentId);
+                    var parent = TenantInfoDAO.Instance.GetOneBy(t => t.TenantId == parentId);
                     if (parent != null)
                     {
-                        bool stillHasChild = BasicunitInfoDAO.Instance.GetListBy(t => t.ParentId == parentId).IsZxxAny();
+                        bool stillHasChild = TenantInfoDAO.Instance.GetListBy(t => t.ParentId == parentId).IsZxxAny();
                         if (parent.HasChild != stillHasChild)
                         {
                             parent.HasChild = stillHasChild;
-                            BasicunitInfoDAO.Instance.UpdateColumns(parent, it => new { it.HasChild });
+                            TenantInfoDAO.Instance.UpdateColumns(parent, it => new { it.HasChild });
                         }
                     }
                 }
-                Message = "单位基本信息删除成功。";
+                Message = "租户信息删除成功。";
             }
             return Message;
         }
@@ -166,15 +162,15 @@ namespace IotWebApi.Controllers
         /// <summary>
         /// 根据主键查询单条数据
         /// </summary>
-        /// <param name="_UnitId">主键</param>
+        /// <param name="_TenantId">主键</param>
         /// <returns></returns>
         [HttpGet]
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Basic)]
-        public BasicunitInfoEntity GetInfoByPk(int _UnitId)
+        public TenantInfo GetInfoByPk(int _TenantId)
         {
-            var entity = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == _UnitId);
+            var entity = TenantInfoDAO.Instance.GetOneBy(t => t.TenantId == _TenantId);
             return entity;
         }
 
@@ -187,51 +183,10 @@ namespace IotWebApi.Controllers
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Basic)]
-        public List<BasicunitInfoEntity> GetListByPage(ActionPara model)
+        public List<TenantInfo> GetListByPage(ActionPara model)
         {
             int totalNumber = 0;
-            var list = BasicunitInfoDAO.Instance.GetListByPage(model, ref totalNumber);
-            TotalCount = totalNumber;
-            return list;
-        }
-
-        /// <summary>
-        /// 获取权限单位列表
-        /// </summary>
-        /// <param name="model">通用参数模型</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Route("Api/[controller]/[action]")]
-        [Token]
-        [ApiGroup(ApiGroupNames.Basic)]
-        public List<BasicunitInfoEntity> GetQxListByPage(ActionPara model)
-        {
-            int totalNumber = 0;
-            var optmdl = Request.GetToken();
-            var redlist = SysRelatedDAO.Instance.GetListBy(t => t.UserId == optmdl.UserID);
-            if (redlist.IsZxxAny())
-            {
-                string unitids = string.Join(",", redlist.Select(t => t.TenantId));
-                model.sconlist.Add(new SelectCondition
-                {
-                    ParamName = "TenantId",
-                    ParamType = "in",
-                    ParamValue = unitids,
-                });
-            }
-            else
-            {
-                if (!optmdl.IsSystem)
-                {
-                    model.sconlist.Add(new SelectCondition
-                    {
-                        ParamName = "TenantId",
-                        ParamType = "=",
-                        ParamValue = optmdl.TenantId.ToString(),
-                    });
-                }
-            }
-            var list = BasicunitInfoDAO.Instance.GetListByPage(model, ref totalNumber);
+            var list = TenantInfoDAO.Instance.GetListByPage(model, ref totalNumber);
             TotalCount = totalNumber;
             return list;
         }

@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using IotModel;
-using Newtonsoft.Json;
 
 namespace IotWebApi
 {
@@ -18,21 +17,6 @@ namespace IotWebApi
         /// 角色信息
         /// </summary>
         public SysRole _Sysrole { get; set; }
-
-        /// <summary>
-        /// 权限单位
-        /// </summary>
-        public List<BasicunitInfo> _UnitAllList = new List<BasicunitInfo>();
-
-        /// <summary>
-        /// 权限单位ID
-        /// </summary>
-        public List<int> _UnitIdList = new List<int>();
-
-        /// <summary>
-        /// 组织查询级别(1:多公司 2：公司 3：部门)
-        /// </summary>
-        public int DepartSelectLevel { get; set; } = 3;
     }
 
     /// <summary>
@@ -56,16 +40,14 @@ namespace IotWebApi
         public bool IsSystem { get; set; }
 
         /// <summary>
-        /// 当前租户ID（Token 载荷字段）。[JsonProperty("UnitId")] 保持序列化字段名不变，
-        /// 使存量旧 Token（JSON 里为 "UnitId"）反序列化后仍能落到本属性，避免全员被迫重登。
+        /// 当前租户ID（Token 载荷字段，整库重建后旧 Token 全部失效，无兼容垫片）
         ///</summary>
-        [JsonProperty("UnitId")]
         public int TenantId { get; set; }
 
         /// <summary>
-        /// 当前单位名称
+        /// 当前租户名称
         ///</summary>
-        public string UnitName { get; set; }
+        public string TenantName { get; set; }
 
         /// <summary>
         /// 请求来源：1:Web 2:Android 3:APP 
@@ -78,11 +60,6 @@ namespace IotWebApi
         public DateTime LoginTime { get; set; }
 
         /// <summary>
-        /// 单位总数量(不显示:1  弹框:>1)
-        ///</summary>
-        public int UnitAllCount { get; set; }
-
-        /// <summary>
         /// 用户验证TOKEN
         /// </summary>
         public string LoginToken { get; set; }
@@ -91,63 +68,5 @@ namespace IotWebApi
         /// 令牌软过期时间(前端到点走GetRefreshToken无感换签;服务端硬窗口仍由tokentimeouthour裁决)
         /// </summary>
         public DateTime TokenExpireTime { get; set; }
-        /// <summary>
-        /// 大屏跳转路径
-        ///</summary>
-        [DisplayName("大屏跳转路径")]
-        public string RouterPath { get; set; }
     }
-
-    /// <summary>
-    /// 罪犯登录
-    /// </summary>
-    public class OperatorStaffModel
-    {
-        /// <summary>
-        /// 罪犯ID
-        /// </summary>
-        [DisplayName("罪犯ID")]
-        public string StaffUid { get; set; }
-
-        /// <summary>
-        /// 罪犯编号
-        /// </summary>
-        [DisplayName("罪犯编号")]
-        public string StaffCode { get; set; }
-
-        /// <summary>
-        /// 罪犯姓名
-        /// </summary>
-        [DisplayName("罪犯姓名")]
-        public string StaffName { get; set; }
-
-        /// <summary>
-        /// 部门编码
-        ///</summary>
-        [DisplayName("部门编码")]
-        public string DeptCode { get; set; }
-
-        /// <summary>
-        /// 登录时间
-        /// </summary>
-        public DateTime LoginTime { get; set; }
-
-        /// <summary>
-        /// StaffToken(传入Headers)
-        /// </summary>
-        public string StaffToken { get; set; }
-
-    }
-
-    /// <summary>
-    /// StaffToken转换后对象
-    /// </summary>
-    public class OperatorStaff : OperatorStaffModel
-    {
-        /// <summary>
-        /// 权限单位
-        /// </summary>
-        public BasicunitInfo unit = null;
-    }
-
 }

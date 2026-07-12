@@ -8,9 +8,9 @@ const button = "告警屏蔽";
 /** 告警屏蔽规则（对应后端 AlarmMask 实体） */
 export interface AlarmMaskItem {
   SnowId: number | string;
-  /** 屏蔽对象类型(1:全局 2:单位 3:建筑 4:设备类型 5:单设备 6:告警等级) */
+  /** 屏蔽对象类型(1:全局 2:租户 3:建筑 4:设备类型 5:单设备 6:告警等级) */
   MaskScopeType?: number;
-  /** 屏蔽对象ID(单位/建筑/设备为ID,设备类型为编码,告警等级为等级名;全局为空) */
+  /** 屏蔽对象ID(租户/建筑/设备为ID,设备类型为编码,告警等级为等级名;全局为空) */
   ScopeId?: string;
   /** 屏蔽模式(1:永久 2:一次性时间段 3:周期性时间窗) */
   MaskMode?: number;

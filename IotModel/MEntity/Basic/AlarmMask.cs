@@ -9,7 +9,7 @@ namespace IotModel
     /// 告警屏蔽规则(§9.4:运行时在"告警产生之后、入库通知之前"过滤;
     /// 取代AlarmConfig.DebounceType=3的一刀切屏蔽;
     /// 注意:引擎为后台组件且规则全局加载,故不挂ITenantEntity(与collect_strategy同类决策),
-    /// 单位维度屏蔽经MaskScopeType=2+ScopeId表达)
+    /// 租户维度屏蔽经MaskScopeType=2+ScopeId表达)
     ///</summary>
     [DisplayName("告警屏蔽规则")]
     [EntityCache]
@@ -24,13 +24,13 @@ namespace IotModel
         [SugarColumn(ColumnName = "snow_id", IsPrimaryKey = true, Length = 20, ColumnDescription = "雪花主键", DefaultValue = "0", ColumnDataType = "bigint")]
         public long SnowId { get; set; }
         /// <summary>
-        /// 屏蔽对象类型(1:全局 2:单位 3:建筑 4:设备类型 5:单设备 6:告警等级)
+        /// 屏蔽对象类型(1:全局 2:租户 3:建筑 4:设备类型 5:单设备 6:告警等级)
         ///</summary>
-        [DisplayName("屏蔽对象类型(1全局2单位3建筑4设备类型5单设备6告警等级)")]
-        [SugarColumn(ColumnName = "mask_scope_type", ColumnDescription = "屏蔽对象类型(1全局2单位3建筑4设备类型5单设备6告警等级)", DefaultValue = "1", ColumnDataType = "int")]
+        [DisplayName("屏蔽对象类型(1全局2租户3建筑4设备类型5单设备6告警等级)")]
+        [SugarColumn(ColumnName = "mask_scope_type", ColumnDescription = "屏蔽对象类型(1全局2租户3建筑4设备类型5单设备6告警等级)", DefaultValue = "1", ColumnDataType = "int")]
         public int MaskScopeType { get; set; } = 1;
         /// <summary>
-        /// 屏蔽对象ID(单位/建筑/设备为ID,设备类型为编码,告警等级为等级名;全局为空)
+        /// 屏蔽对象ID(租户/建筑/设备为ID,设备类型为编码,告警等级为等级名;全局为空)
         ///</summary>
         [DisplayName("屏蔽对象ID")]
         [SugarColumn(ColumnName = "scope_id", IsNullable = true, Length = 50, ColumnDescription = "屏蔽对象ID(全局为空)", DefaultValue = "", ColumnDataType = "varchar")]

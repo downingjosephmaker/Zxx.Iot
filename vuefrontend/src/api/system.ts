@@ -153,55 +153,6 @@ export const saveRoleBatch = (data?: object) => {
   });
 };
 
-/** 单位管理 */
-
-/** 分页查询单位 */
-export const getUnitListByPage = (data?: QueryTableParams) => {
-  localStorage.setItem("button", "分页查询单位");
-  return http.request<ResultTable>("post", "/Basicunitinfo/GetListByPage", {
-    data
-  });
-};
-/** 查询自己有权限的单位 */
-export const GetQxListByPage = (data?: QueryTableParams) => {
-  localStorage.setItem("button", "分页查询单位");
-  return http.request<ResultTable>("post", "/Basicunitinfo/GetQxListByPage", {
-    data
-  });
-};
-/** 切换单位 */
-export const ChangeUserTokenByUnit = unitid => {
-  localStorage.setItem("button", "切换单位");
-  return http.request<Result>(
-    "get",
-    "/Sysuser/ChangeUserTokenByUnit?unitid=" + unitid
-  );
-};
-/** 删除单位 */
-export const deleteUnitByPk = (data?: object) => {
-  localStorage.setItem("button", "删除单位");
-  return http.request<Result>(
-    "post",
-    "/Basicunitinfo/DeleteByPk?_UnitId=" + data["_UnitId"],
-    {
-      data
-    }
-  );
-};
-/** 查询单个单位*/
-export const GetUnitInfoByPk = (data?: object) => {
-  localStorage.setItem("button", "查询单个单位");
-  return http.request<Result>("get", "/Basicunitinfo/GetInfoByPk", {
-    data
-  });
-};
-/** 批量保存/修改单位 */
-export const saveUnitBatch = (data?: object) => {
-  localStorage.setItem("button", "批量保存/修改单位");
-  return http.request<Result>("post", "/Basicunitinfo/SaveBatch", {
-    data
-  });
-};
 /** 修改角色菜单权限 */
 export const saveRoleMenuBtns = (data?: object) => {
   localStorage.setItem("button", "修改角色菜单权限");
@@ -238,8 +189,31 @@ export const deleteButtonByPk = (id?: string) => {
   localStorage.setItem("button", "删除按钮");
   return http.request<Result>("post", "/Sysbutton/DeleteByPk?_ButtonId=" + id);
 };
-// 获取区域列表;
-export const SysAreaList = (data?: object) => {
-  localStorage.setItem("button", "获取区域列表");
-  return http.request<Result>("post", "/SysArea/GetListByPage", { data });
+
+/** 租户管理 */
+
+/** 分页查询租户 */
+export const getUnitListByPage = (data?: QueryTableParams) => {
+  localStorage.setItem("button", "分页查询租户");
+  return http.request<ResultTable>("post", "/TenantInfo/GetListByPage", {
+    data
+  });
+};
+/** 批量保存/修改租户 */
+export const saveUnitBatch = (data?: object) => {
+  localStorage.setItem("button", "批量保存/修改租户");
+  return http.request<Result>("post", "/TenantInfo/SaveBatch", {
+    data
+  });
+};
+/** 删除租户(按祖先链级联删除子树) */
+export const deleteUnitByPk = (data?: object) => {
+  localStorage.setItem("button", "删除租户");
+  return http.request<Result>(
+    "post",
+    "/TenantInfo/DeleteByPk?_TenantId=" + data["_TenantId"],
+    {
+      data
+    }
+  );
 };

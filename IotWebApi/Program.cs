@@ -16,7 +16,7 @@ using System.Text.Unicode;
 using IotWebApi;
 using IotWebApi.Services;
 
-//SysRelatedDAO.Instance.InitTables(); //初始化表格
+//SysRoleDAO.Instance.InitTables(); //初始化表格
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     ApplicationName = "IotWebApi",

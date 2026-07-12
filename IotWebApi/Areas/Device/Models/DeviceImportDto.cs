@@ -54,9 +54,9 @@ namespace IotWebApi.Areas.Device.Models
         public string DeviceAdr { get; set; }
 
         /// <summary>
-        /// 单位名称
+        /// 单位名称(Excel 模板列头保持"单位名称"，属性映射由 ImporterHeader 特性承担)
         ///</summary>
         [ImporterHeader(Name = "单位名称")]
-        public string UnitName { get; set; }
+        public string TenantName { get; set; }
     }
 }

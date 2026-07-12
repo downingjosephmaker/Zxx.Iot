@@ -65,9 +65,9 @@ namespace IotModel
         public string RuntimeUrl { get; set; }
 
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
 

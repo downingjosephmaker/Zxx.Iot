@@ -40,9 +40,9 @@ export type setType = {
 export type userType = {
   avatar?: string;
   username?: string;
-  unitname?: string;
+  tenantname?: string;
   nickname?: string;
-  unitId?: string;
+  tenantId?: string;
   roles?: Array<string>;
   permissions?: Array<string>;
   verifyCode?: string;

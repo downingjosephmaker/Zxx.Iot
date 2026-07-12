@@ -25,20 +25,8 @@ namespace IotWebApi.Areas.Scada.Controllers
         {
             List<ScadaDevice> alllist = new List<ScadaDevice>();
             int totalNumber = 0;
-            var optmdl = Request.GetToken();
-            //单位权限
-            {
-                if (model.sconlist.IsZxxAny() && !model.sconlist.Any(t => t.ParamName.ToLower() == "unitid"))
-                {
-                    model.sconlist.RemoveAll(t => t.ParamName.ToLower() == "unitid");
-                }
-                model.sconlist.Add(new SelectCondition()
-                {
-                    ParamName = "UnitId",
-                    ParamType = "=",
-                    ParamValue = optmdl.TenantId.ToString(),
-                });
-            }
+            // 租户隔离由 DbContext 全局过滤器接管；原手工注入 "UnitId=当前租户" 的条件已删
+            // （实体属性已改名 TenantId，旧条件按属性名反射匹配早已悬空失效）
             var list = DeviceInfoDAO.Instance.GetListByPage(model, ref totalNumber);
             if (list.IsZxxAny())
             {

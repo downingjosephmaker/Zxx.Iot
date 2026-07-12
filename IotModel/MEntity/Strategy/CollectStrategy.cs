@@ -20,9 +20,9 @@ namespace IotModel
         [SugarColumn(ColumnName = "snow_id", IsPrimaryKey = true, Length = 20, ColumnDescription = "雪花主键", DefaultValue = "0", ColumnDataType = "bigint")]
         public long SnowId { get; set; }
         /// <summary>
-        /// 单位ID(暂不挂ITenantEntity:合并引擎为后台组件且合并结果全局共享,按平台级实体tenant_id=0共享,待超管旁路机制落地后纳入隔离)
+        /// 租户ID(暂不挂ITenantEntity:合并引擎为后台组件且合并结果全局共享,按平台级实体tenant_id=0共享,待超管旁路机制落地后纳入隔离)
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
         /// <summary>

@@ -44,9 +44,9 @@ namespace IotModel
         [SugarColumn(ColumnName = "month_formula", IsNullable = true, Length = 50, ColumnDescription = "月份公式", DefaultValue = "", ColumnDataType = "varchar")]
         public string MonthFormula { get; set; }
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
     }

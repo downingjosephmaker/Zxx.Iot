@@ -14,7 +14,7 @@ import editForm from "../form.vue";
 
 const scopeMap = {
   1: "全局",
-  2: "单位",
+  2: "租户",
   3: "建筑",
   4: "设备类型",
   5: "单设备",

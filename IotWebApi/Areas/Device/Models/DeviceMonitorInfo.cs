@@ -40,9 +40,9 @@ namespace IotWebApi.Areas.Device.Models
     public class DeviceMonitorSearch
     {
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         public int TenantId { get; set; }
         /// <summary>
         /// 设备名称

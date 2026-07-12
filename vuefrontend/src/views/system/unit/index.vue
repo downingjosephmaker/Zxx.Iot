@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { type FormInstance } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { PureTableBar } from "@/components/RePureTableBar";
-import { useAlarmMask } from "./utils/hook";
+import { useTenantUnit } from "./utils/hook";
 import AddFill from "~icons/ri/add-circle-line";
 import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
@@ -11,30 +11,26 @@ import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
 
 defineOptions({
-  name: "IotAlarmMask"
+  name: "SystemUnit"
 });
 
 const formRef = ref<FormInstance>();
 const tableRef = ref();
-const title = "告警屏蔽";
+const title = "租户";
 
 const {
   form: searchForm,
   loading,
   columns,
   dataList,
-  selectedNum,
   pagination,
   handleSizeChange,
   handleCurrentChange,
-  handleSelectionChange,
   onSearch,
   resetForm,
   openDialog,
-  handleDelete,
-  onbatchDel,
-  onSelectionCancel
-} = useAlarmMask(tableRef);
+  handleDelete
+} = useTenantUnit(tableRef);
 </script>
 
 <template>
@@ -46,28 +42,13 @@ const {
         :model="searchForm"
         class="search-form bg-bg_color w-[99/100] pl-8 pt-[12px]"
       >
-        <el-form-item label="屏蔽原因" prop="keyword">
+        <el-form-item label="租户名称" prop="keyword">
           <el-input
             v-model="searchForm.keyword"
-            placeholder="请输入屏蔽原因关键词"
+            placeholder="请输入租户名称关键词"
             clearable
             class="!w-[180px]"
           />
-        </el-form-item>
-        <el-form-item label="对象类型" prop="scopetype">
-          <el-select
-            v-model="searchForm.scopetype"
-            placeholder="请选择对象类型"
-            clearable
-            class="!w-[150px]"
-          >
-            <el-option label="全局" value="1" />
-            <el-option label="租户" value="2" />
-            <el-option label="建筑" value="3" />
-            <el-option label="设备类型" value="4" />
-            <el-option label="单设备" value="5" />
-            <el-option label="告警等级" value="6" />
-          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button
@@ -98,30 +79,6 @@ const {
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">
-          <div
-            v-if="selectedNum > 0"
-            v-motion-fade
-            class="bg-[var(--el-fill-color-light)] w-full h-[46px] mb-2 pl-4 flex items-center"
-          >
-            <div class="flex-auto">
-              <span
-                style="font-size: var(--el-font-size-base)"
-                class="text-[rgba(42,46,54,0.5)] dark:text-[rgba(220,220,242,0.5)]"
-              >
-                已选 {{ selectedNum }} 项
-              </span>
-              <el-button type="primary" text @click="onSelectionCancel">
-                取消选择
-              </el-button>
-            </div>
-            <el-popconfirm title="是否确认删除?" @confirm="onbatchDel">
-              <template #reference>
-                <el-button type="danger" text class="mr-1">
-                  批量删除
-                </el-button>
-              </template>
-            </el-popconfirm>
-          </div>
           <pure-table
             ref="tableRef"
             adaptive
@@ -138,7 +95,6 @@ const {
               background: 'var(--el-fill-color-light)',
               color: 'var(--el-text-color-primary)'
             }"
-            @selection-change="handleSelectionChange"
             @page-size-change="handleSizeChange"
             @page-current-change="handleCurrentChange"
           >
@@ -154,7 +110,8 @@ const {
                 修改
               </el-button>
               <el-popconfirm
-                :title="`确定要删除该屏蔽规则吗？`"
+                :title="`删除将级联删除其所有子租户，确定删除【${row.TenantName}】吗？`"
+                width="260"
                 @confirm="handleDelete(row)"
               >
                 <template #reference>

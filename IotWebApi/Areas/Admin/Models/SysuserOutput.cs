@@ -70,9 +70,9 @@ namespace IotWebApi.Areas.Admin.Models
         [DisplayName("上次退出时间")]
         public string LastOutTime { get; set; }
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         public int TenantId { get; set; }
         /// <summary>
         /// 备注

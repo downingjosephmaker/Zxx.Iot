@@ -14,10 +14,10 @@ export interface DataInfo<T> {
   avatar?: string;
   /** 用户名 */
   username?: string;
-  /** 单位名称 */
-  unitname?: string;
-  /** 单位ID */
-  unitId?: string;
+  /** 租户名称 */
+  tenantname?: string;
+  /** 租户ID */
+  tenantId?: string;
   /** 昵称 */
   nickname?: string;
   /** 当前登录用户的角色 */
@@ -78,13 +78,13 @@ export function setToken(data: DataInfo<Date>) {
     nickname,
     roles,
     permissions,
-    unitname,
-    unitId
+    tenantname,
+    tenantId
   }) {
     useUserStoreHook().SET_AVATAR(avatar);
     useUserStoreHook().SET_USERNAME(username);
-    useUserStoreHook().SET_UNITNAME(unitname);
-    useUserStoreHook().SET_UNITID(unitId);
+    useUserStoreHook().SET_TENANTNAME(tenantname);
+    useUserStoreHook().SET_TENANTID(tenantId);
     useUserStoreHook().SET_NICKNAME(nickname);
     useUserStoreHook().SET_ROLES(roles);
     useUserStoreHook().SET_PERMS(permissions);
@@ -93,8 +93,8 @@ export function setToken(data: DataInfo<Date>) {
       expires,
       avatar,
       username,
-      unitname,
-      unitId,
+      tenantname,
+      tenantId,
       nickname,
       roles,
       permissions
@@ -106,8 +106,8 @@ export function setToken(data: DataInfo<Date>) {
     setUserKey({
       avatar: data?.avatar ?? "",
       username,
-      unitname: data?.unitname ?? "",
-      unitId: data?.unitId ?? "",
+      tenantname: data?.tenantname ?? "",
+      tenantId: data?.tenantId ?? "",
       nickname: data?.nickname ?? "",
       roles,
       permissions: data?.permissions ?? []
@@ -115,20 +115,21 @@ export function setToken(data: DataInfo<Date>) {
   } else {
     const avatar = storage.getItem<DataInfo<number>>(userKey)?.avatar ?? "";
     const username = storage.getItem<DataInfo<number>>(userKey)?.username ?? "";
-    const unitname = storage.getItem<DataInfo<number>>(userKey)?.unitname ?? "";
+    const tenantname =
+      storage.getItem<DataInfo<number>>(userKey)?.tenantname ?? "";
     const nickname = storage.getItem<DataInfo<number>>(userKey)?.nickname ?? "";
     const roles = storage.getItem<DataInfo<number>>(userKey)?.roles ?? [];
     const permissions =
       storage.getItem<DataInfo<number>>(userKey)?.permissions ?? [];
-    const unitId = storage.getItem<DataInfo<number>>(userKey)?.unitId ?? "";
+    const tenantId = storage.getItem<DataInfo<number>>(userKey)?.tenantId ?? "";
     setUserKey({
       avatar,
       username,
-      unitname,
+      tenantname,
       nickname,
       roles,
       permissions,
-      unitId
+      tenantId
     });
   }
 }

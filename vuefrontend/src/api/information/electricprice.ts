@@ -55,7 +55,7 @@ export const getListByPage = (data: QueryTableParams): Promise<ApiResponse<Elect
 };
 
 /**
- * 根据浙江省电价信息添加当前单位数据
+ * 根据浙江省电价信息添加当前租户数据
  * @returns Promise<ApiResponse>
  */
 export const initElectricPrice = (): Promise<ApiResponse> => {

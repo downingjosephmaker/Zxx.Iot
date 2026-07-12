@@ -31,9 +31,9 @@ namespace IotModel
         [SugarColumn(ColumnName = "device_type_name", IsNullable = true, Length = 50, ColumnDescription = "设备类型名称", DefaultValue = "", ColumnDataType = "varchar")]
         public string DeviceTypeName { get; set; }
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
         /// <summary>

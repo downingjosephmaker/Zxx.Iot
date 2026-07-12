@@ -129,15 +129,15 @@ class MqttClient {
             this.status = MqttConnectionState.CONNECTED;
             emitter.emit("mqttStatusChange", this.status);
 
-            // 从用户存储中获取单位ID
-            const unitId = useUserStoreHook()?.unitId || "";
+            // 从用户存储中获取租户ID
+            const tenantId = useUserStoreHook()?.tenantId || "";
             // 恢复之前的订阅
             this.resubscribe();
 
             // 订阅实时数据主题
             if (this.mqttInfo?.WebReal) {
-              const realTopic = unitId
-                ? `${this.mqttInfo.WebReal}${unitId}`
+              const realTopic = tenantId
+                ? `${this.mqttInfo.WebReal}${tenantId}`
                 : this.mqttInfo.WebReal;
               // console.log(`订阅实时数据主题: ${realTopic}`);
               this.subscribe(realTopic, message => {
@@ -154,8 +154,8 @@ class MqttClient {
 
             // 订阅告警数据主题
             if (this.mqttInfo?.WebAlarm) {
-              const alarmTopic = unitId
-                ? `${this.mqttInfo.WebAlarm}${unitId}`
+              const alarmTopic = tenantId
+                ? `${this.mqttInfo.WebAlarm}${tenantId}`
                 : this.mqttInfo.WebAlarm;
               // console.log(`订阅告警数据主题: ${alarmTopic}`);
               this.subscribe(alarmTopic, message => {
@@ -264,9 +264,9 @@ class MqttClient {
     }
   }
 
-  // 重新连接MQTT服务器，用于单位切换时更新订阅
+  // 重新连接MQTT服务器，用于租户变更(重新登录)时更新订阅
   async reconnect(): Promise<boolean> {
-    // console.log("重新连接MQTT服务，更新单位ID...");
+    // console.log("重新连接MQTT服务，更新租户ID...");
     if (this.client && this.isConnected) {
       // 先断开当前连接
       this.disconnect();

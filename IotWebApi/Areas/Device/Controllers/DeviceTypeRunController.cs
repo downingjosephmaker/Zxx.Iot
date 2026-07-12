@@ -5,7 +5,7 @@ using IotModel;
 namespace IotWebApi
 {
     /// <summary> 
-    /// 单位设备大类管理
+    /// 租户设备大类管理
     /// </summary>
     [ApiController]
     [ControllSort("7-20")]
@@ -20,7 +20,7 @@ namespace IotWebApi
         [ApiGroup(ApiGroupNames.Device)]
         public string SaveBatch(List<DeviceTypeRun> list)
         {
-            Message = "单位设备大类信息保存失败。";
+            Message = "租户设备大类信息保存失败。";
             if (list.IsZxxAny())
             {
                 var optmdl = Request.GetToken();
@@ -46,7 +46,7 @@ namespace IotWebApi
                 });
                 if (Status)
                 {
-                    Message = "单位设备大类信息保存成功。";
+                    Message = "租户设备大类信息保存成功。";
                 }
             }
 
@@ -64,9 +64,9 @@ namespace IotWebApi
         [ApiGroup(ApiGroupNames.Device)]
         public string DeleteByPk(long snowId)
         {
-            Message = "单位设备大类删除失败。";
+            Message = "租户设备大类删除失败。";
             Status = DeviceTypeRunDAO.Instance.DeleteBy(t => t.SnowId == snowId);
-            if (Status) Message = "单位设备大类删除成功。";
+            if (Status) Message = "租户设备大类删除成功。";
             return Message;
         }
 

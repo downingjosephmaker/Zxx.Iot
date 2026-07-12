@@ -98,9 +98,9 @@ namespace IotModel
         [SugarColumn(ColumnName = "last_out_time", IsNullable = true, Length = 20, ColumnDescription = "上次退出时间", DefaultValue = "", ColumnDataType = "varchar")]
         public string LastOutTime { get; set; }
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
         public int TenantId { get; set; }
         /// <summary>

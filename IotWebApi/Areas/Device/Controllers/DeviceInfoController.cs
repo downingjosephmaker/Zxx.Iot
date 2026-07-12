@@ -224,15 +224,15 @@ namespace IotWebApi.Controllers
             var list = DeviceInfoDAO.Instance.GetListByPage(model, ref totalNumber);
             if (list.IsZxxAny())
             {
-                var unitlist = BasicunitInfoDAO.Instance.GetList();
+                var tenantlist = TenantInfoDAO.Instance.GetList();
                 var typelist = DeviceTypeDAO.Instance.GetList();
                 foreach (var dev in list)
                 {
                     DeviceFullInfo info = new DeviceFullInfo();
                     dev.CopyTypeValue(info);
                     info.ExpandObject = dev.ExpandObject;
-                    var unit = unitlist.FirstOrDefault(t => t.TenantId == info.TenantId);
-                    if (unit != null) info.UnitName = unit.UnitName;
+                    var tenant = tenantlist.FirstOrDefault(t => t.TenantId == info.TenantId);
+                    if (tenant != null) info.TenantName = tenant.TenantName;
                     var devtype = typelist.FirstOrDefault(t => t.TypeCode == info.DeviceTypeCode);
                     if (devtype != null) info.DeviceTypeName = devtype.TypeName;
                     alllist.Add(info);
@@ -341,29 +341,29 @@ namespace IotWebApi.Controllers
                 return data;
             }
 
-            #region 单位
+            #region 租户
 
-            BasicunitInfo unit = null;
-            string unitname = "";
+            TenantInfo unit = null;
+            string tenantname = "";
             foreach (var row in importRes.Data)
             {
-                if (!row.UnitName.IsZxxNullOrEmpty())
+                if (!row.TenantName.IsZxxNullOrEmpty())
                 {
-                    unitname = row.UnitName;
+                    tenantname = row.TenantName;
                     break;
                 }
             }
-            if (!string.IsNullOrEmpty(unitname))
+            if (!string.IsNullOrEmpty(tenantname))
             {
-                var _Basicunitinfo = BasicunitInfoDAO.Instance.GetOneBy(it => it.UnitName == unitname);
-                if (_Basicunitinfo != null)
+                var _Tenantinfo = TenantInfoDAO.Instance.GetOneBy(it => it.TenantName == tenantname);
+                if (_Tenantinfo != null)
                 {
-                    unit = _Basicunitinfo;
+                    unit = _Tenantinfo;
                 }
             }
             if (unit == null)
             {
-                data.Message = "请先创建单位信息";
+                data.Message = "请先创建租户信息";
                 return data;
             }
 

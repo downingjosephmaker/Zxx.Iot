@@ -91,16 +91,16 @@ namespace IotWebApi.Services.Jobs
             => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"device:{deviceId}");
 
         /// <summary>
-        /// 加入告警分组(告警中心页按单位订阅实时告警,告警引擎落地后经ReceiveAlarm下发)
+        /// 加入告警分组(告警中心页按租户订阅实时告警,告警引擎落地后经ReceiveAlarm下发)
         /// </summary>
-        public async Task JoinAlarmGroup(int unitId)
-            => await Groups.AddToGroupAsync(Context.ConnectionId, $"alarm:{unitId}");
+        public async Task JoinAlarmGroup(int tenantId)
+            => await Groups.AddToGroupAsync(Context.ConnectionId, $"alarm:{tenantId}");
 
         /// <summary>
         /// 离开告警分组
         /// </summary>
-        public async Task LeaveAlarmGroup(int unitId)
-            => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"alarm:{unitId}");
+        public async Task LeaveAlarmGroup(int tenantId)
+            => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"alarm:{tenantId}");
 
         /// <summary>
         /// 在客户端连接到中心时执行操作

@@ -1,44 +1,41 @@
-﻿using CenBoCommon.Zxx;
+using CenBoCommon.Zxx;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace IotModel
 {
-    public sealed partial class BasicunitInfoDAO : FullEntityContext<BasicunitInfoEntity>
+    public sealed partial class TenantInfoDAO : DbContext<TenantInfo>
     {
-        private static BasicunitInfoDAO instance;
-        public static BasicunitInfoDAO Instance
+        private static TenantInfoDAO instance;
+        public static TenantInfoDAO Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    instance = new BasicunitInfoDAO();
+                    instance = new TenantInfoDAO();
                 }
                 return instance;
             }
         }
 
-        public override void Init(object[] objs)
+        public override void Init()
         {
             try
             {
-                if (_dbContext == null) _dbContext = objs[0];
                 string time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 // 树形字段预计算后基类直插:种子期在DbContext静态锁内,
-                // 不可走重写Insert的BeginTran事务树形逻辑;建表后序列必从1起步,unit_id=1有保证
-                var list = new List<BasicunitInfoEntity>
+                // 不可走重写Insert的事务树形逻辑;建表后序列必从1起步,tenant_id=1有保证
+                var list = new List<TenantInfo>
                 {
-                    new BasicunitInfoEntity
+                    new TenantInfo
                     {
                         ParentId = 0,
                         TreeLevel = 1,
                         FullCode = "|1|",
-                        FullName = "开发单位",
-                        UnitName = "开发单位",
-                        AreaId = "|330000|330100|330106|",
-                        AreaName = "浙江省|杭州市|西湖区",
+                        FullName = "开发租户",
+                        TenantName = "开发租户",
                         CreateId = 1,
                         CreateTime = time,
                         CreateName = "开发管理员",
@@ -64,51 +61,49 @@ namespace IotModel
 
         /// <summary>
         /// 新增租户：插入后按 parent_id 算 full_code/full_name/tree_level 并回填，维护父级 has_child。
-        /// 树形逻辑照搬旧 BuildInfoDAO 范式（决策 B1 父见子孙的祖先链基础）。
+        /// TranAction 确保插入与树字段回填同事务（事务连接由 _transactionDb 统一提供）。
         /// </summary>
-        public override bool Insert(BasicunitInfoEntity info)
+        public override bool Insert(TenantInfo info)
         {
             bool isok = false;
             try
             {
-                Db.BeginTran();
-
-                var upinfo = InsertReturnEntity(info);
-                if (upinfo.ParentId > 0)
+                TranAction(() =>
                 {
-                    var parent = GetOneBy(t => t.TenantId == upinfo.ParentId);
-                    if (parent != null)
+                    var upinfo = InsertReturnEntity(info);
+                    if (upinfo.ParentId > 0)
                     {
-                        upinfo.FullCode = parent.FullCode + upinfo.TenantId + "|";
-                        upinfo.FullName = parent.FullName + "|" + upinfo.UnitName;
-                        upinfo.TreeLevel = upinfo.FullCode.Count(c => c == '|') - 1;
-                        if (!parent.HasChild)
+                        var parent = GetOneBy(t => t.TenantId == upinfo.ParentId);
+                        if (parent != null)
                         {
-                            parent.HasChild = true;
-                            UpdateColumns(parent, it => new { it.HasChild });
+                            upinfo.FullCode = parent.FullCode + upinfo.TenantId + "|";
+                            upinfo.FullName = parent.FullName + "|" + upinfo.TenantName;
+                            upinfo.TreeLevel = upinfo.FullCode.Count(c => c == '|') - 1;
+                            if (!parent.HasChild)
+                            {
+                                parent.HasChild = true;
+                                UpdateColumns(parent, it => new { it.HasChild });
+                            }
                         }
                     }
-                }
-                else
-                {
-                    upinfo.FullCode = "|" + upinfo.TenantId + "|";
-                    upinfo.FullName = upinfo.UnitName;
-                    upinfo.TreeLevel = 1;
-                }
+                    else
+                    {
+                        upinfo.FullCode = "|" + upinfo.TenantId + "|";
+                        upinfo.FullName = upinfo.TenantName;
+                        upinfo.TreeLevel = 1;
+                    }
 
-                isok = UpdateColumns(upinfo, it => new
-                {
-                    it.FullCode,
-                    it.FullName,
-                    it.TreeLevel,
+                    isok = UpdateColumns(upinfo, it => new
+                    {
+                        it.FullCode,
+                        it.FullName,
+                        it.TreeLevel,
+                    });
                 });
-
-                Db.CommitTran();
                 return isok;
             }
             catch (Exception ex)
             {
-                Db.RollbackTran();
                 if (string.IsNullOrEmpty(sqlError))
                 {
                     throw new Exception(ex.ToString());
@@ -123,7 +118,7 @@ namespace IotModel
         /// <summary>
         /// 修改租户：父级变化时重算 full_code/full_name/tree_level，并级联更新所有子孙节点。
         /// </summary>
-        public override bool Update(BasicunitInfoEntity info)
+        public override bool Update(TenantInfo info)
         {
             bool isok = false;
             try
@@ -138,7 +133,7 @@ namespace IotModel
                     if (parent != null)
                     {
                         info.FullCode = parent.FullCode + info.TenantId + "|";
-                        info.FullName = parent.FullName + "|" + info.UnitName;
+                        info.FullName = parent.FullName + "|" + info.TenantName;
                         info.TreeLevel = info.FullCode.Count(c => c == '|') - 1;
                         if (!parent.HasChild)
                         {
@@ -150,7 +145,7 @@ namespace IotModel
                 else
                 {
                     info.FullCode = "|" + info.TenantId + "|";
-                    info.FullName = info.UnitName;
+                    info.FullName = info.TenantName;
                     info.TreeLevel = 1;
                 }
 
@@ -191,7 +186,7 @@ namespace IotModel
                                 }
 
                                 child.FullCode = parentFullCode + child.TenantId + "|";
-                                child.FullName = parentFullName + "|" + child.UnitName;
+                                child.FullName = parentFullName + "|" + child.TenantName;
                                 child.TreeLevel = child.FullCode.Count(c => c == '|') - 1;
                             }
                             UpdateColumns(childList, it => new

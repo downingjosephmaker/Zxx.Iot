@@ -30,7 +30,7 @@ const formValue = ref(props.formInline);
 
 const scopeOptions = [
   { label: "全局", value: 1 },
-  { label: "单位", value: 2 },
+  { label: "租户", value: 2 },
   { label: "建筑", value: 3 },
   { label: "设备类型", value: 4 },
   { label: "单设备", value: 5 },
@@ -52,7 +52,7 @@ const actionOptions = [
 const scopeIdPlaceholder = computed(() => {
   switch (formValue.value.MaskScopeType) {
     case 2:
-      return "单位ID";
+      return "租户ID";
     case 3:
       return "建筑ID";
     case 4:

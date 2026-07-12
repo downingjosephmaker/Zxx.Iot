@@ -8,7 +8,6 @@ import { useTranslationLang } from "@/layout/hooks/useTranslationLang";
 import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
 import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vue";
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
-import LaySidebarUnit from "../lay-sidebar/components/SidebaUnit.vue";
 import HeaderBadges from "@/components/HeaderBadges.vue";
 import { useRouter } from "vue-router";
 import { useMqttClient, MqttConnectionState } from "@/plugins/mqtt";
@@ -37,9 +36,9 @@ const mqttStatus = ref<string>(MqttConnectionState.DISCONNECTED);
 const mqttConnected = ref<boolean>(false);
 const showMqttStatus = ref<boolean>(false);
 
-// 获取用户存储，用于监听单位ID变化
+// 获取用户存储，用于监听租户ID变化
 const userStore = useUserStoreHook();
-const currentUnitId = ref(userStore.unitId || "");
+const currentTenantId = ref(userStore.tenantId || "");
 
 // 获取告警存储
 // const alarmStore = useAlarmStoreHook() as any;
@@ -55,18 +54,18 @@ const unreadAlarmCount = computed(() => {
 });
 const hasUnreadAlarms = computed(() => unreadAlarmCount.value > 0);
 
-// 监听单位ID变化，自动重连MQTT
+// 监听租户ID变化，自动重连MQTT
 watch(
-  () => userStore.unitId,
-  async (newUnitId, oldUnitId) => {
-    if (newUnitId !== oldUnitId && mqttInitialized.value) {
-      currentUnitId.value = newUnitId || "";
+  () => userStore.tenantId,
+  async (newTenantId, oldTenantId) => {
+    if (newTenantId !== oldTenantId && mqttInitialized.value) {
+      currentTenantId.value = newTenantId || "";
       console.log(
-        `单位ID已变更: ${oldUnitId} -> ${newUnitId}，正在重新连接MQTT...`
+        `租户ID已变更: ${oldTenantId} -> ${newTenantId}，正在重新连接MQTT...`
       );
-      ElMessage.info("单位已切换，正在重新连接MQTT服务...");
+      ElMessage.info("租户已变更，正在重新连接MQTT服务...");
 
-      // 延迟执行重连，确保单位ID已更新
+      // 延迟执行重连，确保租户ID已更新
       setTimeout(async () => {
         try {
           const success = await mqttClient.reconnect();
@@ -298,8 +297,6 @@ const openAlarmPanel = () => {
         <el-icon><IconifyIconOffline :icon="DashboardIcon" /></el-icon>
         <span>能源驾驶舱</span>
       </div>
-      <!-- 当前单位 -->
-      <LaySidebarUnit />
       <!-- MQTT状态和告警组件 -->
       <HeaderBadges />
       <!-- MQTT状态测试 -->

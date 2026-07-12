@@ -220,7 +220,7 @@ namespace IotWebApi.Controllers
         public int UserId { get; set; }
         /// <summary>用户名</summary>
         public string UserName { get; set; } = "";
-        /// <summary>租户ID(unit_id)</summary>
+        /// <summary>租户ID</summary>
         public int TenantId { get; set; }
     }
 }

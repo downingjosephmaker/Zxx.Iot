@@ -22,7 +22,7 @@ namespace IotWebApi.Services.Jobs
                 string backupFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
                 if (!Directory.Exists(backupFolder)) Directory.CreateDirectory(backupFolder);
                 string backupFolderdb = Path.Combine(backupFolder, "zhjngkdb");
-                var isres = SysRelatedDAO.Instance.BackupDataBase(backupFolderdb);
+                var isres = SysRoleDAO.Instance.BackupDataBase(backupFolderdb);
 
                 string backupFoldersplit = Path.Combine(backupFolder, "zhjngkdb_split");
                 isres = ScheduleJobLogDAO.Instance.BackupDataBase(backupFoldersplit);

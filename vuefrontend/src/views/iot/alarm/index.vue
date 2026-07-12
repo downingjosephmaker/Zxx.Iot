@@ -41,10 +41,10 @@ const pagination = reactive<PaginationProps>({
 const liveAlarms = ref<LiveAlarm[]>([]);
 const liveSeq = ref(0);
 
-const { connected, start, joinUnit, setHandler } = useAlarmSignalR();
+const { connected, start, joinTenant, setHandler } = useAlarmSignalR();
 
-const currentUnitId = computed(() => {
-  const raw = useUserStoreHook().unitId;
+const currentTenantId = computed(() => {
+  const raw = useUserStoreHook().tenantId;
   const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
 });
@@ -155,8 +155,8 @@ function clearLive() {
 onMounted(async () => {
   setHandler(onIncomingAlarm);
   await start();
-  if (currentUnitId.value > 0) {
-    await joinUnit(currentUnitId.value);
+  if (currentTenantId.value > 0) {
+    await joinTenant(currentTenantId.value);
   }
   await onSearch();
 });

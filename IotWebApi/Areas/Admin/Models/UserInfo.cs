@@ -10,9 +10,9 @@ namespace IotWebApi.Areas.Admin.Models
         [DisplayName("用户ID")]
         public int UserId { get; set; }
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         public int TenantId { get; set; }
     }
 

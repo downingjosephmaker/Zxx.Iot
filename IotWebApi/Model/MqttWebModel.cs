@@ -12,9 +12,9 @@ namespace IotWebApi
     public class MqttWebModel
     {
         /// <summary>
-        /// 单位ID
+        /// 租户ID
         ///</summary>
-        [DisplayName("单位ID")]
+        [DisplayName("租户ID")]
         public int TenantId { get; set; }
         /// <summary>
         /// 设备类型编码

@@ -53,25 +53,13 @@ namespace IotWebApi
                     }
                 }
 
-                if (model.IsSystem)
-                {
-                    var unitlist = BasicunitInfoDAO.Instance.GetList();
-                    if (unitlist != null) model.UnitAllCount = unitlist.Count;
-                }
-                else
-                {
-                    var relatelist = SysRelatedDAO.Instance.GetListBy(t => t.UserId == user.UserId);
-                    if (relatelist.IsZxxAny()) model.UnitAllCount = relatelist.Count;
-                }
-
-                // 单位名从租户表关联查(sys_user.unit_name 冗余列已删)，须在 Token 加密前就位
+                // 租户名从租户表关联查，须在 Token 加密前就位
                 if (user.TenantId > 0)
                 {
-                    var unitentity = BasicunitInfoDAO.Instance.GetOneBy(t => t.TenantId == user.TenantId);
-                    if (unitentity != null)
+                    var tenantentity = TenantInfoDAO.Instance.GetOneBy(t => t.TenantId == user.TenantId);
+                    if (tenantentity != null)
                     {
-                        model.UnitName = unitentity.UnitName;
-                        model.RouterPath = unitentity.ExpandObject.RouterPath;
+                        model.TenantName = tenantentity.TenantName;
                     }
                 }
 

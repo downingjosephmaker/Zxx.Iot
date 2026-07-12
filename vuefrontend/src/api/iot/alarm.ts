@@ -15,11 +15,6 @@ export interface EventSignalItem {
   /** 详情 */
   EventContent?: string;
   TenantId?: number;
-  UnitName?: string;
-  BuildId?: number;
-  BuildName?: string;
-  DeptId?: number;
-  DeptName?: string;
   DeviceTypeCode?: string;
   DeviceTypeName?: string;
   DeviceId?: number;

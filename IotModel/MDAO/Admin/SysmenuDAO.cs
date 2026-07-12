@@ -264,39 +264,6 @@ namespace IotModel
                 };
                 list.Add(menu1);
 
-                SysMenu menu2 = new SysMenu
-                {
-                    MenuId = "10010",
-                    MenuCode = "Unit",
-                    MenuName = "单位管理",
-                    ParentId = "10000",
-                    MenuUrl = "/system/unit/index",
-                    MenuIcon = ""
-                };
-                list.Add(menu2);
-
-                SysMenu menu3 = new SysMenu
-                {
-                    MenuId = "10011",
-                    MenuCode = "Build",
-                    MenuName = "建筑管理",
-                    ParentId = "10000",
-                    MenuUrl = "/system/build/index",
-                    MenuIcon = ""
-                };
-                list.Add(menu3);
-
-                SysMenu menu4 = new SysMenu
-                {
-                    MenuId = "10012",
-                    MenuCode = "dept",
-                    MenuName = "部门管理",
-                    ParentId = "10000",
-                    MenuUrl = "/system/department/index",
-                    MenuIcon = ""
-                };
-                list.Add(menu4);
-
                 SysMenu menu5 = new SysMenu
                 {
                     MenuId = "10015",

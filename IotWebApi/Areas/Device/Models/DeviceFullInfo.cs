@@ -9,10 +9,10 @@ namespace IotWebApi.Areas.Device.Models
     public class DeviceFullInfo : DeviceInfoEntity
     {
         /// <summary>
-        /// 单位名称
+        /// 租户名称
         ///</summary>
-        [DisplayName("单位名称")]
-        public string UnitName { get; set; }
+        [DisplayName("租户名称")]
+        public string TenantName { get; set; }
         /// <summary>
         /// 设备类型名称
         ///</summary>

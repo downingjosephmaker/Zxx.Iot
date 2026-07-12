@@ -260,10 +260,11 @@ namespace IotWebApi
                         using var sr = new StreamReader(request.Body, leaveOpen: true, encoding: Encoding.UTF8);
                         paramJson = await sr.ReadToEndAsync();
 
-                        // 租户隔离已统一由 DbContext 全局 QueryFilter(AddTableFilter<ITenantEntity>) + TenantScope 超管豁免接管。
+                        // 租户隔离由 TenantIsolation.Attach 统一接管(挂载点:DbContext.GetOperDb/TranAction/SqlSugar_Db):
+                        // QueryFilter.AddTableFilter<ITenantEntity> 查询过滤 + 插入回填 + 缓存出口 FilterTenantScope。
                         // 原先在此按 tokenmdl 向 sconlist 注入 "UnitId=当前租户" 的旧机制已移除:它靠属性名字符串 "unitid"
                         // 反射匹配,且注入的是 =当前租户(与决策 B1 父见子孙冲突)。sys_user 现已实现 ITenantEntity 随全局
-                        // 过滤器隔离;basicunit_info 由其 Controller 内 SysRelated 授权过滤。
+                        // 过滤器隔离。
 
                         //Action中可再次读取流
                         request.Body.Seek(0, SeekOrigin.Begin);

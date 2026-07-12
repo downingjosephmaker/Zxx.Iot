@@ -13,13 +13,13 @@ type AlarmHandler = (alarm: EventSignalItem) => void;
 
 /**
  * 告警实时订阅组合式函数
- * 独立连接，按单位 JoinAlarmGroup，断线自动重连并恢复订阅，页面卸载自动断开
+ * 独立连接，按租户 JoinAlarmGroup，断线自动重连并恢复订阅，页面卸载自动断开
  */
 export function useAlarmSignalR() {
   const connection = shallowRef<HubConnection | null>(null);
   const connected = ref(false);
-  /** 当前已加入的告警组(单位ID)，重连后自动重新 JoinAlarmGroup */
-  const joinedUnitId = ref<number | null>(null);
+  /** 当前已加入的告警组(租户ID)，重连后自动重新 JoinAlarmGroup */
+  const joinedTenantId = ref<number | null>(null);
 
   let onAlarm: AlarmHandler | null = null;
   let manualClosed = false;
@@ -55,8 +55,8 @@ export function useAlarmSignalR() {
       await conn.start();
       connection.value = conn;
       connected.value = true;
-      if (joinedUnitId.value != null) {
-        await conn.invoke("JoinAlarmGroup", joinedUnitId.value);
+      if (joinedTenantId.value != null) {
+        await conn.invoke("JoinAlarmGroup", joinedTenantId.value);
       }
     } catch {
       connected.value = false;
@@ -64,18 +64,20 @@ export function useAlarmSignalR() {
     }
   }
 
-  /** 加入某单位的告警组 */
-  async function joinUnit(unitId: number) {
+  /** 加入某租户的告警组 */
+  async function joinTenant(tenantId: number) {
     const conn = connection.value;
     if (
-      joinedUnitId.value != null &&
+      joinedTenantId.value != null &&
       conn?.state === HubConnectionState.Connected
     ) {
-      await conn.invoke("LeaveAlarmGroup", joinedUnitId.value).catch(() => {});
+      await conn
+        .invoke("LeaveAlarmGroup", joinedTenantId.value)
+        .catch(() => {});
     }
-    joinedUnitId.value = unitId;
+    joinedTenantId.value = tenantId;
     if (conn?.state === HubConnectionState.Connected) {
-      await conn.invoke("JoinAlarmGroup", unitId).catch(() => {});
+      await conn.invoke("JoinAlarmGroup", tenantId).catch(() => {});
     }
   }
 
@@ -87,10 +89,12 @@ export function useAlarmSignalR() {
     manualClosed = true;
     const conn = connection.value;
     if (
-      joinedUnitId.value != null &&
+      joinedTenantId.value != null &&
       conn?.state === HubConnectionState.Connected
     ) {
-      await conn.invoke("LeaveAlarmGroup", joinedUnitId.value).catch(() => {});
+      await conn
+        .invoke("LeaveAlarmGroup", joinedTenantId.value)
+        .catch(() => {});
     }
     if (conn) {
       await conn.stop().catch(() => {});
@@ -105,10 +109,10 @@ export function useAlarmSignalR() {
 
   return {
     connected,
-    joinedUnitId,
+    joinedTenantId,
     start,
     stop,
-    joinUnit,
+    joinTenant,
     setHandler
   };
 }
