@@ -15,8 +15,22 @@ namespace IotPlugin.Cjt188
     /// 同DI点位分组为一条抄读指令;表型T按类型编码经MeterTypeMap配置(默认0x10冷水表);
     /// 阀控C=04H DI=A017H走EnableValveControl白名单,默认关闭)
     /// </summary>
-    public class Cjt188Plugin : ICenBoPlugin
+    public class Cjt188Plugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托Cjt188Simulator) =====
+        private readonly Sim.Cjt188Simulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
         private IEventBus<PluginEvent>? _eventBus;
         private Cjt188PluginConfig? _config;
         private TimerX? _heartTimer;
