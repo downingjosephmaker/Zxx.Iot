@@ -39,15 +39,9 @@ string urls = AppSetting.GetConfig("Urls");
 if (!urls.IsZxxNullOrEmpty())
     builder.WebHost.UseUrls(urls);
 
-#region 配置Serilog（统一由 Zhjngk.ServiceLog 管理）
-
-// 日志选项整体来自 appsettings.json 的 "LogConfig" 节（AppName/LogDir/滚动/保留/Loki）；
-// 文件(按天+按大小滚动)与控制台 sink 始终启用，LokiUrl 配置了才直推 Loki
 var logConfig = AppSetting.GetT<LogOptions>("LogConfig");
 LogBootstrap.Init(logConfig);
 builder.Host.UseSerilog();
-
-#endregion
 
 Log.Information("当前环境: {Environment}", builder.Environment.EnvironmentName);
 

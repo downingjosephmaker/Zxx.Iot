@@ -16,17 +16,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="NewLife.Core">
-      <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="XCode">
-      <HintPath>..\ZhjngkLib\XCode.dll</HintPath>
-    </Reference>
+    <!-- 开放internal给测试项目(帧编解码纯函数单测,方案A §4.3) -->
+    <InternalsVisibleTo Include="IotTests" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 开放internal给测试项目(帧编解码纯函数单测,方案A §4.3) -->
-    <InternalsVisibleTo Include="IotTests" />
+    <Reference Include="NewLife.Core">
+      <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

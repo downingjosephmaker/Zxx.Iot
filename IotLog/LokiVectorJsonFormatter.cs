@@ -30,6 +30,7 @@ namespace IotLog
             // level 归一化：Information→INFO, Warning→WARN, Error→ERROR, Debug→DEBUG
             // 与 Vector 的 starts_with 逻辑等价
             WriteField(sb, "level", NormalizeLevel(logEvent.Level));
+            WriteField(sb, "level", NormalizeLevel(logEvent.Level));
 
             // 属性字段（小写键名，对齐 Vector JSON；属性缺失时输出空字符串）
             WriteProp(sb, "app", logEvent, "App");
