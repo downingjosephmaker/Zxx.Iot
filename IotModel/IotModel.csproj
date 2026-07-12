@@ -8,7 +8,6 @@
 	<ItemGroup>
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
 		<PackageReference Include="SqlSugarCore" Version="5.1.4.216" />
-		<!-- NU1903:SqlSugarCore→Microsoft.Data.Sqlite传递带入SQLitePCLRaw 2.1.11(GHSA-2m69-gcr7-jv3q,2.1.x线无修复版),顶层直引3.0.x覆盖 -->
 		<PackageReference Include="StackExchange.Redis" Version="3.0.17" />
 	</ItemGroup>
 
