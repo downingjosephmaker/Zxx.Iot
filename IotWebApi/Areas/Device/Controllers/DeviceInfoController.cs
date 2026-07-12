@@ -1,4 +1,5 @@
 ﻿using CenBoCommon.Zxx;
+using IotLog;
 using IotModel;
 using IotWebApi.Areas.Device.Models;
 using IotWebApi.Services;
@@ -190,6 +191,29 @@ namespace IotWebApi.Controllers
                 }
             }
             return Message;
+        }
+
+        /// <summary>
+        /// 启用/停用单设备采集(切IsCollection单字段+通知所属插件重建拓扑,即时生效)
+        /// </summary>
+        [HttpPost]
+        [Route("Api/[controller]/[action]")]
+        public string ToggleCollection(int deviceId, int isCollection)
+        {
+            try
+            {
+                var dev = DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == deviceId);
+                if (dev == null) return "设备不存在";
+                dev.IsCollection = isCollection == 1 ? 1 : 0;
+                DeviceInfoDAO.Instance.UpdateColumns(dev, it => new { it.IsCollection });
+                _configReload.Notify(dev.IsCollection == 1 ? "启用设备采集" : "停用设备采集");
+                return "success";
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite("DeviceInfoController", "ToggleCollection", ex.ToString(), "设备管理");
+                return "操作失败";
+            }
         }
 
         /// <summary>
