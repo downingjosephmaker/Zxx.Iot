@@ -198,6 +198,8 @@ namespace IotWebApi.Controllers
         /// </summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public string ToggleCollection(int deviceId, int isCollection)
         {
             try
