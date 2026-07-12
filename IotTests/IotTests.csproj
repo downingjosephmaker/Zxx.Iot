@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IotDriverCore\IotDriverCore.csproj" />
-    <ProjectReference Include="..\IotSimulator.Core\IotSimulator.Core.csproj" />
     <ProjectReference Include="..\IotPlugin.Modbus\IotPlugin.Modbus.csproj" />
     <ProjectReference Include="..\IotPlugin.Dlt645\IotPlugin.Dlt645.csproj" />
     <ProjectReference Include="..\IotPlugin.Cjt188\IotPlugin.Cjt188.csproj" />

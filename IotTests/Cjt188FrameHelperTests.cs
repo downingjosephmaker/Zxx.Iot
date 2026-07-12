@@ -1,7 +1,8 @@
 #if PLUGIN_INTERNALS
 using IotPlugin.Cjt188;
-using IotSimulator.Core.Scenario;
-using IotSimulator.Core.Slaves;
+using IotDriverCore;
+using IotDriverCore.Simulation;
+using IotPlugin.Cjt188.Sim;
 using Xunit;
 
 namespace IotTests
@@ -146,9 +147,9 @@ namespace IotTests
         [Fact]
         public void 对抗_从站应答_插件解析出正确DI值()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4, Scale = 0.01,
-                    Generator = new GeneratorModel { Type = "constant", Base = 123.45 } } } };
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
+                    Generator = new GeneratorModel { Type = "constant", Base = 12345 } } } };
             var slave = new Cjt188Slave(device);
             var addr = Cjt188FrameHelper.BuildAddressBcd(1);
             var request = Cjt188FrameHelper.BuildReadFrame(0x10, addr, 0x9010, 0x33);
@@ -163,15 +164,15 @@ namespace IotTests
             Assert.Equal(0x90, data[1]);  // DI高
             Assert.Equal(0x33, data[2]);  // SER回显
             var valueArea = data[3..];
-            // 123.45/0.01=12345
+            // 从站Scale固定为1,工程值12345直接编码
             Assert.Equal("12345", Cjt188FrameHelper.DecodeBcdValue(valueArea, false));
         }
 
         [Fact]
         public void 对抗_从站SER回显_与请求一致()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4,
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Cjt188Slave(device);
             var addr = Cjt188FrameHelper.BuildAddressBcd(1);

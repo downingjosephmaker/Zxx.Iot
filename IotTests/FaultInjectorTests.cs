@@ -1,5 +1,4 @@
-using IotSimulator.Core.Faults;
-using IotSimulator.Core.Scenario;
+using IotDriverCore.Simulation;
 using Xunit;
 
 namespace IotTests

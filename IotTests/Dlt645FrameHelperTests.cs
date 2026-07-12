@@ -1,7 +1,8 @@
 #if PLUGIN_INTERNALS
 using IotPlugin.Dlt645;
-using IotSimulator.Core.Scenario;
-using IotSimulator.Core.Slaves;
+using IotDriverCore;
+using IotDriverCore.Simulation;
+using IotPlugin.Dlt645.Sim;
 using Xunit;
 
 namespace IotTests
@@ -187,14 +188,14 @@ namespace IotTests
         [Fact]
         public void 对抗_从站应答帧_插件解析出正确DI与值()
         {
-            // 独立从站编:表地址1,DI=00010000,constant=500000(工程值5000,scale0.01)
-            var device = new DeviceModel
+            // 独立从站编:表地址1,DI=00010000,constant=500000(从站Scale固定为1,工程值即原始值)
+            var device = new SimDevice
             {
                 Address = "000000000001",
                 Points =
                 {
-                    new PointModel { Di = "0x00010000", Length = 4, Scale = 0.01,
-                        Generator = new GeneratorModel { Type = "constant", Base = 5000 } }
+                    new SimPoint { Di = "0x00010000", Length = 4,
+                        Generator = new GeneratorModel { Type = "constant", Base = 500000 } }
                 }
             };
             var slave = new Dlt645Slave(device, false);
@@ -214,14 +215,14 @@ namespace IotTests
             // 值区(跳过4字节DI)解码应为500000
             var valueBytes = data[4..];
             var raw = Dlt645FrameHelper.DecodeBcdValue(valueBytes, false);
-            Assert.Equal("500000", raw);  // 5000/0.01=500000
+            Assert.Equal("500000", raw);
         }
 
         [Fact]
         public void 对抗_从站对错误地址不应答()
         {
-            var device = new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var device = new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Dlt645Slave(device, false);
             // 请求另一个地址的表
@@ -233,8 +234,8 @@ namespace IotTests
         [Fact]
         public void 对抗_从站对未配置DI不应答()
         {
-            var device = new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var device = new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Dlt645Slave(device, false);
             var addr = Dlt645FrameHelper.BuildAddressBcd(1);

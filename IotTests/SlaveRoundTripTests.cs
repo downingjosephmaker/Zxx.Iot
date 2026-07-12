@@ -1,5 +1,7 @@
-using IotSimulator.Core.Scenario;
-using IotSimulator.Core.Slaves;
+using IotDriverCore;
+using IotDriverCore.Simulation;
+using IotPlugin.Dlt645.Sim;
+using IotPlugin.Cjt188.Sim;
 using Xunit;
 
 namespace IotTests
@@ -67,25 +69,25 @@ namespace IotTests
         [Fact]
         public void Dlt645从站_常量值_编码正确()
         {
-            var device = new DeviceModel
+            var device = new SimDevice
             {
                 Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4, Scale = 0.01,
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 5000 } } }
             };
             var slave = new Dlt645Slave(device, false);
             var addr = BuildAddr("000000000001", 12);
             var reply = slave.HandleFrame(Build645Read(addr, 0x00010000), System.DateTime.Now);
             Assert.NotNull(reply);
-            // 工程值5000/scale0.01=原始500000
-            Assert.Equal("500000", Parse645Value(reply!));
+            // 从站Scale固定为1,工程值5000直接编码
+            Assert.Equal("5000", Parse645Value(reply!));
         }
 
         [Fact]
         public void Dlt645从站_应答帧结构_双68定界结束符16()
         {
-            var device = new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var device = new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Dlt645Slave(device, false);
             var reply = slave.HandleFrame(Build645Read(BuildAddr("000000000001", 12), 0x00010000), System.DateTime.Now);
@@ -99,8 +101,8 @@ namespace IotTests
         [Fact]
         public void Dlt645从站_应答CS_可被独立校验()
         {
-            var device = new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var device = new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Dlt645Slave(device, false);
             var reply = slave.HandleFrame(Build645Read(BuildAddr("000000000001", 12), 0x00010000), System.DateTime.Now);
@@ -112,8 +114,8 @@ namespace IotTests
         [Fact]
         public void Dlt645从站_地址回显_逐字节相等()
         {
-            var device = new DeviceModel { Address = "000000123456",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var device = new SimDevice { Address = "000000123456",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Dlt645Slave(device, false);
             var addr = BuildAddr("000000123456", 12);
@@ -126,11 +128,11 @@ namespace IotTests
         [Fact]
         public void Dlt645从站_多表挂同连接_按地址路由()
         {
-            var runner1 = new Dlt645Slave(new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var runner1 = new Dlt645Slave(new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 111 } } } }, false);
-            var runner2 = new Dlt645Slave(new DeviceModel { Address = "000000000002",
-                Points = { new PointModel { Di = "0x00010000", Length = 4,
+            var runner2 = new Dlt645Slave(new SimDevice { Address = "000000000002",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 222 } } } }, false);
             var req1 = Build645Read(BuildAddr("000000000001", 12), 0x00010000);
             // 表2不应答表1的请求
@@ -141,14 +143,13 @@ namespace IotTests
         [Fact]
         public void Dlt645从站_有符号负值_编码符号位()
         {
-            var device = new DeviceModel { Address = "000000000001",
-                Points = { new PointModel { Di = "0x02020100", Length = 3, Scale = 0.001,
-                    Generator = new GeneratorModel { Type = "constant", Base = 3.256 } } } };
-            // 从站默认Signed=false,此处仅验证正值链路(有符号编码在插件对抗测覆盖)
+            var device = new SimDevice { Address = "000000000001",
+                Points = { new SimPoint { Di = "0x02020100", Length = 3,
+                    Generator = new GeneratorModel { Type = "constant", Base = 3256 } } } };
+            // 从站默认Signed=false,此处仅验证正值链路(有符号编码在插件对抗测覆盖);Scale固定为1,工程值即原始值
             var slave = new Dlt645Slave(device, false);
             var reply = slave.HandleFrame(Build645Read(BuildAddr("000000000001", 12), 0x02020100), System.DateTime.Now);
             Assert.NotNull(reply);
-            // 3.256/0.001=3256
             Assert.Equal("3256", Parse645Value(reply!));
         }
 
@@ -171,9 +172,9 @@ namespace IotTests
         [Fact]
         public void Cjt188从站_应答结构_控制码81_SER回显()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4, Scale = 0.01,
-                    Generator = new GeneratorModel { Type = "constant", Base = 123.45 } } } };
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
+                    Generator = new GeneratorModel { Type = "constant", Base = 12345 } } } };
             var slave = new Cjt188Slave(device);
             var addr = BuildAddr("00000000000001", 14);
             var reply = slave.HandleFrame(Build188Read(0x10, addr, 0x9010, 0x33), System.DateTime.Now);
@@ -190,8 +191,8 @@ namespace IotTests
         [Fact]
         public void Cjt188从站_地址7字节_低位在前()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4,
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Cjt188Slave(device);
             var addr = BuildAddr("00000000000001", 14);
@@ -204,15 +205,15 @@ namespace IotTests
         [Fact]
         public void Cjt188从站_值区明文BCD无33偏移()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4, Scale = 0.01,
-                    Generator = new GeneratorModel { Type = "constant", Base = 123.45 } } } };
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
+                    Generator = new GeneratorModel { Type = "constant", Base = 12345 } } } };
             var slave = new Cjt188Slave(device);
             var addr = BuildAddr("00000000000001", 14);
             var reply = slave.HandleFrame(Build188Read(0x10, addr, 0x9010, 0x01), System.DateTime.Now);
             Assert.NotNull(reply);
             // 值区从偏移14起(68 T addr7 C L DI2 SER = 2+7+2+3=... 11头+3=14),4字节
-            // 123.45/0.01=12345→BCD低位在前:45 23 01 00(明文无+33)
+            // 从站Scale固定为1,工程值12345直接编码→BCD低位在前:45 23 01 00(明文无+33)
             var valueArea = reply![14..18];
             Assert.Equal(new byte[] { 0x45, 0x23, 0x01, 0x00 }, valueArea);
         }
@@ -220,8 +221,8 @@ namespace IotTests
         [Fact]
         public void Cjt188从站_错误地址_不应答()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4,
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Cjt188Slave(device);
             var wrongAddr = BuildAddr("00000000000099", 14);
@@ -231,8 +232,8 @@ namespace IotTests
         [Fact]
         public void Cjt188从站_应答CS_可被独立校验()
         {
-            var device = new DeviceModel { Address = "00000000000001", MeterType = "0x10",
-                Points = { new PointModel { Di = "0x9010", Length = 4,
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points = { new SimPoint { Di = "0x9010", Length = 4,
                     Generator = new GeneratorModel { Type = "constant", Base = 100 } } } };
             var slave = new Cjt188Slave(device);
             var addr = BuildAddr("00000000000001", 14);
