@@ -157,6 +157,6 @@ SELECT tablename FROM pg_tables WHERE schemaname='public'
 DROP TABLE IF EXISTS public.event_report_month;
 ```
 
-- 数据库 `sys_menu` 中若存在指向已删页面（能耗分析/报表 dataAnalysis/reportForms 系）的菜单行，由运维清理（当前前端为纯静态路由，DB 菜单不参与渲染，仅影响菜单管理页整洁）。
+- ~~数据库 `sys_menu` 菜单残行清理~~ **已核验作废（2026-07-12）**：本地 PG 实例（6305）全部五库逐库核验均不存在 `sys_menu` 表（CodeFirst 惰性建表，菜单 DAO 从未触达），目标环境亦确认无此表，无残行可清。若日后某环境建出该表并存有指向已删页面（能耗分析/dataAnalysis/reportForms 系）的菜单行，按 `menu_url` 匹配删行并清 Redis 键 `SysMenu`（Db=1，实体挂 [EntityCache]）即可。
 - **中期加固项（有生产多租户诉求时做）**：新增 `[Token]` 端点签发"报表专用短时 token"（复用 EncryptsHelper，载荷加 marker 字段+独立短时限，VerifyToken 识别 marker），前端 iframe 改拼该 token——把泄露半径从全 API 缩小到报表数据集两个端点。
 - ~~已知预存问题~~ **已修复（2026-07-12）**：`DbContext` 缓存回填污染——`EnsureCacheLoaded` 回填、`ValidateCacheConsistency` 计数与刷新共三处查询加 `ClearFilter<ITenantEntity>()` 取无租户过滤的真全表（后者原是更主要的污染引擎：普通租户请求触发 10 分钟一致性校验时，子集计数与全表缓存必然"不一致"，反复清掉正确缓存再用子集污染回填）；租户隔离仍由缓存出口 `FilterTenantScope` 负责，全部缓存读路径已核验无未过滤出口。残余小项：插入恰逢缓存过期窗口会短暂种下少量行快照，由修正后的一致性校验在 ≤10 分钟内自愈。
