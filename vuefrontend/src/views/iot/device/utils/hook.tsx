@@ -2,7 +2,7 @@ import { message } from "@/utils/message";
 import { addDialog, closeDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, h, ref, reactive, onMounted } from "vue";
-import { ElMessage, ElTag } from "element-plus";
+import { ElMessage, ElMessageBox, ElTag } from "element-plus";
 import type {
   QueryTableParams,
   DeviceInfoItem,
@@ -15,6 +15,7 @@ import {
   getListByPage as getTypeList,
   type DeviceTypeItem
 } from "@/api/iot/devicetype";
+import { toggleCollection } from "@/api/simulator";
 import editForm from "../form.vue";
 import commandSend from "../command-send.vue";
 import importForm from "../import-form.vue";
@@ -163,7 +164,7 @@ export function useDeviceInfo(tableRef: Ref) {
     {
       label: "操作",
       fixed: "right",
-      width: 220,
+      width: 340,
       slot: "operation"
     }
   ];
@@ -483,6 +484,32 @@ export function useDeviceInfo(tableRef: Ref) {
     }
   }
 
+  /** 启用/停用采集(二次确认→ToggleCollection→刷新列表) */
+  async function handleToggleCollection(row: DeviceInfoItem) {
+    const toStop = row.IsCollection === 1;
+    try {
+      await ElMessageBox.confirm(
+        `确定要${toStop ? "停用" : "启用"}设备「${row.DeviceName}」的采集吗？`,
+        "提示",
+        { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      );
+    } catch {
+      return;
+    }
+    const result = await toggleCollection(row.DeviceId, toStop ? 0 : 1);
+    if (result === "success") {
+      message(`${toStop ? "停用" : "启用"}采集成功`, { type: "success" });
+      onSearch();
+    } else {
+      message(result || "操作失败", { type: "error" });
+    }
+  }
+
+  /** 打开模拟弹窗(Task 10 实现弹窗内容) */
+  function handleOpenSim(row: DeviceInfoItem) {
+    // TODO(Task 10): 打开模拟配置/控制弹窗
+  }
+
   async function onbatchDel() {
     if (selectedRows.value.length === 0) {
       ElMessage.warning("请先选择要删除的设备");
@@ -522,6 +549,8 @@ export function useDeviceInfo(tableRef: Ref) {
     openCommandDialog,
     openImportDialog,
     handleDelete,
+    handleToggleCollection,
+    handleOpenSim,
     onbatchDel,
     onSelectionCancel
   };

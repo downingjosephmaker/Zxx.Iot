@@ -11,6 +11,8 @@ import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
 import Promotion from "~icons/ep/promotion";
 import Upload from "~icons/ep/upload";
+import VideoPlay from "~icons/ep/video-play";
+import Switch from "~icons/ep/switch";
 
 defineOptions({
   name: "IotDevice"
@@ -36,6 +38,8 @@ const {
   openCommandDialog,
   openImportDialog,
   handleDelete,
+  handleToggleCollection,
+  handleOpenSim,
   onbatchDel,
   onSelectionCancel
 } = useDeviceInfo(tableRef);
@@ -163,6 +167,26 @@ const {
                 @click="openCommandDialog(row)"
               >
                 指令
+              </el-button>
+              <el-button
+                class="reset-margin"
+                link
+                :type="row.IsCollection === 1 ? 'danger' : 'success'"
+                :size="size"
+                :icon="useRenderIcon(Switch)"
+                @click="handleToggleCollection(row)"
+              >
+                {{ row.IsCollection === 1 ? "停采" : "启采" }}
+              </el-button>
+              <el-button
+                class="reset-margin"
+                link
+                type="primary"
+                :size="size"
+                :icon="useRenderIcon(VideoPlay)"
+                @click="handleOpenSim(row)"
+              >
+                模拟
               </el-button>
               <el-button
                 class="reset-margin"
