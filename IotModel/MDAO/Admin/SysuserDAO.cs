@@ -34,7 +34,7 @@ namespace IotModel
                     TrueName = "开发管理员",
                     UserXb = "未知",
                     IsEnable = 1,
-                    UserRemark = "Admin6688",
+                    UserRemark = "Admin666",
                     TenantId = 1,
                     CreateId = 1,
                     CreateTime = time,
