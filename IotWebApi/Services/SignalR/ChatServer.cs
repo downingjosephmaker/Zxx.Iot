@@ -103,6 +103,18 @@ namespace IotWebApi.Services.Jobs
             => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"alarm:{tenantId}");
 
         /// <summary>
+        /// 加入模拟分组(模拟弹窗订阅指定模拟实例的实时帧日志,经ReceiveSimLog下发)
+        /// </summary>
+        public async Task JoinSimGroup(string simId)
+            => await Groups.AddToGroupAsync(Context.ConnectionId, $"sim:{simId}");
+
+        /// <summary>
+        /// 离开模拟分组
+        /// </summary>
+        public async Task LeaveSimGroup(string simId)
+            => await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"sim:{simId}");
+
+        /// <summary>
         /// 在客户端连接到中心时执行操作
         /// </summary>
         /// <returns></returns>

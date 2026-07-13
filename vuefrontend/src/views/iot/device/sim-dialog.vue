@@ -189,6 +189,8 @@ async function onStartSim() {
       curSimId.value = data.status?.SimId || "";
       running.value = true;
       logs.value = [];
+      if (curSimId.value)
+        await connection?.invoke("JoinSimGroup", curSimId.value).catch(() => {});
       message("模拟已启动", { type: "success" });
     } else {
       message(data?.msg || "启动模拟失败", { type: "error" });
@@ -205,6 +207,7 @@ async function onStopSim() {
     return;
   }
   await stopSim(curSimId.value);
+  await connection?.invoke("LeaveSimGroup", curSimId.value).catch(() => {});
   running.value = false;
   message("模拟已停止", { type: "success" });
 }
@@ -273,6 +276,7 @@ function onDialogClose() {
     clearInterval(runningTimer);
     runningTimer = null;
   }
+  if (curSimId.value) connection?.invoke("LeaveSimGroup", curSimId.value).catch(() => {});
   closeSignalR();
 }
 

@@ -1,7 +1,10 @@
 using CenBoCommon.Zxx;
 using IotDriverCore;
+using IotLog;
 using IotModel;
+using IotWebApi.Services.Jobs;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace IotWebApi.Areas.Device.Controllers
 {
@@ -30,6 +33,15 @@ namespace IotWebApi.Areas.Device.Controllers
     [ApiController]
     public class SimulatorController : ControllerBaseApi
     {
+        private const string LOG_CATEGORY = "设备模拟";
+
+        private readonly IHubContext<ChatServer> _hubContext;
+
+        public SimulatorController(IHubContext<ChatServer> hubContext)
+        {
+            _hubContext = hubContext;
+        }
+
         /// <summary>取设备模拟元信息:点表快照+所属插件是否支持模拟+默认端口</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
@@ -70,6 +82,7 @@ namespace IotWebApi.Areas.Device.Controllers
             var req = new SimStartRequest { Mode = SimMode.Slave, Port = body.Port, Devices = new() { simDev } };
             var status = await sim.StartSimAsync(req, default);
             status.DeviceId = dev.DeviceId;
+            AttachSimLog(sim);
             return new { ok = true, status };
         }
 
@@ -80,7 +93,12 @@ namespace IotWebApi.Areas.Device.Controllers
         [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> StopSim([FromBody] StopSimBody body)
         {
-            foreach (var sim in AllSims()) await sim.StopSimAsync(body.SimId);
+            foreach (var sim in AllSims())
+            {
+                await sim.StopSimAsync(body.SimId);
+                // 该插件下已无运行中模拟,摘除回调,避免悬空引用
+                if (sim.ListSims().Count == 0) sim.OnSimLog = null;
+            }
             return new { ok = true };
         }
 
@@ -131,6 +149,19 @@ namespace IotWebApi.Areas.Device.Controllers
 
         private static IEnumerable<ISimulatable> AllSims() =>
             OperatorCommon.DicPlugins.Values.OfType<ISimulatable>();
+
+        /// <summary>
+        /// 挂载帧日志回调(按SimLogEntry.SimId路由到对应sim分组;
+        /// 插件实例是单例,一个挂载点服务该插件下所有并存的模拟,幂等挂载不重复覆盖)
+        /// </summary>
+        private void AttachSimLog(ISimulatable sim)
+        {
+            sim.OnSimLog ??= entry =>
+            {
+                _hubContext.Clients.Group($"sim:{entry.SimId}").SendAsync("ReceiveSimLog", entry.ToJson())
+                    .ContinueWith(t => LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"模拟帧日志推送失败：{t.Exception}", LOG_CATEGORY), TaskContinuationOptions.OnlyOnFaulted);
+            };
+        }
 
         private static void ApplyOverrides(SimDevice dev, StartSimBody body)
         {
