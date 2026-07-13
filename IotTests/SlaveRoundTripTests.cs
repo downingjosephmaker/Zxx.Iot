@@ -141,6 +141,22 @@ namespace IotTests
         }
 
         [Fact]
+        public void Dlt645从站_Scale生效_按比例还原原始值()
+        {
+            var device = new SimDevice
+            {
+                Address = "000000000001",
+                Points = { new SimPoint { Di = "0x00010000", Length = 4, Scale = 0.01,
+                    Generator = new GeneratorModel { Type = "constant", Base = 100 } } }
+            };
+            var slave = new Dlt645Slave(device, false);
+            var reply = slave.HandleFrame(Build645Read(BuildAddr("000000000001", 12), 0x00010000), System.DateTime.Now);
+            Assert.NotNull(reply);
+            // 工程值100,Scale=0.01→原始值100/0.01=10000,插件解码后再乘0.01还原100
+            Assert.Equal("10000", Parse645Value(reply!));
+        }
+
+        [Fact]
         public void Dlt645从站_有符号负值_编码符号位()
         {
             var device = new SimDevice { Address = "000000000001",

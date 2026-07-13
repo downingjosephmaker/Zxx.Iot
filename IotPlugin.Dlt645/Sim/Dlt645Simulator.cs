@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using IotDriverCore;
 using IotDriverCore.Simulation;
 
@@ -11,7 +12,7 @@ namespace IotPlugin.Dlt645.Sim
             public TcpServerChannel Channel = null!;
             public FrameAccumulator Accumulator = null!;
             public List<IProtocolSlave> Slaves = new();
-            public Dictionary<IProtocolSlave, FaultInjector> Injectors = new();
+            public ConcurrentDictionary<IProtocolSlave, FaultInjector> Injectors = new();
             public SimStatus Status = null!;
         }
 
@@ -24,6 +25,9 @@ namespace IotPlugin.Dlt645.Sim
         };
 
         public Action<SimLogEntry>? OnSimLog { get; set; }
+
+        /// <summary>本插件配置中判定为1997版(2字节DI)的设备类型编码集合,由Dlt645Plugin在StartSimAsync前注入</summary>
+        public HashSet<string> Codes1997 { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct)
         {
@@ -39,7 +43,7 @@ namespace IotPlugin.Dlt645.Sim
             };
             foreach (var dev in request.Devices)
             {
-                var slave = new Dlt645Slave(dev, is1997: false);
+                var slave = new Dlt645Slave(dev, is1997: Codes1997.Contains(dev.DeviceTypeCode));
                 inst.Slaves.Add(slave);
                 inst.Injectors[slave] = new FaultInjector(dev.Faults, slave.Corrupt);
             }
@@ -47,7 +51,13 @@ namespace IotPlugin.Dlt645.Sim
             {
                 FrameReceived = (ep, data) => OnInbound(simId, inst, ep, data)
             };
-            inst.Channel.Start();
+            if (!inst.Channel.Start())
+            {
+                inst.Status.Running = false;
+                inst.Status.Message = "端口占用或启动失败";
+                inst.Channel.Dispose();
+                return Task.FromResult(inst.Status);
+            }
             lock (_lock) { _sims[simId] = inst; }
             return Task.FromResult(inst.Status);
         }
@@ -62,7 +72,8 @@ namespace IotPlugin.Dlt645.Sim
                 {
                     var reply = slave.HandleFrame(frame, now);
                     if (reply == null) continue;
-                    var decision = inst.Injectors[slave].Decorate(reply);
+                    if (!inst.Injectors.TryGetValue(slave, out var injector)) continue;
+                    var decision = injector.Decorate(reply);
                     if (decision.Drop) { Log(simId, "→", Array.Empty<byte>(), $"从站[{slave.Address}]故障丢弃"); break; }
                     foreach (var seg in decision.Segments)
                     {
@@ -89,6 +100,16 @@ namespace IotPlugin.Dlt645.Sim
                 if (_sims.Remove(simId, out var inst)) inst.Channel.Dispose();
             }
             return Task.CompletedTask;
+        }
+
+        /// <summary>停止并释放所有运行中的模拟实例(插件PluginStop时联动调用)</summary>
+        public void StopAll()
+        {
+            lock (_lock)
+            {
+                foreach (var inst in _sims.Values) inst.Channel.Dispose();
+                _sims.Clear();
+            }
         }
 
         public IReadOnlyList<SimStatus> ListSims()

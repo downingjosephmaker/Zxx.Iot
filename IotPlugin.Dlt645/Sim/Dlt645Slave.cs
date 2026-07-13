@@ -44,7 +44,7 @@ namespace IotPlugin.Dlt645.Sim
                 {
                     Di = di,
                     ValueBytes = Math.Max(1, pm.Length),
-                    Scale = 1,
+                    Scale = pm.Scale,
                     Signed = false,
                     Generator = GeneratorFactory.Create(pm.Generator)
                 };

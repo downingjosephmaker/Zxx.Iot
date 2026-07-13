@@ -27,7 +27,13 @@ namespace IotPlugin.Dlt645
             get => _simulator.OnSimLog;
             set => _simulator.OnSimLog = value;
         }
-        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct)
+        {
+            _simulator.Codes1997 = (_config?.Dlt1997TypeCodes ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return _simulator.StartSimAsync(request, ct);
+        }
         public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
         public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
         public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
@@ -268,6 +274,7 @@ namespace IotPlugin.Dlt645
                     _deviceMap = new Dictionary<int, Dlt645DeviceBinding>();
                     _endpointMap = new Dictionary<string, List<Dlt645DeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("Dlt645Plugin", "PluginStop", ex.ToString(), "DLT645插件"); }
             return true;
