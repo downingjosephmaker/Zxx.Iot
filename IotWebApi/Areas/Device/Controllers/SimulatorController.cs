@@ -5,6 +5,8 @@ using IotModel;
 using IotWebApi.Services.Jobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace IotWebApi.Areas.Device.Controllers
 {
@@ -16,6 +18,7 @@ namespace IotWebApi.Areas.Device.Controllers
             return new SimDevice
             {
                 Address = dev.DeviceAdr.ToString(),
+                DeviceTypeCode = dev.DeviceTypeCode,
                 Points = points.Select(p => new SimPoint
                 {
                     ParamCode = p.ParamCode,
@@ -23,9 +26,26 @@ namespace IotWebApi.Areas.Device.Controllers
                     FuncCode = p.CollectFuncCode,
                     Length = p.CollectFuncCode <= 2 ? 1 : Math.Max(1, p.CollectRegLength),
                     DataType = (p.CollectDataType ?? "uint16").Trim(),
+                    Scale = ParseLinearScale(p.ParamFormula),
+                    BitOffset = p.CollectBitOffset,
                     Generator = new IotDriverCore.Simulation.GeneratorModel { Type = "random", Min = 0, Max = 100 }
                 }).ToList()
             };
+        }
+
+        /// <summary>从ParamFormula线性公式反解乘系数k(a*k / k*a → k;a/空/含偏移/非线性/失败 → 1)</summary>
+        internal static double ParseLinearScale(string? formula)
+        {
+            if (string.IsNullOrWhiteSpace(formula)) return 1;
+            var s = formula.Trim();
+            if (Regex.IsMatch(s, @"^a$", RegexOptions.IgnoreCase)) return 1;
+            var m = Regex.Match(s, @"^a\s*\*\s*([0-9]*\.?[0-9]+)$", RegexOptions.IgnoreCase);
+            if (!m.Success) m = Regex.Match(s, @"^([0-9]*\.?[0-9]+)\s*\*\s*a$", RegexOptions.IgnoreCase);
+            if (m.Success
+                && double.TryParse(m.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var k)
+                && k != 0)
+                return k;
+            return 1;
         }
     }
 
@@ -34,6 +54,9 @@ namespace IotWebApi.Areas.Device.Controllers
     public class SimulatorController : ControllerBaseApi
     {
         private const string LOG_CATEGORY = "设备模拟";
+
+        /// <summary>并发运行中模拟实例上限(跨所有插件合计)</summary>
+        private const int MAX_SIMS = 32;
 
         private readonly IHubContext<ChatServer> _hubContext;
 
@@ -71,6 +94,8 @@ namespace IotWebApi.Areas.Device.Controllers
         [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> StartSim([FromBody] StartSimBody body)
         {
+            if (body.Port < 1024 || body.Port > 65535) return new { ok = false, msg = "端口需在1024-65535之间" };
+            if (AllSims().SelectMany(s => s.ListSims()).Count() >= MAX_SIMS) return new { ok = false, msg = "运行中模拟实例已达上限" };
             var dev = DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == body.DeviceId);
             if (dev == null) return new { ok = false, msg = "设备不存在" };
             var sim = ResolveSim(dev.DeviceTypeCode, out _);
@@ -93,6 +118,9 @@ namespace IotWebApi.Areas.Device.Controllers
         [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> StopSim([FromBody] StopSimBody body)
         {
+            var target = AllSims().SelectMany(s => s.ListSims()).FirstOrDefault(x => x.SimId == body.SimId);
+            if (target == null || DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == target.DeviceId) == null)
+                return new { ok = false, msg = "无权操作该模拟实例或实例不存在" };
             foreach (var sim in AllSims())
             {
                 await sim.StopSimAsync(body.SimId);
@@ -110,7 +138,11 @@ namespace IotWebApi.Areas.Device.Controllers
         public object ListSims()
         {
             var all = AllSims().SelectMany(s => s.ListSims()).ToList();
-            return new { ok = true, sims = all };
+            if (all.Count == 0) return new { ok = true, sims = all };
+            var ids = all.Select(x => x.DeviceId).Distinct().ToList();
+            var mine = DeviceInfoDAO.Instance.GetListBy(t => ids.Contains(t.DeviceId)).Select(d => d.DeviceId).ToHashSet();
+            var sims = all.Where(x => mine.Contains(x.DeviceId)).ToList();
+            return new { ok = true, sims };
         }
 
         /// <summary>运行中注入/清除故障</summary>
@@ -120,6 +152,9 @@ namespace IotWebApi.Areas.Device.Controllers
         [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> InjectFault([FromBody] InjectFaultBody body)
         {
+            var target = AllSims().SelectMany(s => s.ListSims()).FirstOrDefault(x => x.SimId == body.SimId);
+            if (target == null || DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == target.DeviceId) == null)
+                return new { ok = false, msg = "无权操作该模拟实例或实例不存在" };
             foreach (var sim in AllSims())
                 await sim.InjectFaultAsync(body.SimId, new SimFaultSpec { Kind = body.Kind, Probability = body.Probability, DelayMs = body.DelayMs });
             return new { ok = true };
@@ -137,9 +172,8 @@ namespace IotWebApi.Areas.Device.Controllers
             pluginName = "";
             foreach (var kv in OperatorCommon.DicPlugins)
             {
-                if (kv.Value is ISimulatable sim)
+                if (kv.Value is ISimulatable sim && sim.OwnsDeviceType(deviceTypeCode))
                 {
-                    // 简化:首个支持模拟且协议匹配的插件;精确匹配可后续按DeviceTypeCodes配置细化
                     pluginName = kv.Value.PluginName;
                     return sim;
                 }
