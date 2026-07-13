@@ -108,5 +108,9 @@ namespace IotPlugin.Dlt645.Sim
             }
             return Task.CompletedTask;
         }
+
+        // 本模拟器无插件配置(_config)可查,DeviceTypeCodes路由判定在Dlt645Plugin(持有_config)实现,
+        // SimulatorController按插件实例路由,不会调用此处
+        public bool OwnsDeviceType(string deviceTypeCode) => false;
     }
 }

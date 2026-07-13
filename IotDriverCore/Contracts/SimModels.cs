@@ -17,6 +17,10 @@ namespace IotDriverCore
         public string DataType { get; set; } = "uint16";
         /// <summary>值生成器(默认随机游走,UI可覆盖,不落库)</summary>
         public GeneratorModel Generator { get; set; } = new();
+        /// <summary>线性比例系数(平台点位显示值=原始值×Scale,来自ParamFormula如"a*0.01"的乘系数k;默认1无缩放)</summary>
+        public double Scale { get; set; } = 1;
+        /// <summary>值区字节偏移(映射自DeviceTypeParam.CollectBitOffset;仅CJ188多值DI布局用,-1表示按点序连续)</summary>
+        public int BitOffset { get; set; } = -1;
     }
 
     /// <summary>模拟设备(一个从站)</summary>
@@ -26,6 +30,8 @@ namespace IotDriverCore
         public string Address { get; set; } = "";
         /// <summary>表型(仅cjt188)</summary>
         public string? MeterType { get; set; }
+        /// <summary>设备类型编码(供从站判定协议变体,如645的1997/2007版)</summary>
+        public string DeviceTypeCode { get; set; } = "";
         /// <summary>点位清单</summary>
         public List<SimPoint> Points { get; set; } = new();
         /// <summary>设备级故障注入</summary>

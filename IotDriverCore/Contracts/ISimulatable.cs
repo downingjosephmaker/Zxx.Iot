@@ -23,5 +23,8 @@ namespace IotDriverCore
 
         /// <summary>实时日志回调(收发帧hex摘要,宿主接到后转推SignalR)</summary>
         Action<SimLogEntry>? OnSimLog { get; set; }
+
+        /// <summary>本插件是否负责该设备类型编码(按插件配置DeviceTypeCodes匹配,供路由精确命中)</summary>
+        bool OwnsDeviceType(string deviceTypeCode);
     }
 }

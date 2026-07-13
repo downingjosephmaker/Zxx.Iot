@@ -31,6 +31,11 @@ namespace IotPlugin.Cjt188
         public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
         public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
 
+        public bool OwnsDeviceType(string deviceTypeCode) =>
+            _config != null && _config.DeviceTypeCodes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(deviceTypeCode, StringComparer.OrdinalIgnoreCase);
+
         private IEventBus<PluginEvent>? _eventBus;
         private Cjt188PluginConfig? _config;
         private TimerX? _heartTimer;

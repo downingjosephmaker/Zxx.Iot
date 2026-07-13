@@ -63,5 +63,9 @@ namespace IotPlugin.Modbus.Sim
             // Modbus从站为FluentModbus托管寄存器区,故障注入本期不适用(仅串行协议支持),空实现
             return Task.CompletedTask;
         }
+
+        // 本模拟器无插件配置(_config)可查,DeviceTypeCodes路由判定在ModbusPlugin(持有_config)实现,
+        // SimulatorController按插件实例路由,不会调用此处
+        public bool OwnsDeviceType(string deviceTypeCode) => false;
     }
 }
