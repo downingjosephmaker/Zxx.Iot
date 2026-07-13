@@ -39,9 +39,29 @@ namespace IotPlugin.Modbus.Sim
                 StartedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 Message = "已启动"
             };
-            slave.Start();
+            try
+            {
+                slave.Start();
+            }
+            catch (Exception ex)
+            {
+                slave.Dispose();
+                status.Running = false;
+                status.Message = "端口占用或启动失败:" + ex.Message;
+                return Task.FromResult(status);
+            }
             lock (_lock) { _sims[simId] = (slave, status); }
             return Task.FromResult(status);
+        }
+
+        /// <summary>停止所有从站实例(插件停止时调用,确保刷新循环停止、端口释放)</summary>
+        public void StopAll()
+        {
+            lock (_lock)
+            {
+                foreach (var entry in _sims.Values) entry.slave.Stop();
+                _sims.Clear();
+            }
         }
 
         public Task StopSimAsync(string simId)

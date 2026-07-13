@@ -42,7 +42,8 @@ namespace IotPlugin.Modbus.Sim
                         Address = (int)ParseUint(pm.Di),
                         DataType = (pm.DataType ?? "uint16").Trim().ToLowerInvariant(),
                         RegLength = InferRegLength(pm.DataType, pm.Length),
-                        Generator = GeneratorFactory.Create(pm.Generator)
+                        Generator = GeneratorFactory.Create(pm.Generator),
+                        Scale = pm.Scale
                     });
                 }
             }
@@ -107,7 +108,7 @@ namespace IotPlugin.Modbus.Sim
             var registers = point.FuncCode == 4
                 ? _server.GetInputRegisters(point.UnitId)
                 : _server.GetHoldingRegisters(point.UnitId);
-            double value = point.Generator.Next(now);
+            double value = point.Generator.Next(now) / point.Scale;
             switch (point.DataType)
             {
                 case "int16":
@@ -167,6 +168,7 @@ namespace IotPlugin.Modbus.Sim
             public string DataType = "uint16";
             public int RegLength;
             public IValueGenerator Generator = null!;
+            public double Scale = 1;
         }
     }
 }

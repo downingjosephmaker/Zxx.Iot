@@ -262,6 +262,7 @@ namespace IotPlugin.Modbus
                     _deviceMap = new Dictionary<int, ModbusDeviceBinding>();
                     _endpointMap = new Dictionary<string, List<ModbusDeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("ModbusPlugin", "PluginStop", ex.ToString(), "Modbus插件"); }
             return true;
