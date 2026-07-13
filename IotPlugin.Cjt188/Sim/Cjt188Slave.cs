@@ -42,7 +42,8 @@ namespace IotPlugin.Cjt188.Sim
                 list.Add(new SlavePoint
                 {
                     ValueBytes = Math.Max(1, pm.Length),
-                    Scale = 1,
+                    Scale = pm.Scale,
+                    Offset = pm.BitOffset,
                     Generator = GeneratorFactory.Create(pm.Generator)
                 });
             }
@@ -111,18 +112,34 @@ namespace IotPlugin.Cjt188.Sim
         }
 
         /// <summary>
-        /// 构建读应答帧(C=01H|0x80=81H;数据域=DI2低位在前+SER回显+值区顺序拼接)
+        /// 构建读应答帧(C=01H|0x80=81H;数据域=DI2低位在前+SER回显+值区)
+        /// 值区布局:该DI下所有点均配置字节偏移(Offset>=0)时按偏移落位、空隙留0,与采集侧Array.Copy(valuearea,offset,..)对齐;
+        /// 存在未配置偏移(Offset<0)时退回按点序连续拼接(向后兼容)
         /// </summary>
         private byte[] BuildReadReply(byte meterType, ushort di, byte ser, List<SlavePoint> points, DateTime now)
         {
-            // 值区:按点位顺序拼接BCD值字节(低位在前)
-            var valueArea = new List<byte>();
-            foreach (var p in points)
+            byte[] valueArea;
+            if (points.All(p => p.Offset >= 0))
             {
-                valueArea.AddRange(EncodeBcdValue(p.Generator.Next(now) / p.Scale, p.ValueBytes));
+                int len = points.Max(p => Math.Max(0, p.Offset) + p.ValueBytes);
+                valueArea = new byte[len];
+                foreach (var p in points)
+                {
+                    var bcd = EncodeBcdValue(p.Generator.Next(now) / p.Scale, p.ValueBytes);
+                    bcd.CopyTo(valueArea, Math.Max(0, p.Offset));
+                }
+            }
+            else
+            {
+                var list = new List<byte>();
+                foreach (var p in points)
+                {
+                    list.AddRange(EncodeBcdValue(p.Generator.Next(now) / p.Scale, p.ValueBytes));
+                }
+                valueArea = list.ToArray();
             }
 
-            var payload = new byte[3 + valueArea.Count];
+            var payload = new byte[3 + valueArea.Length];
             payload[0] = (byte)(di & 0xFF);
             payload[1] = (byte)(di >> 8);
             payload[2] = ser;
@@ -234,6 +251,8 @@ namespace IotPlugin.Cjt188.Sim
         {
             public int ValueBytes;
             public double Scale;
+            /// <summary>值区字节偏移(映射自CollectBitOffset;-1表示按点序连续)</summary>
+            public int Offset;
             public IValueGenerator Generator = null!;
         }
     }

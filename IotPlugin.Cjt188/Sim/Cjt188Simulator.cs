@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using IotDriverCore;
 using IotDriverCore.Simulation;
 
@@ -11,7 +12,7 @@ namespace IotPlugin.Cjt188.Sim
             public TcpServerChannel Channel = null!;
             public FrameAccumulator Accumulator = null!;
             public List<IProtocolSlave> Slaves = new();
-            public Dictionary<IProtocolSlave, FaultInjector> Injectors = new();
+            public ConcurrentDictionary<IProtocolSlave, FaultInjector> Injectors = new();
             public SimStatus Status = null!;
         }
 
@@ -47,7 +48,13 @@ namespace IotPlugin.Cjt188.Sim
             {
                 FrameReceived = (ep, data) => OnInbound(simId, inst, ep, data)
             };
-            inst.Channel.Start();
+            if (!inst.Channel.Start())
+            {
+                inst.Status.Running = false;
+                inst.Status.Message = "端口占用或启动失败";
+                inst.Channel.Dispose();
+                return Task.FromResult(inst.Status);
+            }
             lock (_lock) { _sims[simId] = inst; }
             return Task.FromResult(inst.Status);
         }
@@ -62,7 +69,8 @@ namespace IotPlugin.Cjt188.Sim
                 {
                     var reply = slave.HandleFrame(frame, now);
                     if (reply == null) continue;
-                    var decision = inst.Injectors[slave].Decorate(reply);
+                    if (!inst.Injectors.TryGetValue(slave, out var injector)) continue;
+                    var decision = injector.Decorate(reply);
                     if (decision.Drop) { Log(simId, "→", Array.Empty<byte>(), $"从站[{slave.Address}]故障丢弃"); break; }
                     foreach (var seg in decision.Segments)
                     {
@@ -89,6 +97,16 @@ namespace IotPlugin.Cjt188.Sim
                 if (_sims.Remove(simId, out var inst)) inst.Channel.Dispose();
             }
             return Task.CompletedTask;
+        }
+
+        /// <summary>停止并释放所有运行中的模拟实例(插件PluginStop时联动调用)</summary>
+        public void StopAll()
+        {
+            lock (_lock)
+            {
+                foreach (var inst in _sims.Values) inst.Channel.Dispose();
+                _sims.Clear();
+            }
         }
 
         public IReadOnlyList<SimStatus> ListSims()

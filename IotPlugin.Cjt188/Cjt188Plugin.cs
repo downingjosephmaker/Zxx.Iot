@@ -279,6 +279,7 @@ namespace IotPlugin.Cjt188
                     _deviceMap = new Dictionary<int, Cjt188DeviceBinding>();
                     _endpointMap = new Dictionary<string, List<Cjt188DeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("Cjt188Plugin", "PluginStop", ex.ToString(), "CJT188插件"); }
             return true;

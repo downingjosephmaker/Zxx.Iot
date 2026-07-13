@@ -235,6 +235,47 @@ namespace IotTests
         }
 
         [Fact]
+        public void Cjt188从站_多值DI_按字节偏移布局_空隙留0()
+        {
+            // 同一DI下两点:偏移0(2字节,常量1234)与偏移4(2字节,常量5678),偏移2~3为空隙留0
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points =
+                {
+                    new SimPoint { Di = "0x9010", Length = 2, BitOffset = 0,
+                        Generator = new GeneratorModel { Type = "constant", Base = 1234 } },
+                    new SimPoint { Di = "0x9010", Length = 2, BitOffset = 4,
+                        Generator = new GeneratorModel { Type = "constant", Base = 5678 } }
+                } };
+            var slave = new Cjt188Slave(device);
+            var addr = BuildAddr("00000000000001", 14);
+            var reply = slave.HandleFrame(Build188Read(0x10, addr, 0x9010, 0x01), System.DateTime.Now);
+            Assert.NotNull(reply);
+            // 值区从偏移14起,长度=max(0+2,4+2)=6:偏移0→BCD低位在前34 12;偏移2~3空隙00 00;偏移4→78 56
+            var valueArea = reply![14..20];
+            Assert.Equal(new byte[] { 0x34, 0x12, 0x00, 0x00, 0x78, 0x56 }, valueArea);
+        }
+
+        [Fact]
+        public void Cjt188从站_多值DI_乱序偏移_按偏移落位不受声明顺序影响()
+        {
+            // 声明顺序与偏移顺序相反:先声明偏移4,后声明偏移0,结果仍按偏移落位
+            var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
+                Points =
+                {
+                    new SimPoint { Di = "0x9010", Length = 2, BitOffset = 4,
+                        Generator = new GeneratorModel { Type = "constant", Base = 5678 } },
+                    new SimPoint { Di = "0x9010", Length = 2, BitOffset = 0,
+                        Generator = new GeneratorModel { Type = "constant", Base = 1234 } }
+                } };
+            var slave = new Cjt188Slave(device);
+            var addr = BuildAddr("00000000000001", 14);
+            var reply = slave.HandleFrame(Build188Read(0x10, addr, 0x9010, 0x01), System.DateTime.Now);
+            Assert.NotNull(reply);
+            var valueArea = reply![14..20];
+            Assert.Equal(new byte[] { 0x34, 0x12, 0x00, 0x00, 0x78, 0x56 }, valueArea);
+        }
+
+        [Fact]
         public void Cjt188从站_错误地址_不应答()
         {
             var device = new SimDevice { Address = "00000000000001", MeterType = "0x10",
