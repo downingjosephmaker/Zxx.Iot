@@ -33,6 +33,8 @@ namespace IotWebApi.Areas.Device.Controllers
         /// <summary>取设备模拟元信息:点表快照+所属插件是否支持模拟+默认端口</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public object GetDeviceSimMeta(int deviceId)
         {
             var dev = DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == deviceId);
@@ -53,6 +55,8 @@ namespace IotWebApi.Areas.Device.Controllers
         /// <summary>启动模拟(路由到设备所属插件)</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> StartSim([FromBody] StartSimBody body)
         {
             var dev = DeviceInfoDAO.Instance.GetOneBy(t => t.DeviceId == body.DeviceId);
@@ -72,6 +76,8 @@ namespace IotWebApi.Areas.Device.Controllers
         /// <summary>停止模拟</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> StopSim([FromBody] StopSimBody body)
         {
             foreach (var sim in AllSims()) await sim.StopSimAsync(body.SimId);
@@ -81,6 +87,8 @@ namespace IotWebApi.Areas.Device.Controllers
         /// <summary>列出所有运行中模拟</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public object ListSims()
         {
             var all = AllSims().SelectMany(s => s.ListSims()).ToList();
@@ -90,6 +98,8 @@ namespace IotWebApi.Areas.Device.Controllers
         /// <summary>运行中注入/清除故障</summary>
         [HttpPost]
         [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Device)]
         public async Task<object> InjectFault([FromBody] InjectFaultBody body)
         {
             foreach (var sim in AllSims())
