@@ -51,6 +51,8 @@ declare global {
     fixedTag?: boolean;
     /** 动态路由可打开的最大数量 `可选` */
     dynamicLevel?: number;
+    /** 项目类型：组态项目(`scada`,默认)/报表项目(`dash`)。两类项目共用项目管理页与组态引擎，仅读写不同的后端接口 `可选` */
+    projectKind?: "scada" | "dash";
     /** 将某个菜单激活
      * （主要用于通过`query`或`params`传参的路由，当它们通过配置`showLink: false`后不在菜单中显示，就不会有任何菜单高亮，
      * 而通过设置`activePath`指定激活菜单即可获得高亮，`activePath`为指定激活菜单的`path`）

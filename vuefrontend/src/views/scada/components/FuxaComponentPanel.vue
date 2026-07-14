@@ -155,6 +155,31 @@ import {
 // 导入新的组件管理器
 import { componentManager } from "../core/ComponentManager";
 
+const props = withDefaults(
+  defineProps<{
+    /** 项目类型：scada=监控组态(全部组件) / dash=自定义报表(仅报表组件) */
+    projectKind?: "scada" | "dash";
+  }>(),
+  { projectKind: "scada" }
+);
+
+/**
+ * 报表项目的可用组件白名单。
+ * 报表要的表格/图表/文本卡散落在 basic 与 controls 两个分类里，按分类粒度过滤会连带
+ * 拖进按钮、滑块、开关等控制件，因此过滤粒度下沉到组件 name。
+ */
+const REPORT_COMPONENTS = [
+  "table", // 表格
+  "unified-chart", // ECharts 图表
+  "text-card", // 文本卡片
+  "led-display", // 数值显示
+  "text", // 文本
+  "image", // 图片(logo/水印)
+  "rect", // 矩形(分区框)
+  "circle",
+  "line" // 分隔线
+];
+
 // 定义组件接口
 interface FuxaComponentItem {
   name: string;
@@ -274,14 +299,27 @@ const fuxaComponentGroups: FuxaComponentGroup[] = [
   convertComponentsToFuxaFormat(resourceComponents, "resource", "资源")
 ].filter(group => group.components.length > 0);
 
+/** 按项目类型裁剪可用组件：报表项目只留白名单内的组件 */
+const kindScopedGroups = computed(() => {
+  if (props.projectKind !== "dash") return fuxaComponentGroups;
+  return fuxaComponentGroups
+    .map(group => ({
+      ...group,
+      components: group.components.filter(comp =>
+        REPORT_COMPONENTS.includes(comp.name)
+      )
+    }))
+    .filter(group => group.components.length > 0);
+});
+
 // 计算属性
 const filteredGroups = computed(() => {
   if (!searchKeyword.value.trim()) {
-    return fuxaComponentGroups;
+    return kindScopedGroups.value;
   }
 
   const keyword = searchKeyword.value.toLowerCase();
-  return fuxaComponentGroups
+  return kindScopedGroups.value
     .map(group => ({
       ...group,
       components: group.components.filter(

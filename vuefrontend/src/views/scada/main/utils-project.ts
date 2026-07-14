@@ -5,7 +5,27 @@ import { ref, reactive, type Ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { Router } from "vue-router";
 import html2canvas from "html2canvas";
-import scadaApi, { type ScadaProjectInfo } from "@/api/scada/project";
+import scadaApi, {
+  createProjectApi,
+  type ProjectApi,
+  type ProjectKind,
+  type ScadaProjectInfo
+} from "@/api/scada/project";
+
+/**
+ * 当前项目类型对应的 API。组态项目(scada_project)与报表项目(dash_project)共用本模块与整个编辑器，
+ * 仅读写的后端接口不同——进入编辑器时按路由 query 的 kind 切换一次即可。
+ */
+let api: ProjectApi = createProjectApi("scada");
+
+/** 从路由取项目类型（缺省为组态项目） */
+export const getProjectKind = (route: any): ProjectKind =>
+  route?.query?.kind === "dash" ? "dash" : "scada";
+
+/** 切换编辑器当前操作的项目类型（编辑器挂载时调用一次） */
+export const setProjectKind = (kind: ProjectKind) => {
+  api = createProjectApi(kind);
+};
 
 /**
  * 生成画布截图(Base64格式)
@@ -99,7 +119,7 @@ export const saveProject = async (
           ImageType: imageType,
           ImageName: ""
         };
-        const uploadRes = await scadaApi.uploadBase64Image(datas);
+        const uploadRes = await api.uploadBase64Image(datas);
         if (uploadRes.Status && uploadRes.Result) {
           thumbnailUrl = uploadRes.Message || "";
         }
@@ -109,7 +129,7 @@ export const saveProject = async (
     }
 
     // 3. 直接保存 projectData（包含 settings、components、devices、datasets）
-    const response = await scadaApi.saveProjectData({
+    const response = await api.saveProjectData({
       ProjectId: projectInfo.value.SnowId,
       ContentData: JSON.stringify(projectData.value, null, 2),
       Thumbnail: thumbnailUrl
@@ -146,7 +166,7 @@ export const loadProject = async (
     loading.value = true;
 
     // 1. 调用getDataInfo获取项目完整数据
-    const response = await scadaApi.getDataInfo(projectId);
+    const response = await api.getDataInfo(projectId);
     if (!response.Status || !response.Result) {
       ElMessage.error("项目不存在或加载失败");
       return;
@@ -516,8 +536,8 @@ export const handleBeforeUnload = (isSaved: Ref<boolean>) => {
  */
 export const publishProject = async (projectId: string, status: number) => {
   try {
-    const runtimeUrl = status === 1 ? scadaApi.buildRuntimeUrl(projectId) : "";
-    const response = await scadaApi.dashPublish(projectId, status, runtimeUrl);
+    const runtimeUrl = status === 1 ? api.buildRuntimeUrl(projectId) : "";
+    const response = await api.dashPublish(projectId, status, runtimeUrl);
     if (response.Status) {
       ElMessage.success(status === 1 ? "项目发布成功" : "取消发布成功");
       return true;

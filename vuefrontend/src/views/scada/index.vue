@@ -46,7 +46,12 @@ import * as utils3 from "./main/utils3";
 import * as utils4 from "./main/utils4";
 import * as utilsButton from "./main/utils-button";
 import * as utilsProject from "./main/utils-project";
-import { DEFAULT_PROJECT_DATA, getProjectId } from "./main/utils-project";
+import {
+  DEFAULT_PROJECT_DATA,
+  getProjectId,
+  getProjectKind,
+  setProjectKind
+} from "./main/utils-project";
 import {
   rehydrateDatasetList,
   previewIotDataset
@@ -79,6 +84,8 @@ const route = useRoute();
 const router = useRouter();
 
 const projectId = getProjectId(route);
+/** 项目类型：scada=监控组态(全部图元) / dash=自定义报表(仅报表组件) */
+const projectKind = getProjectKind(route);
 
 const projectData = ref({ ...DEFAULT_PROJECT_DATA });
 const loading = ref(false);
@@ -3440,6 +3447,9 @@ const handleMqttAlarms = (topic: string, alarms: any[]) => {
 };
 
 onMounted(async () => {
+  // 组态项目/报表项目共用本编辑器，先按路由 kind 切到对应的一套后端接口
+  setProjectKind(projectKind);
+
   document.addEventListener(
     "fuxa:data:update",
     handleRuntimeDataUpdate as EventListener
@@ -3908,6 +3918,7 @@ onUnmounted(() => {
       <!-- 左侧组件库面板 -->
       <div v-show="showComponentPanel" class="left-panel">
         <FuxaComponentPanel
+          :project-kind="projectKind"
           @add-component="handleAddComponent"
           @activate-component="handleActivateComponent"
         />

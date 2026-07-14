@@ -8,17 +8,19 @@ import { ElMessage } from "element-plus";
 import dayjs from "dayjs";
 import type { ScadaProjectItem, ScadaProjectFormItemProps } from "./types";
 import {
-  getListByPage,
-  deleteByPk,
-  saveBatch,
-  dashPublish,
-  buildRuntimeUrl
+  createProjectApi,
+  type ProjectKind
 } from "@/api/scada/project/index";
 import editForm from "../form.vue";
 
-export function useScadaProject(tableRef: Ref) {
+/**
+ * 项目管理页（组态项目 / 报表项目共用）。
+ * 两类项目落在不同的表，但字段与操作完全同构——按 kind 取对应 API，页面只维护一套。
+ */
+export function useScadaProject(tableRef: Ref, kind: ProjectKind = "scada") {
   const router = useRouter();
-  const ModuleTitle = "SCADA项目";
+  const api = createProjectApi(kind);
+  const ModuleTitle = kind === "dash" ? "报表项目" : "组态项目";
   const form = reactive({
     keyword: "",
     status: ""
@@ -100,7 +102,7 @@ export function useScadaProject(tableRef: Ref) {
   ];
 
   async function handleDelete(row: ScadaProjectItem) {
-    const data = await deleteByPk(row.SnowId.toString());
+    const data = await api.deleteByPk(row.SnowId.toString());
     if (data.Status) {
       message("删除成功", { type: "success" });
       onSearch();
@@ -116,10 +118,10 @@ export function useScadaProject(tableRef: Ref) {
       const newStatus = row.ProjectStatus === 0 ? 1 : 0;
       const actionText = newStatus === 1 ? "发布" : "取消发布";
 
-      const data = await dashPublish(
+      const data = await api.dashPublish(
         row.SnowId,
         newStatus,
-        newStatus === 1 ? buildRuntimeUrl(row.SnowId) : ""
+        newStatus === 1 ? api.buildRuntimeUrl(row.SnowId) : ""
       );
       if (data.Status) {
         message(`${actionText}成功`, { type: "success" });
@@ -133,7 +135,7 @@ export function useScadaProject(tableRef: Ref) {
     }
   }
 
-  // 打开SCADA编辑器
+  // 打开编辑器（同一个编辑器，kind 决定读写哪套接口与可用组件）
   function openProject(row: ScadaProjectItem) {
     try {
       // 检查项目ID是否有效
@@ -142,14 +144,11 @@ export function useScadaProject(tableRef: Ref) {
         return;
       }
 
-      // 使用动态路由导航到SCADA编辑器
       router.push({
         name: "ScadaFuxaEditor",
-        params: { id: row.SnowId.toString() }
+        params: { id: row.SnowId.toString() },
+        query: kind === "dash" ? { kind: "dash" } : {}
       });
-      //router.push({
-      //  path: `/scada/editor/${row.SnowId}`
-      //});
     } catch (error) {
       console.error("打开编辑器失败:", error);
       ElMessage.error("打开编辑器失败，请稍后重试");
@@ -211,7 +210,7 @@ export function useScadaProject(tableRef: Ref) {
       });
     }
 
-    const data = await getListByPage(params);
+    const data = await api.getListByPage(params);
     if (data.Status) {
       dataList.value = JSON.parse(data.Result);
       pagination.total = data.Total;
@@ -266,9 +265,9 @@ export function useScadaProject(tableRef: Ref) {
         FormRef.validate(async valid => {
           if (valid) {
             delete curData.title;
-            const data = await saveBatch([curData]);
+            const data = await api.saveBatch([curData]);
             if (data.Status) {
-              message(`${title}SCADA项目成功`, { type: "success" });
+              message(`${title}${ModuleTitle}成功`, { type: "success" });
               done(); // 关闭弹框
               onSearch(); // 刷新表格数据
             } else {
@@ -297,7 +296,7 @@ export function useScadaProject(tableRef: Ref) {
 
     try {
       const ids = selectedRows.value.map(row => row.SnowId.toString());
-      const promises = ids.map(id => deleteByPk(id));
+      const promises = ids.map(id => api.deleteByPk(id));
       const results = await Promise.all(promises);
 
       const successCount = results.filter(result => result.Status).length;

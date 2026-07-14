@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { ElMessage, ElMessageBox, type FormInstance } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -9,6 +9,7 @@ import { Auth } from "@/components/ReAuth";
 import useUtils from "@/utils/utils";
 import dayjs from "dayjs";
 import type { ScadaProjectItem } from "./utils/types";
+import type { ProjectKind } from "@/api/scada/project/index";
 import AddFill from "~icons/ri/add-circle-line";
 import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
@@ -16,9 +17,12 @@ import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
 
 const router = useRouter();
+const route = useRoute();
 const formRef = ref<FormInstance>();
 const tableRef = ref();
-const title = "组态项目";
+// 项目类型由路由 meta 决定：同一个页面同时服务组态项目与报表项目两个入口
+const kind = (route.meta?.projectKind as ProjectKind) ?? "scada";
+const title = kind === "dash" ? "报表项目" : "组态项目";
 
 // 使用hook获取表格管理功能
 const {
@@ -39,7 +43,7 @@ const {
   openProject,
   onSelectionCancel,
   onbatchDel
-} = useScadaProject(tableRef);
+} = useScadaProject(tableRef, kind);
 
 // 导入项目功能
 const importProject = () => {

@@ -30,7 +30,7 @@ import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { FullScreen } from "@element-plus/icons-vue";
-import scadaApi from "@/api/scada/project";
+import { createProjectApi, type ProjectKind } from "@/api/scada/project";
 import { fuxaMqttService } from "./core/fuxaMqttService";
 import { IotDatasetRunner, type IotPointValue } from "./core/DatasetRuntime";
 import {
@@ -47,6 +47,10 @@ defineOptions({
 
 const route = useRoute();
 const projectId = route.params.id as string;
+/** 组态项目与报表项目共用运行态，kind 决定从哪套接口读项目 */
+const projectKind: ProjectKind =
+  route.query.kind === "dash" ? "dash" : "scada";
+const projectApi = createProjectApi(projectKind);
 
 const canvasRef = ref<HTMLElement | null>(null);
 const canvasWidth = ref(1920);
@@ -70,7 +74,7 @@ const loadProject = async () => {
     loading.value = true;
 
     // 1. 获取项目完整数据（基本信息 + ContentData 组态内容）
-    const response = await scadaApi.getDataInfo(projectId);
+    const response = await projectApi.getDataInfo(projectId);
     if (!response.Status || !response.Result) {
       throw new Error("获取项目数据失败");
     }
