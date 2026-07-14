@@ -254,9 +254,27 @@ namespace IotWebApi.Controllers
                 var rolemenulist = SysRoleMenuBtnDAO.Instance.GetListBy(t => t.RoleId == optmdl._Sysuser.RoleId);
                 if (!rolemenulist.IsZxxAny()) return list;
 
-                var _MenuIds = rolemenulist.Select(t => t.MenuId);
+                var _MenuIds = rolemenulist.Select(t => t.MenuId).Distinct().ToList();
                 var _menulist = SysMenuDAO.Instance.GetListBy(t => _MenuIds.Contains(t.MenuId));
-                if (_menulist.IsZxxAny()) menulist.AddRange(_menulist);
+                if (_menulist.IsZxxAny())
+                {
+                    //补全祖先:授权只勾了子菜单而没勾父目录时,GetMenuInfoList 从"0"递归找不到父节点,
+                    //会把整棵子树静默丢掉。沿 ParentId 上溯把缺失的祖先补进来,保证树可达。
+                    var allmenu = SysMenuDAO.Instance.GetList();
+                    var picked = _menulist.ToDictionary(t => t.MenuId);
+                    foreach (var m in _menulist)
+                    {
+                        var pid = m.ParentId;
+                        while (!pid.IsZxxNullOrEmpty() && pid != "0" && !picked.ContainsKey(pid))
+                        {
+                            var parent = allmenu.Find(t => t.MenuId == pid);
+                            if (parent == null) break;
+                            picked[parent.MenuId] = parent;
+                            pid = parent.ParentId;
+                        }
+                    }
+                    menulist.AddRange(picked.Values);
+                }
                 var sysbtnlist = SysButtonDAO.Instance.GetList();
                 foreach (var item in rolemenulist)
                 {
@@ -305,9 +323,25 @@ namespace IotWebApi.Controllers
                     {
                         title = item.MenuName,
                         icon = item.MenuIcon,
-                        rank = item.SortBorder,
+                        rank = ParseRank(item.SortBorder),
                         showLink = item.IsShowLink == 1,
                     };
+                    //meta_json 的键平铺进 meta(如 projectKind:组态与报表共用同一个 project 页面,靠它区分读写哪套数据)
+                    if (!item.MetaJson.IsZxxNullOrEmpty())
+                    {
+                        try
+                        {
+                            var extra = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(item.MetaJson);
+                            if (extra != null)
+                            {
+                                foreach (var kv in extra) meta.extra[kv.Key] = kv.Value;
+                            }
+                        }
+                        catch
+                        {
+                            //meta_json 由人在菜单管理里手填,格式写错不该让整棵菜单树崩掉
+                        }
+                    }
                     var btnlist = menubtnlist.FindAll(t => t.MenuId == item.MenuId);
                     if (btnlist.IsZxxAny())
                     {
@@ -328,6 +362,8 @@ namespace IotWebApi.Controllers
                         menuid = item.MenuId,
                         name = item.MenuCode,
                         path = item.MenuUrl,
+                        //目录节点不配组件:前端会把动态路由拍平后统一挂到根路由(Layout)下
+                        component = item.Component.IsZxxNullOrEmpty() ? null : item.Component,
                         meta = meta,
                     };
 
@@ -342,6 +378,17 @@ namespace IotWebApi.Controllers
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// 把排序码解析成 pure-admin 需要的数字 rank(如 "A002"→2、"B011"→11)。
+        /// SortBorder 兼具树内排序码与前端 rank 两个用途,前端只认数字,故在此剥离字母前缀。
+        /// </summary>
+        private static int? ParseRank(string sortBorder)
+        {
+            if (sortBorder.IsZxxNullOrEmpty()) return null;
+            var digits = new string(sortBorder.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out var rank) ? rank : (int?)null;
         }
 
         /// <summary>

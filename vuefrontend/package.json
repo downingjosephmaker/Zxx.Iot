@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "gen:icons": "node build/gen-ri-iconset.mjs",
+    "predev": "node build/gen-ri-iconset.mjs",
     "dev": "NODE_OPTIONS=--max-old-space-size=4096 vite",
     "serve": "pnpm dev",
+    "prebuild": "node build/gen-ri-iconset.mjs",
     "build": "rimraf dist && NODE_OPTIONS=--max-old-space-size=8192 vite build && generate-version-file",
     "build:staging": "rimraf dist && vite build --mode staging",
     "report": "rimraf dist && vite build",

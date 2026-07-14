@@ -6,7 +6,7 @@ import {
   resetRouter,
   routerArrays
 } from "../utils";
-import { storageSession, storageLocal } from "@pureadmin/utils";
+import { storageSession } from "@pureadmin/utils";
 import {
   type UserResult,
   type RefreshTokenResult,
@@ -16,38 +16,36 @@ import {
 } from "@/api/user";
 import { getMenuTree } from "@/api/system";
 
-/** 授权菜单名集本地键(侧边栏按角色过滤依据;超管/空集时不写=直通不过滤,防锁死) */
-export const grantedMenusKey = "granted-menu-names";
-
 /**
- * 登录后按角色装配菜单/按钮权限(③全局菜单目录+租户角色授权的前端接线)。
- * 超管:清空授权集→侧边栏不过滤看全部;非超管:拉本角色授权菜单树,
- * 落菜单名集(供 filterNoPermissionTree 过滤)+按钮码(供 v-perms)。失败静默(空集直通,绝不锁死)。
+ * 登录后装配按钮级权限(供 v-perms / v-auth 指令使用)。
+ *
+ * 菜单本身不在这里处理:侧边栏由 initRouter 拉 GetMenuTree(islimit=1) 动态生成,
+ * 后端已按角色只下发授权菜单。这里只从同一份数据里把按钮码摘出来。
+ * 失败静默:拿不到按钮权限不该阻断登录。
  */
-async function applyMenuGrants(isSystem: boolean, setPerms: (p: string[]) => void) {
+async function applyMenuGrants(
+  isSystem: boolean,
+  setPerms: (p: string[]) => void
+) {
   try {
     if (isSystem) {
-      storageLocal().removeItem(grantedMenusKey);
       setPerms([]);
       return;
     }
     const res = await getMenuTree(1);
     if (res.Status && res.Result) {
       const tree = JSON.parse(res.Result);
-      const names: string[] = [];
       const auths: string[] = [];
       const walk = (nodes: any[]) =>
         nodes.forEach(n => {
-          if (n.name) names.push(n.name);
           (n.meta?.auths ?? []).forEach((a: string) => auths.push(a));
           if (n.children) walk(n.children);
         });
       walk(tree);
-      storageLocal().setItem(grantedMenusKey, names);
       setPerms([...new Set(auths)]);
     }
   } catch {
-    // 拉取失败不写授权集→直通不过滤,绝不因异常锁死用户
+    // 拉取失败不阻断登录
   }
 }
 import { useMultiTagsStoreHook } from "./multiTags";
@@ -253,7 +251,6 @@ export const useUserStore = defineStore("pure-user", {
       this.tenantname = "";
       this.roles = [];
       this.permissions = [];
-      storageLocal().removeItem(grantedMenusKey);
       removeToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();

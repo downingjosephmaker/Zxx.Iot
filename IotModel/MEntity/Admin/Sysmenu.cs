@@ -48,6 +48,18 @@ namespace IotModel
         [SugarColumn(ColumnName = "menu_icon", IsNullable = true, Length = 100, ColumnDescription = "图标样式", DefaultValue = "", ColumnDataType = "varchar")]
         public string MenuIcon { get; set; }
         /// <summary>
+        /// 组件路径(相对src/views,如 iot/center/index.vue;目录节点留空)
+        ///</summary>
+        [DisplayName("组件路径")]
+        [SugarColumn(ColumnName = "component", IsNullable = true, Length = 200, ColumnDescription = "组件路径", DefaultValue = "", ColumnDataType = "varchar")]
+        public string Component { get; set; }
+        /// <summary>
+        /// 附加路由meta(JSON,如 {"projectKind":"scada"});下发时合并进 meta,承载 component 之外的自定义路由元数据
+        ///</summary>
+        [DisplayName("附加路由meta")]
+        [SugarColumn(ColumnName = "meta_json", IsNullable = true, Length = 500, ColumnDescription = "附加路由meta(JSON)", DefaultValue = "", ColumnDataType = "varchar")]
+        public string MetaJson { get; set; }
+        /// <summary>
         /// 是否显示菜单中(1:是 0:否)
         ///</summary>
         [DisplayName("是否显示菜单中(1:是 0:否)")]

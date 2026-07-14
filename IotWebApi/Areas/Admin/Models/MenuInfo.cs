@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using Newtonsoft.Json;
 
 namespace IotWebApi.Areas.Admin.Models
 {
@@ -20,6 +21,11 @@ namespace IotWebApi.Areas.Admin.Models
         /// 菜单编码
         ///</summary>
         public string name { get; set; }
+        /// <summary>
+        /// 组件路径(相对src/views,如 iot/center/index.vue)。
+        /// 目录节点为null:前端 addAsyncRoutes 会把动态路由拍平后统一挂到根路由(Layout)下,目录只用于菜单树渲染。
+        ///</summary>
+        public string component { get; set; }
         /// <summary>
         /// 菜单属性
         ///</summary>
@@ -44,9 +50,10 @@ namespace IotWebApi.Areas.Admin.Models
         ///</summary>
         public string icon { get; set; }
         /// <summary>
-        /// 菜单排序
+        /// 菜单排序。必须是数字:前端 ascending() 做的是 a.meta.rank - b.meta.rank,
+        /// 下发 SortBorder 原值("A002")会得到 NaN,顶级菜单排序静默失效。
         ///</summary>
-        public string rank { get; set; }
+        public int? rank { get; set; }
         /// <summary>
         /// 是否显示菜单中
         ///</summary>
@@ -59,6 +66,12 @@ namespace IotWebApi.Areas.Admin.Models
         /// 菜单按钮
         ///</summary>
         public List<BtnInfo> btns { get; set; } = new List<BtnInfo>();
+        /// <summary>
+        /// sys_menu.meta_json 里的自定义路由元数据(如 projectKind)。
+        /// [JsonExtensionData] 使其在序列化时平铺进 meta 而非嵌套成子对象。
+        ///</summary>
+        [JsonExtensionData]
+        public Dictionary<string, object> extra { get; set; } = new Dictionary<string, object>();
     }
 
     /// <summary>

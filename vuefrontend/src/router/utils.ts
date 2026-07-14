@@ -13,20 +13,16 @@ import {
   cloneDeep,
   isAllEmpty,
   intersection,
-  isIncludeAllChildren,
-  storageLocal,
-  storageSession
+  isIncludeAllChildren
 } from "@pureadmin/utils";
 import { buildHierarchyTree } from "@/utils/tree";
 import type { menuType } from "@/layout/types";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import { getAsyncRoutes } from "@/api/routes";
 const IFrame = () => import("@/layout/frame.vue");
 // https://cn.vitejs.dev/guide/features.html#glob-import
 const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
-
-// ========== 使用本地静态路由，不需要从接口获取 ==========
-// import { getAsyncRoutes } from "@/api/routes";
 
 function handRank(routeInfo: any) {
   const { name, path, parentId, meta } = routeInfo;
@@ -78,33 +74,6 @@ function isOneOfArray(a: Array<string>, b: Array<string>) {
       ? true
       : false
     : true;
-}
-
-/** 按 name 递归裁剪:保留在授权集内、或有存活子节点的节点(③租户角色授权侧边栏过滤) */
-function pruneByGranted(nodes: any[], granted: string[]) {
-  return nodes.filter((v: any) => {
-    if (v.children) v.children = pruneByGranted(v.children, granted);
-    return granted.includes(v.name) || (v.children && v.children.length > 0);
-  });
-}
-
-/**
- * 按当前登录用户的角色授权菜单集过滤侧边栏(③)。
- * 兜底防锁死:超管(is-system)或授权集为空/缺失时直通不过滤——绝不因授权缺失把用户菜单清空。
- * 授权集由 user store 登录时按 GetMenuTree(islimit=1) 落 localStorage(granted-menu-names)。
- */
-function filterNoPermissionTree(data: RouteComponent[]) {
-  const newTree = cloneDeep(data);
-  const isSystem = !!storageSession().getItem<any>("is-system")?.data;
-  const granted = storageLocal().getItem<string[]>("granted-menu-names");
-  if (isSystem || !Array.isArray(granted) || granted.length === 0) {
-    // 直通(原行为):超管看全部、非超管未配授权时不裁剪,避免锁死
-    newTree.forEach(
-      (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
-    );
-    return filterChildrenTree(newTree);
-  }
-  return filterChildrenTree(pruneByGranted(newTree, granted));
 }
 
 /** 通过指定 `key` 获取父级路径集合，默认 `key` 为 `path` */
@@ -257,62 +226,34 @@ function handleAsyncRoutes(routeList) {
 //   addPathMatch();
 // }
 
-/** 初始化路由（`new Promise` 写法防止在异步请求中造成无限循环）*/
+/**
+ * 初始化路由（`new Promise` 写法防止在异步请求中造成无限循环）。
+ *
+ * 侧边栏的唯一真源是数据库的 sys_menu 表：后端 GetMenuTree(islimit=1) 按当前用户的角色
+ * 只下发授权菜单（超管返回全量），前端不再做二次裁剪。
+ * 静态路由只剩 home（"/" 根路由，是这些动态路由的挂载容器）、remaining 与 error。
+ *
+ * 不做本地缓存：菜单在「菜单管理」里改完，刷新即生效，避免缓存导致改了不生效。
+ * 拉取失败时不塞任何动态路由——用户只剩首页，但仍可手敲 /rescue/menu
+ *（remaining.ts 里的逃生舱）进去把菜单数据修回来。
+ */
 function initRouter() {
-  // ========== 使用本地静态路由，不从后端接口获取 ==========
   return new Promise(resolve => {
-    // 直接使用空数组，表示不添加任何动态路由
-    // 所有路由都通过 src/router/modules 目录下的文件定义
-    handleAsyncRoutes([]);
-    resolve(router);
+    getAsyncRoutes(1)
+      .then(({ Status, Result }) => {
+        const data = Status && Result ? JSON.parse(Result) : [];
+        handleAsyncRoutes(cloneDeep(data));
+        resolve(router);
+      })
+      .catch(err => {
+        console.error(
+          "[initRouter] 动态菜单拉取失败，侧边栏仅保留静态路由",
+          err
+        );
+        handleAsyncRoutes([]);
+        resolve(router);
+      });
   });
-
-  // ========== 以下是原来从后端获取路由的代码，已注释 ==========
-  // if (getConfig()?.CachingAsyncRoutes) {
-  //   // 开启动态路由缓存本地localStorage
-  //   const key = "async-routes";
-  //   const asyncRouteList = storageLocal().getItem(key) as any;
-  //   if (asyncRouteList && asyncRouteList?.length > 0) {
-  //     return new Promise(resolve => {
-  //       handleAsyncRoutes(asyncRouteList);
-  //       resolve(router);
-  //     });
-  //   } else {
-  //     return new Promise(resolve => {
-  //       getAsyncRoutes(1).then(({ Result }) => {
-  //         const data = JSON.parse(Result);
-  //         data.forEach(item => {
-  //           // item.children = undefined;
-  //           item.showLink = true;
-  //           if (!item?.children) delete item?.children;
-  //           item.redirect = item?.children && item.children[0].path;
-  //           item.children?.forEach(it => {
-  //             delete it?.children;
-  //           });
-  //         });
-  //         handleAsyncRoutes(cloneDeep(data));
-  //         storageLocal().setItem(key, data);
-  //         resolve(router);
-  //       });
-  //     });
-  //   }
-  // } else {
-  //   return new Promise(resolve => {
-  //     getAsyncRoutes(1).then(({ Result }) => {
-  //       const data = JSON.parse(Result);
-  //       data.forEach(item => {
-  //         item.showLink = true;
-  //         if (!item?.children) delete item?.children;
-  //         item.redirect = item?.children && item.children[0].path;
-  //         item.children?.forEach(it => {
-  //           delete it?.children;
-  //         });
-  //       });
-  //       handleAsyncRoutes(cloneDeep(data));
-  //       resolve(router);
-  //     });
-  //   });
-  // }
 }
 /**
  * 将多级嵌套路由处理成一维数组
@@ -569,5 +510,5 @@ export {
   handleAliveRoute,
   formatTwoStageRoutes,
   formatFlatteningRoutes,
-  filterNoPermissionTree
+  filterChildrenTree
 };

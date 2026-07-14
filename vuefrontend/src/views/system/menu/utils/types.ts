@@ -4,7 +4,11 @@ interface MenuItem {
   MenuName: string;
   ParentId: string;
   MenuUrl?: string;
+  /** 组件路径(相对 src/views)，目录节点留空 */
+  Component?: string;
   MenuIcon?: string;
+  /** 附加路由 meta(JSON 字符串)，如 {"projectKind":"scada"} */
+  MetaJson?: string;
   IsShowLink?: number;
   SortBorder?: string;
   TreeLevel?: number;
@@ -21,7 +25,9 @@ interface MenuFormItemProps {
   MenuName: string;
   ParentId: string;
   MenuUrl: string;
+  Component: string;
   MenuIcon: string;
+  MetaJson: string;
   IsShowLink: number;
   SortBorder: string;
   TreeLevel: number;

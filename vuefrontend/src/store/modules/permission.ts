@@ -7,7 +7,7 @@ import {
   getKeyList,
   filterTree,
   constantMenus,
-  filterNoPermissionTree,
+  filterChildrenTree,
   formatFlatteningRoutes
 } from "../utils";
 import { useMultiTagsStoreHook } from "./multiTags";
@@ -24,9 +24,13 @@ export const usePermissionStore = defineStore("pure-permission", {
     cachePageList: []
   }),
   actions: {
-    /** 组装整体路由生成的菜单 */
+    /**
+     * 组装整体路由生成的菜单。
+     * 不做角色裁剪:后端 GetMenuTree(islimit=1) 已按角色只下发授权菜单,前端再裁一遍就是重复真源。
+     * 这里只做 showLink 过滤(filterTree)与空目录过滤(filterChildrenTree)。
+     */
     handleWholeMenus(routes: any[]) {
-      this.wholeMenus = filterNoPermissionTree(
+      this.wholeMenus = filterChildrenTree(
         filterTree(ascending(this.constantMenus.concat(routes)))
       );
       this.flatteningRoutes = formatFlatteningRoutes(

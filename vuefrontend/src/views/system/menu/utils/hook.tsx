@@ -1,5 +1,6 @@
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
+import { IconifyIconOffline } from "@/components/ReIcon";
 import { type Ref, h, ref, onMounted } from "vue";
 import type { MenuItem, MenuFormItemProps } from "./types";
 import {
@@ -22,9 +23,7 @@ function buildTree(flat: MenuItem[]): MenuItem[] {
     else roots.push(node);
   });
   const sortRec = (nodes: MenuItem[]) => {
-    nodes.sort(
-      (a, b) => Number(a.SortBorder || 0) - Number(b.SortBorder || 0)
-    );
+    nodes.sort((a, b) => Number(a.SortBorder || 0) - Number(b.SortBorder || 0));
     nodes.forEach(n => n.children && n.children.length && sortRec(n.children));
     nodes.forEach(n => {
       if (n.children && n.children.length === 0) delete n.children;
@@ -46,7 +45,35 @@ export function useSysMenu() {
     { label: "菜单名称", prop: "MenuName", align: "left", minWidth: 200 },
     { label: "编码(路由name)", prop: "MenuCode", align: "left", minWidth: 150 },
     { label: "路由地址", prop: "MenuUrl", align: "left", minWidth: 160 },
-    { label: "图标", prop: "MenuIcon", align: "center", width: 130 },
+    {
+      label: "图标",
+      prop: "MenuIcon",
+      align: "center",
+      width: 150,
+      cellRenderer: ({ row }) =>
+        row.MenuIcon
+          ? h(
+              "div",
+              {
+                style:
+                  "display:flex;align-items:center;justify-content:center;gap:6px"
+              },
+              [
+                h(IconifyIconOffline, {
+                  icon: row.MenuIcon,
+                  style: "font-size:18px"
+                }),
+                h(
+                  "span",
+                  {
+                    style: "font-size:12px;color:var(--el-text-color-secondary)"
+                  },
+                  row.MenuIcon
+                )
+              ]
+            )
+          : h("span", { style: "color:var(--el-text-color-placeholder)" }, "-")
+    },
     {
       label: "显示",
       prop: "IsShowLink",
@@ -95,7 +122,9 @@ export function useSysMenu() {
       MenuName: row?.MenuName ?? "",
       ParentId: row?.ParentId ?? "0",
       MenuUrl: row?.MenuUrl ?? "",
+      Component: row?.Component ?? "",
       MenuIcon: row?.MenuIcon ?? "",
+      MetaJson: row?.MetaJson ?? "",
       IsShowLink: row?.IsShowLink ?? 1,
       SortBorder: row?.SortBorder ?? "",
       TreeLevel: row?.TreeLevel ?? 1,

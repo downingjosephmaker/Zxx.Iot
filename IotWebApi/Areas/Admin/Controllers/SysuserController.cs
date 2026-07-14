@@ -82,11 +82,20 @@ namespace IotWebApi.Controllers
                 Message = $"账号{temp.UserUid}已存在,不能新增。";
                 return Message;
             }
+            //超管可为任意租户建号;非超管一律落到自己的租户,防跨租户建号
+            info.TenantId = optmdl.IsSystem ? info.TenantId : optmdl.TenantId;
+
+            //角色必须属于目标租户,或为平台共享角色(TenantId=0);防把A租户的用户配成B租户的角色
+            var role = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == info.RoleId);
+            if (role == null || (role.TenantId != 0 && role.TenantId != info.TenantId))
+            {
+                Message = "角色不存在或不属于该租户。";
+                return Message;
+            }
+
             info.PasswordSalt = Guid.NewGuid().ToString("N").ToUpper();
             string password = EncryptsHelper.MD5Make32(info.Password).ToUpper();
             info.Password = HashCryto.GetHash2String(string.Concat(password.ToUpper(), info.PasswordSalt), HashAlgorithmType.SHA256);
-
-            info.TenantId = optmdl.TenantId;
 
             info.CreateId = optmdl.UserID;
             info.CreateTime = DateTime.Now.ToDateTimeString();
@@ -116,6 +125,27 @@ namespace IotWebApi.Controllers
             if (optmdl == null)
             {
                 Message = "Token令牌传递错误。";
+                return Message;
+            }
+
+            //查得到即有权管:SysUser 走租户 QueryFilter,非超管只能看到自己租户子树内的用户
+            var target = SysUserDAO.Instance.GetOneBy(t => t.UserId == info.UserId);
+            if (target == null)
+            {
+                Message = "账号不存在。";
+                return Message;
+            }
+            //不得改自己的角色,防自我提权
+            if (target.UserId == optmdl.UserID && info.RoleId != target.RoleId)
+            {
+                Message = "不能修改自己的角色。";
+                return Message;
+            }
+            //角色必须属于该用户所在租户,或为平台共享角色(TenantId=0)
+            var role = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == info.RoleId);
+            if (role == null || (role.TenantId != 0 && role.TenantId != target.TenantId))
+            {
+                Message = "角色不存在或不属于该租户。";
                 return Message;
             }
 
@@ -151,9 +181,15 @@ namespace IotWebApi.Controllers
         {
             Message = "用户信息删除失败。";
             Status = false;
+            var optmdl = Request.GetToken();
 
             var user = SysUserDAO.Instance.GetOneBy(s => s.UserId == userid);
             if (user == null) return "账号不存在。";
+            if (user.UserId == optmdl.UserID)
+            {
+                Message = "不能删除当前登录的账号。";
+                return Message;
+            }
 
             Status = SysUserDAO.Instance.DeleteBy(t => t.UserId == userid);
             if (Status)
@@ -186,7 +222,12 @@ namespace IotWebApi.Controllers
             var info = SysUserDAO.Instance.GetOneBy(s => s.UserId == userid);
             if (info == null)
             {
-                Message = $"账号{info.UserUid}不存在。";
+                Message = "账号不存在。";
+                return Message;
+            }
+            if (info.UserId == optmdl.UserID)
+            {
+                Message = "不能变更当前登录账号的启用状态。";
                 return Message;
             }
             int oldenable = info.IsEnable;
@@ -390,12 +431,13 @@ namespace IotWebApi.Controllers
         /// <summary>
         /// 根据用户权限获取角色列表(树结构)
         /// </summary>
+        /// <param name="tenantId">目标租户ID。传 -1(默认)不按租户过滤;传 >=0 时只返回该租户自建角色与平台共享角色(TenantId=0)</param>
         /// <returns></returns>
         [HttpGet]
         [Route("Api/[controller]/[action]")]
         [Token]
         [ApiGroup(ApiGroupNames.Admin)]
-        public List<SysRole> GetRoleList()
+        public List<SysRole> GetRoleList(int tenantId = -1)
         {
             List<SysRole> list = new List<SysRole>();
             Message = "角色列表获取失败。";
@@ -406,6 +448,8 @@ namespace IotWebApi.Controllers
             {
                 var roleinlist = rolelist.FindAll(t => t.TreeLevel > optmdl._Sysrole.TreeLevel
                                             && t.FullCode.Contains($"|{optmdl._Sysrole.RoleId}|"));
+                //为指定租户挑角色时,只能选该租户自建角色或平台共享角色
+                if (tenantId >= 0) roleinlist = roleinlist.FindAll(t => t.TenantId == tenantId || t.TenantId == 0);
                 if (roleinlist.IsZxxAny()) list.AddRange(roleinlist);
             }
             if (list.Count > 0)
