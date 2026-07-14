@@ -31,6 +31,13 @@ export const regularComponents: ComponentIconMapping[] = [
     description: "多行文本卡片,支持标题和正文,适合信息展示"
   },
   {
+    name: "stat-card",
+    title: "统计数值卡",
+    iconPath: "@/assets/svg/text-card.svg",
+    category: "常规",
+    description: "大数字+单位+标题,绑点位显示统计指标,报表常用"
+  },
+  {
     name: "line",
     title: "直线工具",
     iconPath: "@/assets/svg/line.svg",

@@ -87,6 +87,19 @@ const projectId = getProjectId(route);
 /** 项目类型：scada=监控组态(全部图元) / dash=自定义报表(仅报表组件) */
 const projectKind = getProjectKind(route);
 
+/**
+ * 编辑器→编辑器直跳（换项目或换 kind，路由同名仅 params/query 变）时，Vue 会复用组件实例、
+ * 不重跑 setup —— 结果是画布残留上一个项目的组件、组件面板仍按旧 kind 过滤、读写走错接口。
+ * 编辑器状态极重（画布/组件/数据集/MQTT/自动保存），局部重载难以覆盖干净，整页重载最稳。
+ * 编辑器自身从不改路由，不会触发重载循环。
+ */
+watch(
+  () => route.fullPath,
+  (next, prev) => {
+    if (prev && next !== prev) window.location.reload();
+  }
+);
+
 const projectData = ref({ ...DEFAULT_PROJECT_DATA });
 const loading = ref(false);
 const editorContainer = ref<HTMLDivElement>();

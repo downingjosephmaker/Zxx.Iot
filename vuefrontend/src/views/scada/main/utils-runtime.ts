@@ -14,6 +14,7 @@ import { componentManager } from "../core/ComponentManager";
 import { svgManager, createSvgComponent } from "../core/SvgManager";
 import { ledDisplayManager } from "../core/LedDisplayComponent";
 import { textCardManager } from "../core/TextCardComponent";
+import { statCardManager } from "../core/StatCardComponent";
 import * as utils1 from "./utils1";
 import * as utils2 from "./utils2";
 import * as utils3 from "./utils3";
@@ -182,6 +183,17 @@ export function applyPointValue(
   if (component.type === "text-card") {
     component.properties = { ...component.properties, content: text };
     textCardManager.updateTextCardComponent(component.id, component.properties);
+    return true;
+  }
+
+  // 统计数值卡：值与单位分开写(单位是卡片自己的小字,不该拼进数值)
+  if (component.type === "stat-card") {
+    component.properties = {
+      ...component.properties,
+      value: value !== "" && value !== null ? value : "--",
+      unit: unit || component.properties?.unit || ""
+    };
+    statCardManager.updateStatCardComponent(component.id, component.properties);
     return true;
   }
 

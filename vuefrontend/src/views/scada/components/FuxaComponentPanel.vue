@@ -171,8 +171,9 @@ const props = withDefaults(
 const REPORT_COMPONENTS = [
   "table", // 表格
   "unified-chart", // ECharts 图表
+  "stat-card", // 统计数值卡(大数字+单位+标题)
   "text-card", // 文本卡片
-  "led-display", // 数值显示
+  "led-display", // 数值显示(工业仪表观感)
   "text", // 文本
   "image", // 图片(logo/水印)
   "rect", // 矩形(分区框)

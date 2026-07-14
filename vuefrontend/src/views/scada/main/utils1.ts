@@ -906,6 +906,13 @@ export const createComponentElement = (
     return textCardElement;
   }
 
+  // 统计数值卡（报表常用：大数字+单位+标题）
+  if (component.type === "stat-card") {
+    const statCardElement = componentManager.createComponent(component, canvasContent);
+    setupComponentInteractions(statCardElement, component);
+    return statCardElement;
+  }
+
   console.log('createComponentElement 检查绘图工具组件...');
   console.log('componentManager 对象:', componentManager);
   console.log('isDrawingToolComponent 方法存在:', !!componentManager.isDrawingToolComponent);

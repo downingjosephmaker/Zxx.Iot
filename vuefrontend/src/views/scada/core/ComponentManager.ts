@@ -1,9 +1,9 @@
 import { DrawingToolManager, drawingTools } from './DrawingTools'
-import { ChartComponentManager, chartComponents } from './ChartComponents'
 import { ImageComponentManager, imageComponents } from './ImageComponent'
 import { TimePickerComponentManager, timePickerComponents } from './TimePickerComponent'
 import { ledDisplayManager, ledDisplayComponents } from './LedDisplayComponent'
 import { textCardManager } from './TextCardComponent'
+import { statCardManager } from './StatCardComponent'
 import { findComponentByName } from './fuxa-icon-mapping'
 
 /**
@@ -25,7 +25,6 @@ export interface ScadaComponent {
  */
 export class ComponentManager {
   private drawingManager: DrawingToolManager
-  private chartManager: ChartComponentManager
   private imageManager: ImageComponentManager
   private timePickerManager: TimePickerComponentManager
   private ledDisplayManager: typeof ledDisplayManager
@@ -36,7 +35,6 @@ export class ComponentManager {
 
   constructor() {
     this.drawingManager = new DrawingToolManager()
-    this.chartManager = new ChartComponentManager()
     this.imageManager = new ImageComponentManager()
     this.timePickerManager = new TimePickerComponentManager()
     this.textCardManager = textCardManager
@@ -52,9 +50,6 @@ export class ComponentManager {
     // 各个管理器的初始化逻辑
     if (this.drawingManager.initialize) {
       this.drawingManager.initialize(container)
-    }
-    if (this.chartManager.initialize) {
-      this.chartManager.initialize(container)
     }
     if (this.imageManager.initialize) {
       this.imageManager.initialize(container)
@@ -91,12 +86,6 @@ console.log('组件管理器已初始化')
       console.log('绘图完成:', componentId, shapeData)
       this.onComponentUpdate?.(componentId, shapeData)
     }
-    
-    // 图表数据更新事件
-    this.chartManager.onChartDataUpdate = (componentId: string, data: any) => {
-      console.log('图表数据更新:', componentId, data)
-      this.onComponentUpdate?.(componentId, { data })
-    }
   }
   
   /**
@@ -108,8 +97,6 @@ console.log('组件管理器已初始化')
     // 根据组件类型创建相应的实例
     if (this.isDrawingTool(component.type)) {
       element = this.drawingManager.createDrawingComponent(component, container)
-    } else if (this.isChartComponent(component.type)) {
-      element = this.chartManager.createChartComponent(component, container)
     } else if (this.isImageComponent(component.type)) {
       element = this.imageManager.createImageComponent(component, container)
     } else if (this.isTimePickerComponent(component.type)) {
@@ -118,6 +105,8 @@ console.log('组件管理器已初始化')
       element = this.ledDisplayManager.createLedDisplayComponent(component, container)
     } else if (component.type === 'text-card') {
       element = this.textCardManager.createTextCardComponent(component, container)
+    } else if (component.type === 'stat-card') {
+      element = statCardManager.createStatCardComponent(component, container)
     } else if (this.isRegularSvgComponent(component.type)) {
       // 常规SVG组件（如心形、箭头等）通过DrawingManager处理
       element = this.drawingManager.createDrawingComponent(component, container)
@@ -142,8 +131,6 @@ console.log('组件管理器已初始化')
 
     if (this.isDrawingTool(componentType)) {
       this.drawingManager.updateDrawingComponent(componentId, properties)
-    } else if (this.isChartComponent(componentType)) {
-      this.chartManager.updateChartComponent(componentId, properties)
     } else if (this.isImageComponent(componentType)) {
       this.imageManager.updateImageComponent(componentId, properties)
     } else if (this.isTimePickerComponent(componentType)) {
@@ -152,6 +139,8 @@ console.log('组件管理器已初始化')
       this.ledDisplayManager.updateLedDisplayComponent(componentId, properties)
     } else if (componentType === 'text-card') {
       this.textCardManager.updateTextCardComponent(componentId, properties)
+    } else if (componentType === 'stat-card') {
+      statCardManager.updateStatCardComponent(componentId, properties)
     } else if (this.isRegularSvgComponent(componentType)) {
       this.drawingManager.updateDrawingComponent(componentId, properties)
     }
@@ -166,14 +155,14 @@ console.log('组件管理器已初始化')
 
     if (this.isDrawingTool(componentType)) {
       this.drawingManager.destroyDrawingComponent(componentId)
-    } else if (this.isChartComponent(componentType)) {
-      this.chartManager.destroyChartComponent(componentId)
     } else if (this.isImageComponent(componentType)) {
       this.imageManager.removeUploadedImage(componentId)
     } else if (this.isTimePickerComponent(componentType)) {
       this.timePickerManager.destroyTimePickerComponent(componentId)
     } else if (this.isLedDisplayComponent(componentType)) {
       this.ledDisplayManager.destroyLedDisplayComponent(componentId)
+    } else if (componentType === 'stat-card') {
+      statCardManager.destroyStatCardComponent(componentId)
     } else if (this.isRegularSvgComponent(componentType)) {
       this.drawingManager.destroyDrawingComponent(componentId)
     }
@@ -223,7 +212,6 @@ console.log('组件管理器已初始化')
   getAllComponentTypes() {
     return {
       drawing: drawingTools.map(tool => tool.name),
-      charts: chartComponents.map(chart => chart.name),
       images: imageComponents.map(image => image.name),
       timePickers: timePickerComponents.map(picker => picker.name),
       ledDisplays: ledDisplayComponents.map(led => led.name)
@@ -237,9 +225,6 @@ console.log('组件管理器已初始化')
     // 尝试从各个管理器获取配置
     const drawingTool = drawingTools.find(tool => tool.name === componentType)
     if (drawingTool) return drawingTool
-
-    const chartConfig = chartComponents.find(chart => chart.name === componentType)
-    if (chartConfig) return chartConfig
 
     const imageConfig = imageComponents.find(image => image.name === componentType)
     if (imageConfig) return imageConfig
@@ -262,13 +247,6 @@ console.log('组件管理器已初始化')
     const result = drawingTools.some(tool => tool.name === componentType);
     console.log('ComponentManager.isDrawingTool 结果:', result);
     return result;
-  }
-  
-  /**
-   * 检查是否为图表组件
-   */
-  private isChartComponent(componentType: string): boolean {
-    return chartComponents.some(chart => chart.name === componentType)
   }
   
   /**
@@ -312,8 +290,8 @@ console.log('组件管理器已初始化')
    */
   public isComponentTypeSupported(componentType: string): boolean {
     return componentType === 'text-card' ||
+           componentType === 'stat-card' ||
            this.isDrawingTool(componentType) ||
-           this.isChartComponent(componentType) ||
            this.isImageComponent(componentType) ||
            this.isTimePickerComponent(componentType) ||
            this.isLedDisplayComponent(componentType) ||
@@ -345,20 +323,6 @@ console.log('组件管理器已初始化')
   }
   
   /**
-   * 开始实时数据更新
-   */
-  startRealTimeUpdates() {
-    this.chartManager.startRealTimeUpdates()
-  }
-  
-  /**
-   * 停止实时数据更新
-   */
-  stopRealTimeUpdates() {
-    this.chartManager.stopRealTimeUpdates()
-  }
-  
-  /**
    * 获取绘图管理器
    */
   getDrawingManager(): DrawingToolManager {
@@ -373,13 +337,6 @@ console.log('组件管理器已初始化')
     const result = this.drawingManager.isDrawingTool(componentType);
     console.log('ComponentManager.isDrawingToolComponent 结果:', result);
     return result;
-  }
-  
-  /**
-   * 获取图表管理器
-   */
-  getChartManager(): ChartComponentManager {
-    return this.chartManager
   }
   
   /**
@@ -404,7 +361,6 @@ console.log('组件管理器已初始化')
    */
   destroy() {
     this.drawingManager.destroy()
-    this.chartManager.destroy()
     this.imageManager.clearCache()
     this.timePickerManager.destroy()
     
