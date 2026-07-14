@@ -1520,10 +1520,12 @@ export const fetchChartData = async (component: any, datasetList: any) => {
   if (dataset.type === 'iot') {
     // 历史模式：取第一个勾选点位的曲线({name:时间,value:数值}[])
     if (dataset.mode === 'history' && dataset.points?.length) {
-      const end = new Date();
-      const start = new Date(
-        end.getTime() - (dataset.historyHours || 24) * 3600 * 1000
-      );
+      // 报表运行态的查询条件栏会写入显式区间(queryStart/queryEnd)覆盖"最近N小时"；
+      // 未指定时仍按 historyHours 回溯，编辑器与组态运行态行为不变。
+      const end = dataset.queryEnd ? new Date(dataset.queryEnd) : new Date();
+      const start = dataset.queryStart
+        ? new Date(dataset.queryStart)
+        : new Date(end.getTime() - (dataset.historyHours || 24) * 3600 * 1000);
       const res = await getDeviceHistory(
         dataset.deviceId,
         dataset.points[0].ParamCode,

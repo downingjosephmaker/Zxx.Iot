@@ -1,5 +1,28 @@
 <template>
-  <div class="scada-runtime">
+  <div class="scada-runtime" :class="{ 'is-report': isReport }">
+    <!-- 报表外壳：查询条件栏 + 导出。组态项目不显示（它是常驻实时大屏，无查询与导出语义） -->
+    <div v-if="isReport" class="report-toolbar">
+      <el-date-picker
+        v-model="queryRange"
+        type="datetimerange"
+        range-separator="至"
+        start-placeholder="开始时间"
+        end-placeholder="结束时间"
+        value-format="YYYY-MM-DD HH:mm:ss"
+        :shortcuts="rangeShortcuts"
+      />
+      <el-button type="primary" :loading="querying" @click="handleQuery">
+        查询
+      </el-button>
+      <div class="toolbar-right">
+        <el-button @click="handlePrint">打印</el-button>
+        <el-button @click="handleExportExcel">导出 Excel</el-button>
+        <el-button :loading="exporting" @click="handleExportPdf">
+          导出 PDF
+        </el-button>
+      </div>
+    </div>
+
     <div
       ref="canvasRef"
       class="runtime-canvas"
@@ -18,18 +41,24 @@
       <div class="canvas-content" />
     </div>
 
-    <!-- 全屏按钮 -->
-    <el-button class="fullscreen-btn" circle @click="toggleFullscreen">
+    <!-- 全屏按钮（报表以打印/导出为主，不需要全屏大屏） -->
+    <el-button
+      v-if="!isReport"
+      class="fullscreen-btn"
+      circle
+      @click="toggleFullscreen"
+    >
       <el-icon><FullScreen /></el-icon>
     </el-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { FullScreen } from "@element-plus/icons-vue";
+import dayjs from "dayjs";
 import { createProjectApi, type ProjectKind } from "@/api/scada/project";
 import { fuxaMqttService } from "./core/fuxaMqttService";
 import { IotDatasetRunner, type IotPointValue } from "./core/DatasetRuntime";
@@ -40,17 +69,31 @@ import {
   stopChartComponents,
   type RuntimeRenderer
 } from "./main/utils-runtime";
+import {
+  applyQueryRange,
+  printReport,
+  exportTablesToExcel,
+  exportCanvasToPdf
+} from "./main/utils-report";
 
 defineOptions({
   name: "ScadaRuntime"
 });
 
 const route = useRoute();
-const projectId = route.params.id as string;
-/** 组态项目与报表项目共用运行态，kind 决定从哪套接口读项目 */
-const projectKind: ProjectKind =
-  route.query.kind === "dash" ? "dash" : "scada";
-const projectApi = createProjectApi(projectKind);
+
+/**
+ * 组态项目与报表项目共用同一个运行态路由(/scada/runtime/:id)，仅 query.kind 不同。
+ * 两者间跳转时 Vue 会复用组件实例、不重跑 setup，因此这些必须是 computed 而非一次性常量，
+ * 并 watch 路由变化重新装载——否则从报表跳到组态会挂着报表工具栏、还读错后端接口。
+ */
+const projectId = computed(() => route.params.id as string);
+const projectKind = computed<ProjectKind>(() =>
+  route.query.kind === "dash" ? "dash" : "scada"
+);
+const projectApi = computed(() => createProjectApi(projectKind.value));
+/** 报表：带查询条件栏与导出；组态：常驻实时大屏 */
+const isReport = computed(() => projectKind.value === "dash");
 
 const canvasRef = ref<HTMLElement | null>(null);
 const canvasWidth = ref(1920);
@@ -74,7 +117,7 @@ const loadProject = async () => {
     loading.value = true;
 
     // 1. 获取项目完整数据（基本信息 + ContentData 组态内容）
-    const response = await projectApi.getDataInfo(projectId);
+    const response = await projectApi.value.getDataInfo(projectId.value);
     if (!response.Status || !response.Result) {
       throw new Error("获取项目数据失败");
     }
@@ -82,6 +125,8 @@ const loadProject = async () => {
     if (!info.ContentData) {
       throw new Error("项目暂无组态内容，请先在编辑器中保存");
     }
+    projectName.value =
+      info.ProjectName || (isReport.value ? "报表" : "组态");
 
     // 2. 解析组态内容（编辑器保存结构：{ settings, components, devices, datasets }）
     const projectJson = JSON.parse(info.ContentData);
@@ -95,6 +140,19 @@ const loadProject = async () => {
 
     components = projectJson.components || [];
     datasetList.value = projectJson.datasets || [];
+
+    // 报表默认查询最近24小时（用户可在条件栏改后重查）
+    if (isReport.value) {
+      queryRange.value = [
+        fmt(dayjs().subtract(1, "day").toDate()),
+        fmt(new Date())
+      ];
+      applyQueryRange(
+        datasetList.value,
+        queryRange.value[0],
+        queryRange.value[1]
+      );
+    }
 
     // 4. 渲染组件（复用编辑器创建链路，交互为空实现）
     await nextTick();
@@ -121,7 +179,7 @@ const loadProject = async () => {
 
     // 9. 通知父页面加载完成
     notifyParent("SCADA_RUNTIME_LOADED", {
-      projectId,
+      projectId: projectId.value,
       componentCount: components.length
     });
   } catch (error) {
@@ -150,6 +208,71 @@ const applyDatasetValues = (
     if (v === undefined) return;
     applyPointValue(comp, v.value, v.unit || "", renderer!);
   });
+};
+
+/* ─────────────── 报表运行态：查询条件与导出 ─────────────── */
+
+const projectName = ref("报表");
+const querying = ref(false);
+const exporting = ref(false);
+/** 默认查询区间：最近 24 小时 */
+const queryRange = ref<[string, string]>(["", ""]);
+
+const fmt = (d: Date) => dayjs(d).format("YYYY-MM-DD HH:mm:ss");
+
+const rangeShortcuts = [
+  {
+    text: "最近24小时",
+    value: () => [dayjs().subtract(1, "day").toDate(), new Date()]
+  },
+  {
+    text: "最近7天",
+    value: () => [dayjs().subtract(7, "day").toDate(), new Date()]
+  },
+  {
+    text: "最近30天",
+    value: () => [dayjs().subtract(30, "day").toDate(), new Date()]
+  }
+];
+
+/** 按查询条件栏的时间区间重新出数（历史数据集按该区间取，图表随之刷新） */
+const handleQuery = async () => {
+  if (!renderer) return;
+  const [start, end] = queryRange.value;
+  if (!start || !end) {
+    ElMessage.warning("请先选择查询时间范围");
+    return;
+  }
+  querying.value = true;
+  try {
+    stopChartComponents(components);
+    applyQueryRange(datasetList.value, start, end);
+    await startChartComponents(components, datasetList, renderer);
+  } finally {
+    querying.value = false;
+  }
+};
+
+const handlePrint = () => {
+  if (canvasRef.value) printReport(canvasRef.value);
+};
+
+const handleExportExcel = () => {
+  if (!canvasRef.value) return;
+  const ok = exportTablesToExcel(canvasRef.value, projectName.value);
+  if (!ok) ElMessage.warning("报表中没有表格组件，无可导出的数据");
+};
+
+const handleExportPdf = async () => {
+  if (!canvasRef.value) return;
+  exporting.value = true;
+  try {
+    await exportCanvasToPdf(canvasRef.value, projectName.value);
+  } catch (error) {
+    ElMessage.error("导出PDF失败: " + (error as Error).message);
+  } finally {
+    exporting.value = false;
+  }
 };
 
 /**
@@ -188,6 +311,9 @@ const toggleFullscreen = () => {
  * 自动缩放适配
  */
 const autoScale = () => {
+  // 报表保持 100% 原尺寸：缩放会让打印与 PDF 导出失真，页面改为可滚动
+  if (isReport.value) return;
+
   const container = document.querySelector(".scada-runtime") as HTMLElement;
   if (!container) return;
 
@@ -205,17 +331,39 @@ const notifyParent = (type: string, data: any) => {
   }
 };
 
+/** 卸下当前项目：停订阅与定时器、清空已挂载的组件 DOM */
+const teardown = () => {
+  iotRunner?.stop();
+  iotRunner = null;
+  stopChartComponents(components);
+  fuxaMqttService.disconnect();
+  const content = canvasRef.value?.querySelector(".canvas-content");
+  if (content) content.innerHTML = "";
+  components = [];
+  datasetList.value = [];
+  renderer = null;
+};
+
 onMounted(async () => {
   await loadProject();
   window.addEventListener("resize", autoScale);
 });
 
+/**
+ * 组态与报表共用本路由，互相跳转时 Vue 复用组件实例、不重跑 setup，
+ * 必须在此重新装载，否则会残留上一个项目的组件与订阅。
+ */
+watch(
+  () => route.fullPath,
+  async () => {
+    teardown();
+    await loadProject();
+  }
+);
+
 onUnmounted(() => {
   window.removeEventListener("resize", autoScale);
-  fuxaMqttService.disconnect();
-  iotRunner?.stop();
-  iotRunner = null;
-  stopChartComponents(components);
+  teardown();
 });
 </script>
 
@@ -230,10 +378,42 @@ onUnmounted(() => {
   overflow: hidden;
   background: #f5f5f5;
 
+  /* 报表：条件栏在上、画布原尺寸可滚动（不缩放，保证打印与PDF清晰） */
+  &.is-report {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: auto;
+  }
+
+  .report-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    flex-shrink: 0;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+
+    .toolbar-right {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+  }
+
   .runtime-canvas {
     position: relative;
+    flex-shrink: 0;
     box-shadow: 0 2px 12px rgb(0 0 0 / 10%);
     transition: transform 0.3s ease;
+  }
+
+  &.is-report .runtime-canvas {
+    margin: 16px auto;
   }
 
   /* 组件挂载点：编辑器渲染链路以 .canvas-content 为容器，组件绝对定位于此 */
