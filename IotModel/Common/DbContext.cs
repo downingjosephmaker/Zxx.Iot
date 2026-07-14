@@ -72,6 +72,47 @@ namespace IotModel
                             {
                                 p.IsNullable = true;
                             }
+
+                            // PostgreSQL 方言适配：实体统一按 MySQL/TiDB 方言声明(bigint/int 带 Length、bit、tinyint)，
+                            // 这些在 PG 下会拼出 bigint(20) 等非法 DDL(42601)。此处按库统一改写列类型，一处解决全仓映射，
+                            // 不改任何实体定义。仅在 CodeFirst 显式指定 DataType 时生效，未显式指定的走 SqlSugar 默认 C# 类型映射。
+                            if (DbType == SqlSugar.DbType.PostgreSQL && !string.IsNullOrEmpty(p.DataType))
+                            {
+                                var dt = p.DataType.Trim().ToLower();
+                                switch (dt)
+                                {
+                                    case "bigint":
+                                    case "int":
+                                    case "integer":
+                                    case "smallint":
+                                        // PG 整数类型不接受长度，清空 Length 避免拼出 int(11)/bigint(20)
+                                        p.Length = 0;
+                                        p.DataType = dt == "int" ? "int4" : (dt == "bigint" ? "int8" : (dt == "smallint" ? "int2" : "int4"));
+                                        break;
+                                    case "tinyint":
+                                        // PG 无 tinyint，用 smallint(int2) 承载
+                                        p.Length = 0;
+                                        p.DataType = "int2";
+                                        break;
+                                    case "bit":
+                                        // 实体里 bit 用于承载 bool/0-1，PG 用 bool
+                                        p.Length = 0;
+                                        p.DataType = "bool";
+                                        break;
+                                    case "datetime":
+                                        p.Length = 0;
+                                        p.DataType = "timestamp";
+                                        break;
+                                    case "double":
+                                        p.Length = 0;
+                                        p.DataType = "float8";
+                                        break;
+                                    case "float":
+                                        p.Length = 0;
+                                        p.DataType = "float4";
+                                        break;
+                                }
+                            }
                         },
                         EntityNameService = (x, p) => //处理表名
                         {
@@ -237,7 +278,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Split
     {
-        public static DbType _DbType = DbType.Tidb;
+        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 
@@ -288,7 +329,7 @@ namespace IotModel
     /// </summary>
     public class SqlSugar_Custom
     {
-        public static DbType _DbType = DbType.Tidb;
+        public static DbType _DbType = Enum.TryParse<DbType>(DbSetting.Current.DbTypeName, true, out var dbtype) ? dbtype : DbType.Tidb;
         private static readonly object _lock = new object();
         private static DbReconnectHelper.DbConnectionState _state;
 
