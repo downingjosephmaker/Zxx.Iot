@@ -8,6 +8,7 @@ import { useSysPlugin } from "./utils/hook";
 import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
+import FolderChecked from "~icons/ep/folder-checked";
 import Setting from "~icons/ep/setting";
 import Delete from "~icons/ep/delete";
 import Document from "~icons/ep/document";
@@ -31,6 +32,8 @@ const {
   uploadVisible,
   uploading,
   uploadFile,
+  scanning,
+  handleScan,
   configVisible,
   configLoading,
   configSaving,
@@ -114,6 +117,17 @@ const {
           >
             上传{{ title }}
           </el-button>
+          <el-popconfirm
+            title="扫描插件存储目录并批量登记入库？新插件默认停用，配置后启用。"
+            width="260"
+            @confirm="handleScan"
+          >
+            <template #reference>
+              <el-button :icon="useRenderIcon(FolderChecked)" :loading="scanning">
+                扫描入库
+              </el-button>
+            </template>
+          </el-popconfirm>
         </template>
         <template v-slot="{ size, dynamicColumns }">
           <pure-table

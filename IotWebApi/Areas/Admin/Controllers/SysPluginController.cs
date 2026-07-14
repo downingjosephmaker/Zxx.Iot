@@ -439,47 +439,24 @@ namespace IotWebApi.Areas.Admin.Controllers
                     await file.CopyToAsync(stream);
                 }
 
+                // 1.5 剥离旁置的共享程序集副本(须由宿主deferral统一提供;旁置陈旧副本会造成跨ALC类型不同一)
+                PluginLoadContext.StripSharedAssemblies(stagingDir);
+
                 // 2. 临时可回收ALC逐个DLL反射识别插件主程序集(识别完即卸载,只保留元数据字符串)
-                string mainDll = null, pluginGuid = null, pluginName = null, pluginType = null,
-                       pluginVersion = null, pluginDesc = null, pluginModelPath = null, pluginManifest = null;
+                PluginMeta meta = null;
                 foreach (var dllpath in Directory.GetFiles(stagingDir, "*.dll", SearchOption.TopDirectoryOnly))
                 {
-                    var inspectContext = new PluginLoadContext(dllpath);
-                    try
-                    {
-                        var assembly = inspectContext.LoadFromAssemblyPath(dllpath);
-                        var plugintype = assembly.GetTypes()
-                            .FirstOrDefault(t => typeof(ICenBoPlugin).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface);
-                        if (plugintype == null) continue;
-                        var plugin = (ICenBoPlugin)Activator.CreateInstance(plugintype);
-                        pluginGuid = plugin.PluginGuid;
-                        pluginName = plugin.PluginName;
-                        pluginType = plugin.PluginType;
-                        pluginVersion = plugin.PluginVersion;
-                        pluginDesc = plugin.PluginDesc;
-                        pluginModelPath = plugin.PluginModelPath;
-                        try { pluginManifest = plugin.PluginManifest; }
-                        catch (Exception ex)
-                        {
-                            LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{pluginGuid}]Manifest读取失败：{ex}", PLUGIN_CATEGORY);
-                        }
-                        mainDll = Path.GetFileName(dllpath);
-                        break; // 只取第一个实现
-                    }
-                    catch
-                    {
-                        // 依赖DLL/非托管DLL反射失败属正常,继续尝试下一个
-                    }
-                    finally
-                    {
-                        inspectContext.Unload();
-                    }
+                    meta = InspectPluginDll(dllpath);
+                    if (meta != null) break; // 只取第一个实现
                 }
-                if (mainDll == null || pluginGuid.IsZxxNullOrEmpty())
+                if (meta == null || meta.PluginGuid.IsZxxNullOrEmpty())
                 {
                     data.Message = "未发现有效插件类型(须实现ICenBoPlugin)。";
                     return data;
                 }
+                string mainDll = meta.MainDll, pluginGuid = meta.PluginGuid, pluginName = meta.PluginName,
+                       pluginType = meta.PluginType, pluginVersion = meta.PluginVersion, pluginDesc = meta.PluginDesc,
+                       pluginModelPath = meta.PluginModelPath, pluginManifest = meta.PluginManifest;
 
                 // 3. 落位版本化目录(旧版本目录不动,规避运行中ALC的文件锁)
                 var versionRoot = Path.Combine(OperatorCommon.PluginLocalRoot, pluginGuid);
@@ -625,6 +602,186 @@ namespace IotWebApi.Areas.Admin.Controllers
             {
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), PLUGIN_CATEGORY);
             }
+        }
+
+        /// <summary>
+        /// 反射识别单个DLL是否为 ICenBoPlugin 插件主程序集，返回其元数据；非插件/依赖DLL返回null。
+        /// 用临时可回收ALC加载，识别完即卸载，只保留元数据字符串。上传与扫描共用。
+        /// </summary>
+        private static PluginMeta InspectPluginDll(string dllpath)
+        {
+            var inspectContext = new PluginLoadContext(dllpath);
+            try
+            {
+                var assembly = inspectContext.LoadFromAssemblyPath(dllpath);
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (System.Reflection.ReflectionTypeLoadException rtle)
+                {
+                    // 部分类型依赖缺失(如外部包DLL未随行)时,仍从可加载的类型里找插件主类
+                    types = rtle.Types.Where(t => t != null).ToArray();
+                }
+                var plugintype = types
+                    .FirstOrDefault(t => typeof(ICenBoPlugin).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface);
+                if (plugintype == null) return null;
+                var plugin = (ICenBoPlugin)Activator.CreateInstance(plugintype);
+                var meta = new PluginMeta
+                {
+                    MainDll = Path.GetFileName(dllpath),
+                    PluginGuid = plugin.PluginGuid,
+                    PluginName = plugin.PluginName,
+                    PluginType = plugin.PluginType,
+                    PluginVersion = plugin.PluginVersion,
+                    PluginDesc = plugin.PluginDesc,
+                    PluginModelPath = plugin.PluginModelPath
+                };
+                try { meta.PluginManifest = plugin.PluginManifest; }
+                catch (Exception ex)
+                {
+                    LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"插件[{meta.PluginGuid}]Manifest读取失败：{ex}", PLUGIN_CATEGORY);
+                }
+                return meta;
+            }
+            catch (Exception ex)
+            {
+                // 依赖DLL/非托管DLL反射失败属正常;实现了ICenBoPlugin却实例化失败(如缺外部包)时记日志便于排查
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"识别插件DLL[{Path.GetFileName(dllpath)}]跳过：{ex.Message}", PLUGIN_CATEGORY);
+                return null;
+            }
+            finally
+            {
+                inspectContext.Unload();
+            }
+        }
+
+        /// <summary>
+        /// 扫描插件存储目录(PluginLocalRoot)并批量登记/更新到 sys_plugin。
+        /// 递归识别每个 ICenBoPlugin 主程序集，按 Guid 去重(同 Guid 取版本目录名最大者=最新)，
+        /// 新插件默认停用；已存在的仅刷新元数据与落位路径(不动运行状态与已有配置)。
+        /// 用于批量入库(免逐个上传)与 DB↔磁盘记录自愈。等价 RCE 入口，仅超管可执行。
+        /// </summary>
+        [HttpPost]
+        [Route("Api/[controller]/[action]")]
+        [Token]
+        [ApiGroup(ApiGroupNames.Basic)]
+        public MetaData ScanAndRegister()
+        {
+            var data = new MetaData { Status = false, Message = "扫描插件失败" };
+            if (DenyIfNotSuperAdmin(out var optmdl))
+            {
+                data.Message = Message;
+                return data;
+            }
+            try
+            {
+                string root = OperatorCommon.PluginLocalRoot;
+                var allDlls = Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories);
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"扫描插件根：{root}，发现 {allDlls.Length} 个DLL", PLUGIN_CATEGORY);
+                // 候选：递归所有dll，跳过_staging；按Guid分组，同Guid取所在目录名最大者(时间戳/版本更新)
+                var candidates = new Dictionary<string, (PluginMeta Meta, string RelPath, string DirName)>();
+                foreach (var dllpath in allDlls)
+                {
+                    var rel = Path.GetRelativePath(root, dllpath).Replace(@"\", "/");
+                    if (rel.StartsWith("_staging/", StringComparison.OrdinalIgnoreCase)) continue;
+                    var meta = InspectPluginDll(dllpath);
+                    if (meta == null || meta.PluginGuid.IsZxxNullOrEmpty()) continue;
+                    var dirName = Path.GetFileName(Path.GetDirectoryName(dllpath)) ?? "";
+                    if (candidates.TryGetValue(meta.PluginGuid, out var prev) &&
+                        string.CompareOrdinal(prev.DirName, dirName) >= 0) continue;
+                    candidates[meta.PluginGuid] = (meta, rel, dirName);
+                }
+
+                int inserted = 0, updated = 0;
+                var names = new List<string>();
+                foreach (var kv in candidates)
+                {
+                    var (m, relPath, _) = kv.Value;
+                    string defaultConfig = "";
+                    if (!m.PluginManifest.IsZxxNullOrEmpty())
+                    {
+                        try { defaultConfig = JObject.Parse(m.PluginManifest)["defaultConfig"]?.ToString(Newtonsoft.Json.Formatting.None) ?? ""; }
+                        catch { /* Manifest非法JSON时不回填 */ }
+                    }
+                    var exist = SysPluginDAO.Instance.GetOneBy(t => t.PluginGuid == kv.Key);
+                    if (exist == null)
+                    {
+                        SysPluginDAO.Instance.Insert(new SysPluginEntity
+                        {
+                            PluginGuid = kv.Key,
+                            PluginName = m.PluginName,
+                            PluginType = m.PluginType,
+                            PluginModelPath = m.PluginModelPath,
+                            PluginVersion = m.PluginVersion,
+                            PluginDesc = m.PluginDesc,
+                            PluginPath = relPath,
+                            PluginStatus = 0, // 默认停用
+                            PluginConfig = defaultConfig,
+                            PluginManifest = m.PluginManifest ?? "",
+                            CreateTime = DateTime.Now.ToDateTimeString(),
+                            UpdateTime = DateTime.Now.ToDateTimeString(),
+                            CreateId = optmdl.UserID,
+                            CreateName = optmdl.UserName,
+                            UpdateId = optmdl.UserID,
+                            UpdateName = optmdl.UserName,
+                        });
+                        inserted++;
+                    }
+                    else
+                    {
+                        exist.PluginName = m.PluginName;
+                        exist.PluginType = m.PluginType;
+                        exist.PluginModelPath = m.PluginModelPath;
+                        exist.PluginVersion = m.PluginVersion;
+                        exist.PluginDesc = m.PluginDesc;
+                        exist.PluginPath = relPath;
+                        exist.PluginManifest = m.PluginManifest ?? "";
+                        exist.UpdateTime = DateTime.Now.ToDateTimeString();
+                        exist.UpdateId = optmdl.UserID;
+                        exist.UpdateName = optmdl.UserName;
+                        exist.ExpandObject = null; // 防FullEntity写路径用空壳拓展对象覆写plugin_config
+                        SysPluginDAO.Instance.UpdateColumns(exist, it => new
+                        {
+                            it.PluginName,
+                            it.PluginType,
+                            it.PluginModelPath,
+                            it.PluginVersion,
+                            it.PluginDesc,
+                            it.PluginPath,
+                            it.PluginManifest,
+                            it.UpdateId,
+                            it.UpdateTime,
+                            it.UpdateName
+                        });
+                        updated++;
+                    }
+                    names.Add(m.PluginName);
+                }
+
+                data.Status = true;
+                data.Message = candidates.Count == 0
+                    ? "扫描完成：插件目录下未发现有效插件(须实现ICenBoPlugin)。请先将插件目录拷入 plugins 存储根后再扫描。"
+                    : $"扫描完成：新增登记 {inserted} 个、更新 {updated} 个（{string.Join("、", names)}）。新插件默认停用，配置后启用。";
+                return data;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, ex.ToString(), PLUGIN_CATEGORY);
+                data.Message = $"扫描插件失败：{ex.Message}";
+                return data;
+            }
+        }
+
+        /// <summary>插件反射识别元数据(上传/扫描共用)</summary>
+        private sealed class PluginMeta
+        {
+            public string MainDll { get; set; }
+            public string PluginGuid { get; set; }
+            public string PluginName { get; set; }
+            public string PluginType { get; set; }
+            public string PluginVersion { get; set; }
+            public string PluginDesc { get; set; }
+            public string PluginModelPath { get; set; }
+            public string PluginManifest { get; set; }
         }
 
     }

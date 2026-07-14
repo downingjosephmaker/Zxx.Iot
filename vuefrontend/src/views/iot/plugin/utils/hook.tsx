@@ -10,6 +10,7 @@ import {
   saveConfig,
   deletePlugin,
   uploadPluginFile,
+  scanPlugins,
   type SysPluginItem
 } from "@/api/iot/plugin";
 
@@ -32,6 +33,7 @@ export function useSysPlugin(tableRef: Ref) {
   const uploadVisible = ref(false);
   const uploading = ref(false);
   const uploadFile = ref<File | null>(null);
+  const scanning = ref(false);
 
   /** 配置弹窗(有Manifest走Schema动态表单,否则回落JSON文本编辑) */
   const configVisible = ref(false);
@@ -252,6 +254,32 @@ export function useSysPlugin(tableRef: Ref) {
     }
   }
 
+  /** 扫描插件存储目录批量登记入库(返回MetaData,与上传同构双层解析) */
+  async function handleScan() {
+    scanning.value = true;
+    try {
+      const data = await scanPlugins();
+      let meta: any = null;
+      if (typeof data.Result === "string" && data.Result) {
+        try {
+          meta = JSON.parse(data.Result);
+        } catch {
+          /* 保持信封状态兜底 */
+        }
+      } else if (data.Result && typeof data.Result === "object") {
+        meta = data.Result;
+      }
+      const ok =
+        meta && typeof meta.Status === "boolean" ? meta.Status : !!data.Status;
+      const msg =
+        meta?.Message || data.Message || (ok ? "扫描完成" : "扫描失败");
+      message(msg, { type: ok ? "success" : "error" });
+      if (ok) onSearch();
+    } finally {
+      scanning.value = false;
+    }
+  }
+
   async function openConfig(row: SysPluginItem) {
     configRow.value = row;
     configSchema.value = "";
@@ -339,6 +367,8 @@ export function useSysPlugin(tableRef: Ref) {
     uploadVisible,
     uploading,
     uploadFile,
+    scanning,
+    handleScan,
     configVisible,
     configLoading,
     configSaving,

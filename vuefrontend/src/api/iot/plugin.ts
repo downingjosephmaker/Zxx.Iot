@@ -150,6 +150,12 @@ export const uploadPluginFile = (file: File) => {
   });
 };
 
+/** 扫描插件存储目录批量登记入库(免逐个上传;新插件默认停用,DB↔磁盘自愈) */
+export const scanPlugins = () => {
+  storage.setItem("button", "扫描" + button);
+  return http.request<Result>("post", "/SysPlugin/ScanAndRegister", {});
+};
+
 export default {
   getListByPage,
   getInfoByGuid,
@@ -161,5 +167,6 @@ export default {
   deletePlugin,
   insertPlugin,
   updatePlugin,
-  uploadPluginFile
+  uploadPluginFile,
+  scanPlugins
 };

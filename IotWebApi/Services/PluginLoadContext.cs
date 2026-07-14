@@ -24,6 +24,22 @@ namespace IotWebApi
             _resolver = new AssemblyDependencyResolver(pluginPath);
         }
 
+        /// <summary>
+        /// 剥离插件目录中旁置的共享程序集副本(dll/pdb/xml)。共享程序集必须由宿主deferral统一提供,
+        /// 插件包(尤其dotnet publish产物)自带的副本一旦与宿主版本漂移,会被加载进进程造成跨ALC类型不同一——
+        /// 插件绑定到陈旧接口,类型校验判其未实现新增成员而加载失败。上传落位时调用,保证存储目录只留插件自身+非共享依赖。
+        /// </summary>
+        public static void StripSharedAssemblies(string dir)
+        {
+            if (!Directory.Exists(dir)) return;
+            foreach (var name in SharedAssemblies)
+                foreach (var ext in new[] { ".dll", ".pdb", ".xml" })
+                {
+                    var p = Path.Combine(dir, name + ext);
+                    if (File.Exists(p)) { try { File.Delete(p); } catch { /* 占用则跳过,不阻断上传 */ } }
+                }
+        }
+
         protected override Assembly Load(AssemblyName assemblyName)
         {
             // 共享程序集返回null回落Default ALC(宿主已加载的同一份)
