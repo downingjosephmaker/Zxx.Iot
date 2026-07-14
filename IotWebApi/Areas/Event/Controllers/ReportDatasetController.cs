@@ -7,8 +7,8 @@ using Newtonsoft.Json;
 namespace IotWebApi.Controllers
 {
     /// <summary>
-    /// 低代码报表数据集(D-7:JimuReport旁挂经API数据源取数,不直连业务库;
-    /// 数据集端点[Token]鉴权走全局租户过滤,VerifyToken供报表服务端回调验真)
+    /// 报表数据集(供自定义报表的图表/表格组件取数,不直连业务库;
+    /// [Token]鉴权走全局租户过滤——时序库无租户列,设备集须先经DeviceInfoDAO取得)
     /// </summary>
     [ApiController]
     [ControllSort("25-5-8")]
@@ -129,98 +129,38 @@ namespace IotWebApi.Controllers
             return rows;
         }
 
-        /// <summary>
-        /// Token校验回调(供JimuReport等旁挂服务的JmReportTokenServiceI服务端验真;
-        /// 无[Token]=匿名可调,只回答token是否有效,不签发任何凭据;
-        /// 校验口径与TokenAuthorizationFilter同源:DES解密+LoginTime时限,另加用户在库且启用;
-        /// 失败文案统一不区分原因,避免匿名端点成为token状态探测oracle)
-        /// </summary>
-        /// <param name="token">平台登录token(优先读请求头token,查询参数仅作回落——避免有效token进反代访问日志)</param>
-        [HttpGet]
-        [Route("Api/[controller]/[action]")]
-        [ApiGroup(ApiGroupNames.Event)]
-        public TokenVerifyResult VerifyToken(string token)
-        {
-            Status = false;
-            Message = "token验证不通过。";
-            var result = new TokenVerifyResult();
-            if (Request.Headers.TryGetValue("token", out var headertoken)
-                && !string.IsNullOrWhiteSpace(headertoken))
-            {
-                token = headertoken.ToString();
-            }
-            if (token.IsZxxNullOrEmpty())
-            {
-                return result;
-            }
-            try
-            {
-                string json = EncryptsHelper.Decrypt(token);
-                var model = JsonConvert.DeserializeObject<OperatorModelLogin>(json);
-                if (model == null || model.UserID <= 0)
-                {
-                    return result;
-                }
-                string timeouthour = AppSetting.GetConfig("DefaultValues:tokentimeouthour");
-                if (!string.IsNullOrWhiteSpace(timeouthour)
-                    && model.LoginTime.AddHours(timeouthour.ToZxxInt()) < DateTime.Now)
-                {
-                    return result;
-                }
-                var user = SysUserDAO.Instance.GetOneBy(t => t.UserId == model.UserID && t.IsEnable == 1);
-                if (user == null)
-                {
-                    return result;
-                }
-                result.Valid = true;
-                result.UserId = model.UserID;
-                result.UserName = model.UserName;
-                result.TenantId = model.TenantId;
-                Status = true;
-                Message = "验证通过。";
-            }
-            catch (Exception)
-            {
-                // 解密/反序列化异常与非法token同文案,不暴露失败阶段
-            }
-            return result;
-        }
     }
 
-    /// <summary>日用量数据集行</summary>
+    /// <summary>
+    /// 按日设备用量行
+    /// </summary>
     public class DailyEnergyRow
     {
         /// <summary>日期(yyyy-MM-dd)</summary>
-        public string Day { get; set; } = "";
+        public string Day { get; set; }
+
         /// <summary>设备ID</summary>
         public long DeviceId { get; set; }
+
         /// <summary>设备名称</summary>
-        public string DeviceName { get; set; } = "";
-        /// <summary>当日用量(累积表码日末差分;首日无基准或表码回退为null)</summary>
+        public string DeviceName { get; set; }
+
+        /// <summary>当日用量(表码差分;表码回退时为null)</summary>
         public double? Value { get; set; }
     }
 
-    /// <summary>告警日统计数据集行</summary>
+    /// <summary>
+    /// 按日告警计数行(按等级,零值已补齐)
+    /// </summary>
     public class AlarmDailyRow
     {
         /// <summary>日期(yyyy-MM-dd)</summary>
-        public string Day { get; set; } = "";
-        /// <summary>报警等级</summary>
-        public string AlarmGrade { get; set; } = "";
-        /// <summary>告警数</summary>
-        public int AlarmCount { get; set; }
-    }
+        public string Day { get; set; }
 
-    /// <summary>Token校验回调结果</summary>
-    public class TokenVerifyResult
-    {
-        /// <summary>是否有效</summary>
-        public bool Valid { get; set; }
-        /// <summary>用户ID</summary>
-        public int UserId { get; set; }
-        /// <summary>用户名</summary>
-        public string UserName { get; set; } = "";
-        /// <summary>租户ID</summary>
-        public int TenantId { get; set; }
+        /// <summary>告警等级</summary>
+        public string AlarmGrade { get; set; }
+
+        /// <summary>告警条数</summary>
+        public int AlarmCount { get; set; }
     }
 }

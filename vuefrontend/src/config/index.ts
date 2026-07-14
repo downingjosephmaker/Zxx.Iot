@@ -98,15 +98,11 @@ const getSignalRUrl = (): string =>
   import.meta.env.VITE_BASE_URL_WIRHURL ||
   "/signalr/chatHub";
 
-/** 低代码报表（JimuReport 旁挂服务）地址，空=未部署（页面显示未配置提示） */
-const getReportUrl = (): string => getConfig().ReportUrl || "";
-
 export {
   getConfig,
   setConfig,
   responsiveStorageNameSpace,
   getApiUrl,
   getWapianUrl,
-  getSignalRUrl,
-  getReportUrl
+  getSignalRUrl
 };

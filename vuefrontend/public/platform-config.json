@@ -27,7 +27,6 @@
   "ApiUrl": "",
   "WapianUrl": "",
   "SignalRUrl": "",
-  "ReportUrl": "",
   "MapConfigure": {
     "amapKey": "adc139d56406f3844c8f1cf1c6b65c41",
     "options": {

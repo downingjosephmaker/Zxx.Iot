@@ -1,5 +1,16 @@
 # 低代码报表 JimuReport 部署集成文档（D-7 第四批）
 
+> ## ⚠️ 本方案已作废（2026-07-14）
+>
+> JimuReport 旁挂路线**已撤除**，报表改为**自研，复用组态引擎**（见 `docs/组态与报表拆分方案.md`）。
+> JimuReport 从未部署（`platform-config.json` 的 `ReportUrl` 一直是空串），撤除无损失。
+>
+> 已随之删除：前端 iframe 页 `views/report/lowcode.vue`、`ReportUrl` 配置与 `getReportUrl()`、
+> 后端供 JimuReport 服务端回调验签的**匿名端点** `ReportDataset/VerifyToken`。
+> **保留** `ReportDataset` 的 `GetDailyEnergy` / `GetAlarmDaily` 两个数据集端点——它们转为自研报表的平台内置数据源。
+>
+> 本文仅作历史留档，勿按其部署。
+
 > 口径来源：`docs/协议模拟器与插件体系完善方案.md` §7 D-7 与 Q7。
 > 路线：旁挂 **JimuReport**（Java/Spring Boot 独立服务）；数据源**不直连业务库**，经 WebApi 数据集端点（带租户过滤）；平台侧代码已随第四批落码，**docker 部署与示例报表制作为运维侧动作**。
 > 许可合规确认项已于 2026-07-12 经用户拍板取消，不作为部署前置。
