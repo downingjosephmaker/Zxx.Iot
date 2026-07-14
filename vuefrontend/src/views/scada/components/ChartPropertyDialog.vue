@@ -855,7 +855,6 @@ const openDatasetPanel = () => {
 const getDatasetTypeName = (type: string) => {
   const names = {
     api: "API",
-    mqtt: "MQTT",
     static: "静态数据"
   };
   return names[type] || type;

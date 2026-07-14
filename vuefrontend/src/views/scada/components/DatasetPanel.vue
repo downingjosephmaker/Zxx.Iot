@@ -508,95 +508,6 @@
           </div>
         </el-tab-pane>
 
-        <!-- MQTT配置 -->
-        <el-tab-pane label="MQTT订阅" name="mqtt">
-          <div class="dataset-config-section">
-            <!-- MQTT连接配置 -->
-            <div class="config-section">
-              <h4>连接配置</h4>
-              <el-form :model="mqttConfig" label-width="100px" size="small">
-                <el-row :gutter="16">
-                  <el-col :span="12">
-                    <el-form-item label="MQTT地址">
-                      <el-input
-                        v-model="mqttConfig.host"
-                        placeholder="mqtt://localhost:1883"
-                      />
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
-                    <el-form-item label="客户端ID">
-                      <el-input
-                        v-model="mqttConfig.clientId"
-                        placeholder="自动生成"
-                      />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-                <el-row :gutter="16">
-                  <el-col :span="12">
-                    <el-form-item label="用户名">
-                      <el-input
-                        v-model="mqttConfig.username"
-                        placeholder="可选"
-                      />
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
-                    <el-form-item label="密码">
-                      <el-input
-                        v-model="mqttConfig.password"
-                        type="password"
-                        placeholder="可选"
-                      />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-              </el-form>
-            </div>
-
-            <!-- 订阅配置 -->
-            <div class="config-section">
-              <h4>订阅配置</h4>
-              <el-form :model="mqttConfig" label-width="100px" size="small">
-                <el-form-item label="实时数据主题" required>
-                  <el-input
-                    v-model="mqttConfig.dataTopic"
-                    placeholder="scada/devices/data"
-                  >
-                    <template #append>
-                      <el-tooltip content="接收设备实时数据的MQTT主题" placement="top">
-                        <el-icon><QuestionFilled /></el-icon>
-                      </el-tooltip>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="告警主题">
-                  <el-input
-                    v-model="mqttConfig.alarmTopic"
-                    placeholder="scada/devices/alarm"
-                  >
-                    <template #append>
-                      <el-tooltip content="接收设备告警消息的MQTT主题(可选)" placement="top">
-                        <el-icon><QuestionFilled /></el-icon>
-                      </el-tooltip>
-                    </template>
-                  </el-input>
-                </el-form-item>
-                <el-form-item label="QoS等级">
-                  <el-select v-model="mqttConfig.qos" style="width: 100%">
-                    <el-option label="0 - 最多一次" value="0" />
-                    <el-option label="1 - 至少一次" value="1" />
-                    <el-option label="2 - 仅一次" value="2" />
-                  </el-select>
-                </el-form-item>
-              </el-form>
-            </div>
-          </div>
-        </el-tab-pane>
-
-
-
         <!-- 静态数据配置 -->
         <el-tab-pane label="静态数据" name="static">
           <div class="dataset-config-section">
@@ -910,16 +821,6 @@ const iotConfig = reactive({
   historyMode: "auto" as "auto" | "raw" | "hour"
 });
 
-// MQTT配置
-const mqttConfig = reactive({
-  host: "mqtt://localhost:1883",
-  clientId: "",
-  username: "",
-  password: "",
-  topic: "",
-  qos: "1"
-});
-
 // WebSocket配置
 const wsConfig = reactive({
   url: "",
@@ -1074,12 +975,6 @@ const saveConfig = () => {
         }
       };
       break;
-    case "mqtt":
-      config = {
-        type: "mqtt",
-        ...mqttConfig
-      };
-      break;
     case "websocket":
       config = {
         type: "websocket",
@@ -1180,9 +1075,6 @@ const testDataset = async () => {
             headers: mergedHeaders
           }
         };
-        break;
-      case "mqtt":
-        testConfig = mqttConfig;
         break;
       case "websocket":
         testConfig = wsConfig;
@@ -1589,7 +1481,7 @@ watch(
       return;
     }
     Object.assign(formData, newDataset);
-    if (["api", "mqtt", "static"].includes(newDataset.type)) {
+    if (["api", "static"].includes(newDataset.type)) {
       activeTab.value = newDataset.type;
     }
   },

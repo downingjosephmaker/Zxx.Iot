@@ -1453,8 +1453,6 @@ export const fetchTableData = async (component: any, datasetList: any) => {
     }));
   } else if (dataset.type === 'api') {
     return null;
-  } else if (dataset.type === 'mqtt') {
-    return null;
   }
 
   return null;
@@ -1549,8 +1547,6 @@ export const fetchChartData = async (component: any, datasetList: any) => {
         value: p.Value
       }));
   } else if (dataset.type === 'api') {
-    return null;
-  } else if (dataset.type === 'mqtt') {
     return null;
   }
 

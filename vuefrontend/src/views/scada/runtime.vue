@@ -60,7 +60,6 @@ import { ElMessage } from "element-plus";
 import { FullScreen } from "@element-plus/icons-vue";
 import dayjs from "dayjs";
 import { createProjectApi, type ProjectKind } from "@/api/scada/project";
-import { fuxaMqttService } from "./core/fuxaMqttService";
 import { IotDatasetRunner, type IotPointValue } from "./core/DatasetRuntime";
 import {
   createRuntimeRenderer,
@@ -169,15 +168,10 @@ const loadProject = async () => {
       iotRunner.start();
     }
 
-    // 7. 连接MQTT（如果有设备配置）
-    if (projectJson.devices?.length > 0) {
-      await connectMqtt(projectJson.devices);
-    }
-
-    // 8. 自动缩放适配
+    // 7. 自动缩放适配
     autoScale();
 
-    // 9. 通知父页面加载完成
+    // 8. 通知父页面加载完成
     notifyParent("SCADA_RUNTIME_LOADED", {
       projectId: projectId.value,
       componentCount: components.length
@@ -276,26 +270,6 @@ const handleExportPdf = async () => {
 };
 
 /**
- * 连接MQTT
- */
-const connectMqtt = async (devices: any[]) => {
-  try {
-    await fuxaMqttService.connect();
-
-    // 订阅所有设备的主题
-    devices.forEach(device => {
-      if (device.type === "mqtt" && device.enabled) {
-        device.connection.topics?.forEach((topic: string) => {
-          fuxaMqttService.subscribe(topic, 0);
-        });
-      }
-    });
-  } catch (error) {
-    console.warn("MQTT连接失败:", error);
-  }
-};
-
-/**
  * 全屏切换
  */
 const toggleFullscreen = () => {
@@ -336,7 +310,6 @@ const teardown = () => {
   iotRunner?.stop();
   iotRunner = null;
   stopChartComponents(components);
-  fuxaMqttService.disconnect();
   const content = canvasRef.value?.querySelector(".canvas-content");
   if (content) content.innerHTML = "";
   components = [];

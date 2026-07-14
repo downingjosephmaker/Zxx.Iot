@@ -830,7 +830,6 @@
                   >
                     <el-option label="静态数据" value="static" />
                     <el-option label="数据集" value="dataset" />
-                    <el-option label="MQTT订阅" value="mqtt" />
                   </el-select>
                 </el-form-item>
 
@@ -856,30 +855,6 @@
                   </div>
                 </div>
 
-                <!-- MQTT配置 -->
-                <div
-                  v-if="selectedComponent.chartConfig?.dataSource === 'mqtt'"
-                >
-                  <el-form-item label="MQTT主题">
-                    <el-input
-                      :model-value="
-                        selectedComponent.chartConfig?.mqttConfig?.topic || ''
-                      "
-                      placeholder="sensors/data"
-                      @input="updateMqttConfig('topic', $event)"
-                    />
-                  </el-form-item>
-                  <el-form-item label="数据路径">
-                    <el-input
-                      :model-value="
-                        selectedComponent.chartConfig?.mqttConfig?.dataPath ||
-                        ''
-                      "
-                      placeholder="value"
-                      @input="updateMqttConfig('dataPath', $event)"
-                    />
-                  </el-form-item>
-                </div>
               </div>
 
               <!-- 样式配置 -->
@@ -1909,10 +1884,6 @@ const clearSelectedComponent = () => {
 
 const updateChartConfig = (property: string, value: any) => {
   emit("update-chart-config", property, value);
-};
-
-const updateMqttConfig = (property: string, value: any) => {
-  emit("update-chart-config", `mqttConfig.${property}`, value);
 };
 
 const openDatasetDialog = () => {

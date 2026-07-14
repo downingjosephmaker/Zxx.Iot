@@ -376,20 +376,6 @@
   color: #909399;
   flex-shrink: 0;
 
-  .mqtt-status {
-    &.mqtt-connected {
-      color: #67c23a;
-    }
-    &.mqtt-connecting {
-      color: #e6a23c;
-    }
-    &.mqtt-error {
-      color: #f56c6c;
-    }
-    &.mqtt-disconnected {
-      color: #909399;
-    }
-  }
 }
 
 // 滚动条样式

@@ -1,6 +1,5 @@
 import { ElMessage, ElMessageBox } from "element-plus";
 import { nextTick } from "vue";
-import { fuxaMqttService } from "../core/fuxaMqttService";
 import {
   addResizeHandles,
   removeResizeHandles,

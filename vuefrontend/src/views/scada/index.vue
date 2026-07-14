@@ -11,7 +11,6 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import { fuxaMqttService } from "./core/fuxaMqttService";
 import FuxaComponentPanel from "./components/FuxaComponentPanel.vue";
 import DatasetPanel from "./components/DatasetPanel.vue";
 import PropertyPanel from "./components/PropertyPanel.vue";
@@ -90,7 +89,7 @@ const projectKind = getProjectKind(route);
 /**
  * 编辑器→编辑器直跳（换项目或换 kind，路由同名仅 params/query 变）时，Vue 会复用组件实例、
  * 不重跑 setup —— 结果是画布残留上一个项目的组件、组件面板仍按旧 kind 过滤、读写走错接口。
- * 编辑器状态极重（画布/组件/数据集/MQTT/自动保存），局部重载难以覆盖干净，整页重载最稳。
+ * 编辑器状态极重（画布/组件/数据集/自动保存），局部重载难以覆盖干净，整页重载最稳。
  * 编辑器自身从不改路由，不会触发重载循环。
  */
 watch(
@@ -115,10 +114,6 @@ const lineDrawingState = reactive({
   tempLineElement: null,
   currentPoints: []
 });
-
-const mqttStatus = computed(() => fuxaMqttService.status.value);
-const mqttDeviceCount = computed(() => fuxaMqttService.devices.size);
-const mqttMessageCount = computed(() => fuxaMqttService.messageCount.value);
 
 // 项目基本信息
 const projectInfo = ref<ScadaProjectInfo>({
@@ -186,8 +181,7 @@ const currentTextCardComponent = ref(null);
 // 数据集配置状态
 const datasetDialogVisible = ref(false);
 const datasetList = ref([
-  { id: "ds1", name: "传感器数据", type: "api" },
-  { id: "ds2", name: "MQTT数据", type: "mqtt" }
+  { id: "ds1", name: "传感器数据", type: "api" }
 ]);
 
 // 设备列表
@@ -228,10 +222,6 @@ const chartConfigData = ref({
     headers: {},
     params: {},
     dataPath: "data"
-  },
-  mqttConfig: {
-    topic: "",
-    dataPath: "value"
   },
   refreshInterval: 5000,
   theme: "default"
@@ -1045,7 +1035,6 @@ const showChartConfigDialog = (component: any) => {
     dataSource: component.chartConfig.dataSource,
     staticData: [...component.chartConfig.staticData],
     apiConfig: { ...component.chartConfig.apiConfig },
-    mqttConfig: { ...component.chartConfig.mqttConfig },
     refreshInterval: component.chartConfig.refreshInterval,
     theme: component.chartConfig.theme
   };
@@ -1201,13 +1190,6 @@ const previewDataBinding = async () => {
           { id: 1, name: "温度传感器", value: 25.6, unit: "°C" },
           { id: 2, name: "湿度传感器", value: 68.3, unit: "%" }
         ],
-        timestamp: new Date().toISOString()
-      };
-    } else if (dataset.type === "mqtt") {
-      // 模拟MQTT数据
-      mockData = {
-        value: 42.5,
-        status: "online",
         timestamp: new Date().toISOString()
       };
     } else if (dataset.type === "iot") {
@@ -1417,48 +1399,6 @@ const handleSaveDatasetConfig = async (config: any) => {
     config.id = `dataset_${Date.now()}`;
   }
 
-  // 如果是MQTT类型,连接并订阅主题
-  if (config.type === 'mqtt') {
-    try {
-      // 确保MQTT服务已连接
-      if (fuxaMqttService.status.value !== 'connected') {
-        // 使用完整的 MqttConfig 对象连接
-        await fuxaMqttService.connect({
-          host: config.host,
-          clientId: config.clientId || `dataset_mqtt_${Date.now()}`,
-          username: config.username,
-          password: config.password,
-          dataTopic: config.dataTopic,
-          alarmTopic: config.alarmTopic,
-          qos: config.qos
-        });
-        
-        ElMessage.success('MQTT连接并订阅成功');
-      } else {
-        // 已连接,只订阅新主题
-        const qos = parseInt(config.qos) as 0 | 1 | 2;
-        const topics = [];
-
-        if (config.dataTopic) {
-          await fuxaMqttService.subscribeCustomTopic(config.dataTopic, qos);
-          topics.push(config.dataTopic);
-        }
-
-        if (config.alarmTopic) {
-          await fuxaMqttService.subscribeCustomTopic(config.alarmTopic, qos);
-          topics.push(config.alarmTopic);
-        }
-
-        if (topics.length > 0) {
-          ElMessage.success(`已订阅MQTT主题: ${topics.join(', ')}`);
-        }
-      }
-    } catch (error) {
-      ElMessage.error(`MQTT连接失败: ${error instanceof Error ? error.message : '未知错误'}`);
-      console.error('MQTT连接失败:', error);
-    }
-  }
-
   // 添加到数据集列表
   const existingIndex = datasetList.value.findIndex(ds => ds.id === config.id);
   if (existingIndex > -1) {
@@ -1487,18 +1427,6 @@ const handleTestDataset = async (config: any) => {
       // 测试API连接
       // TODO: 实际调用API接口测试
       ElMessage.success("API连接测试成功");
-    } else if (config.type === 'mqtt') {
-      // 测试MQTT连接(使用完整的 MqttConfig 对象)
-      await fuxaMqttService.connect({
-        host: config.host,
-        clientId: `test_mqtt_${Date.now()}`,
-        username: config.username,
-        password: config.password,
-        dataTopic: config.dataTopic,
-        alarmTopic: config.alarmTopic,
-        qos: config.qos
-      });
-      ElMessage.success("MQTT连接测试成功");
     } else if (config.type === 'static') {
       // 静态数据无需测试
       ElMessage.success("静态数据配置有效");
@@ -3318,158 +3246,6 @@ watch(
   { immediate: true }
 );
 
-/**
- * 根据MQTT数据更新组件
- * @param topic MQTT主题
- * @param devices 设备数据数组
- */
-const updateComponentsWithMqttData = (topic: string, devices: any[]) => {
-  if (!projectData.value?.components) return;
-
-  // 创建设备数据映射: DeviceId -> Device
-  const deviceMap = new Map();
-  devices.forEach(device => {
-    deviceMap.set(device.DeviceId, device);
-  });
-
-  // 创建参数值映射: DeviceId_ParamCode -> ParamValue
-  const paramValueMap = new Map();
-  devices.forEach(device => {
-    if (device.DeviceParams && Array.isArray(device.DeviceParams)) {
-      device.DeviceParams.forEach(param => {
-        const key = `${device.DeviceId}_${param.ParamCode}`;
-        paramValueMap.set(key, param.ParamValue);
-      });
-    }
-  });
-
-  console.log('参数值映射:', paramValueMap.size, '个参数');
-
-  // 遍历所有组件,更新绑定了设备参数的组件
-  projectData.value.components.forEach(component => {
-    // 检查组件是否绑定了设备和参数
-    if (component.deviceId && component.paramcode) {
-      const key = `${component.deviceId}_${component.paramcode}`;
-      const newValue = paramValueMap.get(key);
-      
-      if (newValue !== undefined) {
-        console.log(`更新组件 ${component.id}: ${component.deviceId}/${component.paramcode} = ${newValue}`);
-        updateComponentWithValue(component, newValue);
-      }
-    }
-
-    // 更新图表组件(如果绑定了数据集)
-    if (component.chartConfig?.dataSource === 'dataset' || 
-        component.chartConfig?.dataSource === 'mqtt') {
-      updateChartComponentData(component, devices, deviceMap);
-    }
-  });
-};
-
-/**
- * 更新组件值
- * @param component 组件对象
- * @param value 新值
- */
-const updateComponentWithValue = (component: any, value: any) => {
-  try {
-    // 根据组件类型更新不同的属性
-    const updates: any = { lastUpdate: Date.now() };
-
-    // 根据 targetProperty 确定更新哪个属性
-    if (component.targetProperty) {
-      updates[component.targetProperty] = value;
-    } else {
-      // 默认更新 value 属性
-      updates.value = value;
-    }
-
-    // 使用 ComponentManager 更新组件
-    componentManager.updateComponent(component.id, updates);
-
-    // 同时更新 projectData 中的组件数据
-    Object.assign(component, updates);
-
-    // 触发组件的 valuechange 事件
-    const element = document.getElementById(component.id);
-    if (element && component.events) {
-      const valueChangeEvents = component.events.filter(
-        evt => evt.type === 'valuechange' && evt.enabled !== false
-      );
-      valueChangeEvents.forEach(event => {
-        executeEvent(component, event);
-      });
-    }
-  } catch (error) {
-    console.error('更新组件失败:', component.id, error);
-  }
-};
-
-/**
- * 更新图表组件数据
- * @param component 图表组件
- * @param devices 设备数据
- * @param deviceMap 设备映射
- */
-const updateChartComponentData = (component: any, devices: any[], deviceMap: Map<string, any>) => {
-  if (!component.chartConfig) return;
-  
-  try {
-    // 如果图表绑定了特定设备
-    if (component.deviceId) {
-      const device = deviceMap.get(component.deviceId);
-      if (device && device.DeviceParams) {
-        const chartData = device.DeviceParams.map(param => ({
-          name: param.ParamName,
-          value: parseFloat(param.ParamValue) || 0
-        }));
-        
-        componentManager.updateComponent(component.id, { 
-          chartData,
-          lastUpdate: Date.now() 
-        });
-      }
-    } else {
-      // 图表显示所有设备的某个参数
-      const paramCode = component.paramcode || component.chartConfig.paramCode;
-      if (paramCode) {
-        const chartData = devices.map(device => {
-          const param = device.DeviceParams?.find(p => p.ParamCode === paramCode);
-          return {
-            name: device.DeviceName,
-            value: parseFloat(param?.ParamValue || 0)
-          };
-        });
-        
-        componentManager.updateComponent(component.id, { 
-          chartData,
-          lastUpdate: Date.now() 
-        });
-      }
-    }
-  } catch (error) {
-    console.error('更新图表组件失败:', component.id, error);
-  }
-};
-
-/**
- * 处理MQTT告警消息
- * @param topic MQTT主题
- * @param alarms 告警数据
- */
-const handleMqttAlarms = (topic: string, alarms: any[]) => {
-  // 触发告警通知
-  alarms.forEach(alarm => {
-    ElMessage.warning({
-      message: `设备告警: ${alarm.DeviceName || '未知设备'}`,
-      duration: 5000
-    });
-  });
-  
-  // 可以在这里更新告警组件、记录告警历史等
-  console.log('收到告警:', alarms);
-};
-
 onMounted(async () => {
   // 组态项目/报表项目共用本编辑器，先按路由 kind 切到对应的一套后端接口
   setProjectKind(projectKind);
@@ -3609,30 +3385,6 @@ onMounted(async () => {
 
   // 监听SVG样式更新事件
   document.addEventListener("svgStyleUpdate", handleSvgStyleUpdate);
-
-  // 初始化MQTT服务(使用默认配置)
-  try {
-    await fuxaMqttService.connect({
-      host: 'ws://localhost:9001/mqtt',
-      clientId: `scada_editor_${Date.now()}`
-    });
-    console.log("MQTT服务已初始化");
-
-    // 设置MQTT数据更新回调
-    fuxaMqttService.onDataUpdate((topic, devices) => {
-      console.log(`MQTT数据更新 [${topic}]:`, devices.length, '个设备');
-      // 查找绑定了该数据集的组件并更新
-      updateComponentsWithMqttData(topic, devices);
-    });
-
-    fuxaMqttService.onAlarmUpdate((topic, alarms) => {
-      console.log(`MQTT告警更新 [${topic}]:`, alarms.length, '条告警');
-      // 处理告警消息
-      handleMqttAlarms(topic, alarms);
-    });
-  } catch (error) {
-    ElMessage.warning("MQTT服务连接失败，将以离线模式运行");
-  }
 
   // 初始化组件管理器
   try {
@@ -3844,9 +3596,6 @@ onUnmounted(() => {
     "fuxa:data:batch-update",
     handleRuntimeBatchUpdate as EventListener
   );
-  // 清理MQTT服务连接
-  fuxaMqttService.disconnect();
-
   // 清理组件管理器
   componentManager.destroy();
 
@@ -4052,22 +3801,9 @@ onUnmounted(() => {
         >
       </div>
       <div class="status-right">
-        <span :class="`mqtt-status mqtt-${mqttStatus}`">
-          MQTT:
-          {{
-            mqttStatus === "connected"
-              ? "已连接"
-              : mqttStatus === "connecting"
-                ? "连接中"
-                : mqttStatus === "error"
-                  ? "错误"
-                  : "已断开"
-          }}
-        </span>
+        <span>组件: {{ projectData.components?.length || 0 }}个</span>
         <el-divider direction="vertical" />
-        <span>设备: {{ mqttDeviceCount }}个</span>
-        <el-divider direction="vertical" />
-        <span>消息: {{ mqttMessageCount }}条</span>
+        <span>数据集: {{ datasetList.length }}个</span>
       </div>
     </div>
 

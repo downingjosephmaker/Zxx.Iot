@@ -1042,10 +1042,6 @@ export const createChartComponent = (
         params: {},
         dataPath: "data"
       },
-      mqttConfig: {
-        topic: "",
-        dataPath: "value"
-      },
       refreshInterval: 5000,
       theme: "default"
     },
