@@ -111,6 +111,13 @@ namespace IotModel
                                         p.Length = 0;
                                         p.DataType = "float4";
                                         break;
+                                    case "tinytext":
+                                    case "mediumtext":
+                                    case "longtext":
+                                        // PG 只有 text(无长度上限),MySQL 的三档大文本统一收敛过去
+                                        p.Length = 0;
+                                        p.DataType = "text";
+                                        break;
                                 }
                             }
                         },

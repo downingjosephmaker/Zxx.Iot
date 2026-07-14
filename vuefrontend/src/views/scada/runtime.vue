@@ -1,56 +1,45 @@
 <template>
   <div class="scada-runtime">
     <div
+      ref="canvasRef"
       class="runtime-canvas"
       :style="{
         width: canvasWidth + 'px',
         height: canvasHeight + 'px',
         backgroundColor: canvasBackgroundColor,
-        backgroundImage: canvasBackgroundImage ? `url(${canvasBackgroundImage})` : 'none',
+        backgroundImage: canvasBackgroundImage
+          ? `url(${canvasBackgroundImage})`
+          : 'none',
         transform: `scale(${canvasZoom / 100})`,
         transformOrigin: 'top left'
       }"
     >
-      <!-- 渲染组件 -->
-      <div
-        v-for="comp in components"
-        :key="comp.id"
-        :id="comp.id"
-        class="runtime-component"
-        :style="{
-          position: 'absolute',
-          left: comp.position.x + 'px',
-          top: comp.position.y + 'px',
-          width: comp.size.width + 'px',
-          height: comp.size.height + 'px',
-          zIndex: comp.zIndex || 1
-        }"
-        v-html="comp.rendered"
-      />
+      <!-- 组件由渲染器命令式挂载到此容器(与编辑器同一条创建链路) -->
+      <div class="canvas-content" />
     </div>
 
     <!-- 全屏按钮 -->
-    <el-button
-      class="fullscreen-btn"
-      circle
-      @click="toggleFullscreen"
-    >
+    <el-button class="fullscreen-btn" circle @click="toggleFullscreen">
       <el-icon><FullScreen /></el-icon>
     </el-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { FullScreen } from "@element-plus/icons-vue";
 import scadaApi from "@/api/scada/project";
 import { fuxaMqttService } from "./core/fuxaMqttService";
+import { IotDatasetRunner, type IotPointValue } from "./core/DatasetRuntime";
 import {
-  IotDatasetRunner,
-  type IotPointValue
-} from "./core/DatasetRuntime";
+  createRuntimeRenderer,
+  applyPointValue,
+  startChartComponents,
+  stopChartComponents,
+  type RuntimeRenderer
+} from "./main/utils-runtime";
 
 defineOptions({
   name: "ScadaRuntime"
@@ -59,16 +48,22 @@ defineOptions({
 const route = useRoute();
 const projectId = route.params.id as string;
 
+const canvasRef = ref<HTMLElement | null>(null);
 const canvasWidth = ref(1920);
 const canvasHeight = ref(1080);
 const canvasZoom = ref(100);
 const canvasBackgroundColor = ref("#f5f5f5");
 const canvasBackgroundImage = ref("");
-const components = ref([]);
 const loading = ref(false);
 
+/** 组件为普通数组：运行态由渲染器直接操作 DOM，无需响应式（响应式重渲会毁掉图表实例与动画） */
+let components: any[] = [];
+const datasetList = ref<any[]>([]);
+let renderer: RuntimeRenderer | null = null;
+let iotRunner: IotDatasetRunner | null = null;
+
 /**
- * 加载项目数据
+ * 加载项目并渲染
  */
 const loadProject = async () => {
   try {
@@ -90,39 +85,41 @@ const loadProject = async () => {
     // 3. 设置画布
     canvasWidth.value = projectJson.settings?.canvasWidth || 1920;
     canvasHeight.value = projectJson.settings?.canvasHeight || 1080;
-    canvasBackgroundColor.value = projectJson.settings?.backgroundColor || "#f5f5f5";
+    canvasBackgroundColor.value =
+      projectJson.settings?.backgroundColor || "#f5f5f5";
     canvasBackgroundImage.value = projectJson.settings?.backgroundImage || "";
 
-    // 4. 加载组件（简化渲染，只显示基本内容）
-    components.value = (projectJson.components || []).map(comp => ({
-      ...comp,
-      rendered: renderComponent(comp)
-    }));
+    components = projectJson.components || [];
+    datasetList.value = projectJson.datasets || [];
 
-    // 5. 启动IoT点位数据集（最新值铺底+SignalR增量，驱动绑定组件刷新）
-    const iotDatasets = (projectJson.datasets || []).filter(
-      (d: any) => d.type === "iot"
-    );
+    // 4. 渲染组件（复用编辑器创建链路，交互为空实现）
+    await nextTick();
+    renderer = createRuntimeRenderer(canvasRef);
+    components.forEach(comp => renderer!.render(comp));
+
+    // 5. 图表接线（取数 + 定时刷新）
+    await startChartComponents(components, datasetList, renderer);
+
+    // 6. 启动IoT点位数据集（最新值铺底+SignalR增量，驱动绑定组件刷新）
+    const iotDatasets = datasetList.value.filter((d: any) => d.type === "iot");
     if (iotDatasets.length) {
       iotRunner = new IotDatasetRunner(iotDatasets, applyDatasetValues);
       iotRunner.start();
     }
 
-    // 6. 连接MQTT（如果有设备配置）
+    // 7. 连接MQTT（如果有设备配置）
     if (projectJson.devices?.length > 0) {
       await connectMqtt(projectJson.devices);
     }
 
-    // 7. 自动缩放适配
+    // 8. 自动缩放适配
     autoScale();
 
-    // 8. 通知父页面加载完成
+    // 9. 通知父页面加载完成
     notifyParent("SCADA_RUNTIME_LOADED", {
       projectId,
-      componentCount: components.value.length
+      componentCount: components.length
     });
-
-    ElMessage.success("项目加载成功");
   } catch (error) {
     console.error("加载项目失败:", error);
     ElMessage.error("加载失败: " + (error as Error).message);
@@ -132,8 +129,6 @@ const loadProject = async () => {
   }
 };
 
-let iotRunner: IotDatasetRunner | null = null;
-
 /**
  * IoT数据集值到达：刷新绑定该数据集的组件。
  * 组件绑定形状 comp.dataBinding = { datasetId, dataPath|paramCode }，dataPath=点位编码。
@@ -142,42 +137,15 @@ const applyDatasetValues = (
   datasetId: string,
   values: Record<string, IotPointValue>
 ) => {
-  components.value = components.value.map((comp: any) => {
+  if (!renderer) return;
+  components.forEach(comp => {
     const binding = comp.dataBinding;
-    if (!binding || binding.datasetId !== datasetId) return comp;
+    if (!binding || binding.datasetId !== datasetId) return;
     const code = binding.dataPath || binding.paramCode;
     const v = code ? values[code] : undefined;
-    if (v === undefined) return comp;
-    const next = {
-      ...comp,
-      properties: {
-        ...comp.properties,
-        text: `${v.value !== "" ? v.value : "-"}${v.unit || ""}`
-      }
-    };
-    next.rendered = renderComponent(next);
-    return next;
+    if (v === undefined) return;
+    applyPointValue(comp, v.value, v.unit || "", renderer!);
   });
-};
-
-/**
- * 简化的组件渲染函数（运行时模式）
- */
-const renderComponent = (comp: any): string => {
-  switch (comp.type) {
-    case "text":
-      return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:${comp.properties?.fontSize || 14}px;color:${comp.properties?.color || '#000'}">${comp.properties?.text || ""}</div>`;
-
-    case "image":
-      return `<img src="${comp.properties?.src || ""}" style="width:100%;height:100%;object-fit:${comp.properties?.objectFit || 'contain'}" />`;
-
-    case "video":
-      return `<video src="${comp.properties?.src || ""}" style="width:100%;height:100%" ${comp.properties?.autoplay ? "autoplay" : ""} ${comp.properties?.loop ? "loop" : ""} ${comp.properties?.controls ? "controls" : ""}></video>`;
-
-    default:
-      // 其他组件类型的基础渲染
-      return `<div style="width:100%;height:100%;background:${comp.style?.backgroundColor || 'transparent'};border:${comp.style?.borderWidth || 0}px solid ${comp.style?.borderColor || '#ccc'}"></div>`;
-  }
 };
 
 /**
@@ -243,39 +211,43 @@ onUnmounted(() => {
   fuxaMqttService.disconnect();
   iotRunner?.stop();
   iotRunner = null;
+  stopChartComponents(components);
 });
 </script>
 
 <style scoped lang="scss">
 .scada-runtime {
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
   position: relative;
-  background: #f5f5f5;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f5f5;
 
   .runtime-canvas {
-    transition: transform 0.3s ease;
     position: relative;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 12px rgb(0 0 0 / 10%);
+    transition: transform 0.3s ease;
   }
 
-  .runtime-component {
-    pointer-events: auto;
+  /* 组件挂载点：编辑器渲染链路以 .canvas-content 为容器，组件绝对定位于此 */
+  .canvas-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
   }
 
   .fullscreen-btn {
     position: fixed;
-    bottom: 20px;
     right: 20px;
+    bottom: 20px;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
 
     &:hover {
-      background: rgba(255, 255, 255, 1);
+      background: rgb(255 255 255 / 100%);
     }
   }
 }
