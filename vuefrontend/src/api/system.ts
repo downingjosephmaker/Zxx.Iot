@@ -25,10 +25,16 @@ export const updateMenu = (data?: object) => {
   localStorage.setItem("button", "修改菜单");
   return http.request<Result>("post", "/Sysmenu/Update", { data });
 };
-/** 删除菜单 */
-export const deleteMenu = (data?: object) => {
+/** 删除菜单(按MenuId,含子菜单) */
+export const deleteMenu = (id?: string) => {
   localStorage.setItem("button", "删除菜单");
-  return http.request<Result>("post", "/Sysmenu/Delete?id=" + data);
+  return http.request<Result>("post", "/Sysmenu/Delete?id=" + id);
+};
+
+/** 获取菜单树(含按钮,授权树用;islimit=2全部,1按当前用户角色过滤) */
+export const getMenuTree = (islimit = 2) => {
+  localStorage.setItem("button", "获取菜单树");
+  return http.request<Result>("post", "/Sysmenu/GetMenuTree?islimit=" + islimit);
 };
 
 /** 菜单绑定按钮 */

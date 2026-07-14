@@ -13,7 +13,9 @@ import {
   cloneDeep,
   isAllEmpty,
   intersection,
-  isIncludeAllChildren
+  isIncludeAllChildren,
+  storageLocal,
+  storageSession
 } from "@pureadmin/utils";
 import { buildHierarchyTree } from "@/utils/tree";
 import type { menuType } from "@/layout/types";
@@ -78,27 +80,31 @@ function isOneOfArray(a: Array<string>, b: Array<string>) {
     : true;
 }
 
-/** 从localStorage里取出当前登录用户的角色roles，过滤无权限的菜单 */
+/** 按 name 递归裁剪:保留在授权集内、或有存活子节点的节点(③租户角色授权侧边栏过滤) */
+function pruneByGranted(nodes: any[], granted: string[]) {
+  return nodes.filter((v: any) => {
+    if (v.children) v.children = pruneByGranted(v.children, granted);
+    return granted.includes(v.name) || (v.children && v.children.length > 0);
+  });
+}
+
+/**
+ * 按当前登录用户的角色授权菜单集过滤侧边栏(③)。
+ * 兜底防锁死:超管(is-system)或授权集为空/缺失时直通不过滤——绝不因授权缺失把用户菜单清空。
+ * 授权集由 user store 登录时按 GetMenuTree(islimit=1) 落 localStorage(granted-menu-names)。
+ */
 function filterNoPermissionTree(data: RouteComponent[]) {
-  // const currentRoles =
-  //   storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [];
-  // const newTree = cloneDeep(data).filter((v: any) =>
-  //   isOneOfArray(v.meta?.roles, currentRoles)
-  // );
-  // newTree.forEach(
-  //   (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
-  // );
-  // console.log(
-  //   "🚀 ~ filterNoPermissionTree ~ filterChildrenTree(newTree);:",
-  //   filterChildrenTree(newTree)
-  // );
-  // return filterChildrenTree(newTree);
   const newTree = cloneDeep(data);
-  // console.log(444444, newTree);
-  newTree.forEach(
-    (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
-  );
-  return filterChildrenTree(newTree);
+  const isSystem = !!storageSession().getItem<any>("is-system")?.data;
+  const granted = storageLocal().getItem<string[]>("granted-menu-names");
+  if (isSystem || !Array.isArray(granted) || granted.length === 0) {
+    // 直通(原行为):超管看全部、非超管未配授权时不裁剪,避免锁死
+    newTree.forEach(
+      (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
+    );
+    return filterChildrenTree(newTree);
+  }
+  return filterChildrenTree(pruneByGranted(newTree, granted));
 }
 
 /** 通过指定 `key` 获取父级路径集合，默认 `key` 为 `path` */

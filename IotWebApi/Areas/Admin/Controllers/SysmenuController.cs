@@ -26,6 +26,14 @@ namespace IotWebApi.Controllers
         {
             Message = "菜单表信息保存失败。";
             var optmdl = Request.GetToken();
+            // MenuId 为 varchar(10) 主键(非自增),UI 新增未带时取现有最大数字ID+1(顺序短号,符合字段长度约束,稳定被 menu_btn/role_menu_btn 引用)
+            if (string.IsNullOrEmpty(info.MenuId))
+            {
+                var maxId = SysMenuDAO.Instance.GetList()
+                    .Select(m => long.TryParse(m.MenuId, out var v) ? v : 0L)
+                    .DefaultIfEmpty(0L).Max();
+                info.MenuId = (maxId + 1).ToString();
+            }
             info.CreateId = optmdl.UserID;
             info.CreateTime = DateTime.Now.ToDateTimeString();
             info.CreateName = optmdl.UserName;

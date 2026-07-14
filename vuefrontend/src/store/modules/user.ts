@@ -6,7 +6,7 @@ import {
   resetRouter,
   routerArrays
 } from "../utils";
-import { storageSession } from "@pureadmin/utils";
+import { storageSession, storageLocal } from "@pureadmin/utils";
 import {
   type UserResult,
   type RefreshTokenResult,
@@ -14,6 +14,42 @@ import {
   getSSOLogin,
   refreshTokenApi
 } from "@/api/user";
+import { getMenuTree } from "@/api/system";
+
+/** 授权菜单名集本地键(侧边栏按角色过滤依据;超管/空集时不写=直通不过滤,防锁死) */
+export const grantedMenusKey = "granted-menu-names";
+
+/**
+ * 登录后按角色装配菜单/按钮权限(③全局菜单目录+租户角色授权的前端接线)。
+ * 超管:清空授权集→侧边栏不过滤看全部;非超管:拉本角色授权菜单树,
+ * 落菜单名集(供 filterNoPermissionTree 过滤)+按钮码(供 v-perms)。失败静默(空集直通,绝不锁死)。
+ */
+async function applyMenuGrants(isSystem: boolean, setPerms: (p: string[]) => void) {
+  try {
+    if (isSystem) {
+      storageLocal().removeItem(grantedMenusKey);
+      setPerms([]);
+      return;
+    }
+    const res = await getMenuTree(1);
+    if (res.Status && res.Result) {
+      const tree = JSON.parse(res.Result);
+      const names: string[] = [];
+      const auths: string[] = [];
+      const walk = (nodes: any[]) =>
+        nodes.forEach(n => {
+          if (n.name) names.push(n.name);
+          (n.meta?.auths ?? []).forEach((a: string) => auths.push(a));
+          if (n.children) walk(n.children);
+        });
+      walk(tree);
+      storageLocal().setItem(grantedMenusKey, names);
+      setPerms([...new Set(auths)]);
+    }
+  } catch {
+    // 拉取失败不写授权集→直通不过滤,绝不因异常锁死用户
+  }
+}
 import { useMultiTagsStoreHook } from "./multiTags";
 import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
 import { message } from "@/utils/message";
@@ -125,7 +161,10 @@ export const useUserStore = defineStore("pure-user", {
               storageSession().setItem("is-system", {
                 data: result.IsSystem
               });
-              resolve(datas);
+              // ③按角色装配菜单/按钮权限(超管看全部;非超管按授权过滤),失败静默不阻断登录
+              applyMenuGrants(result.IsSystem, p => this.SET_PERMS(p)).finally(
+                () => resolve(datas)
+              );
             } else {
               resolve(datas);
               message(datas.Message, { type: "error" });
@@ -168,7 +207,10 @@ export const useUserStore = defineStore("pure-user", {
               storageSession().setItem("is-system", {
                 data: result.IsSystem
               });
-              resolve(datas);
+              // ③按角色装配菜单/按钮权限,失败静默不阻断登录
+              applyMenuGrants(result.IsSystem, p => this.SET_PERMS(p)).finally(
+                () => resolve(datas)
+              );
             } else {
               resolve(datas);
               message(datas.Message, { type: "error" });
@@ -211,6 +253,7 @@ export const useUserStore = defineStore("pure-user", {
       this.tenantname = "";
       this.roles = [];
       this.permissions = [];
+      storageLocal().removeItem(grantedMenusKey);
       removeToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();

@@ -9,8 +9,14 @@ namespace IotModel
     [DisplayName("角色管理")]
     [EntityCache]
     [SugarTable(TableName = "sys_role", TableDescription = "角色管理", IsDisabledUpdateAll = true)]
-    public class SysRole : BaseEntity
+    public class SysRole : BaseEntity, ITenantEntity
     {
+        /// <summary>
+        /// 租户ID(0=平台共享角色,超管维护;非0=某租户自建角色)
+        ///</summary>
+        [DisplayName("租户ID")]
+        [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
+        public int TenantId { get; set; }
         /// <summary>
         /// 角色ID
         ///</summary>

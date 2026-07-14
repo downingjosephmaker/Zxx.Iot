@@ -10,8 +10,14 @@ namespace IotModel
     [DisplayName("角色菜单按钮权限")]
     [EntityCache]
     [SugarTable(TableName = "sys_role_menu_btn", TableDescription = "角色菜单按钮权限", IsDisabledUpdateAll = true)]
-    public class SysRoleMenuBtn : BaseEntity
+    public class SysRoleMenuBtn : BaseEntity, ITenantEntity
     {
+        /// <summary>
+        /// 租户ID(随所属角色隔离,0=平台共享角色的授权)
+        ///</summary>
+        [DisplayName("租户ID")]
+        [SugarColumn(ColumnName = "tenant_id", ColumnDescription = "租户ID", DefaultValue = "0", ColumnDataType = "int")]
+        public int TenantId { get; set; }
         /// <summary>
         /// 雪花主键
         ///</summary>

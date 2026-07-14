@@ -139,7 +139,8 @@ namespace IotWebApi.Controllers
                 if (RoleAllList.IsZxxAny())
                 {
                     var role = SysRoleDAO.Instance.GetOneBy(t => t.RoleId == user.RoleId);
-                    if (role != null && role.ParentId == 0) IsSystem = true;
+                    // 超管须为"平台级根角色"(tenant_id==0 且 parent_id==0);租户自建角色即便顶级也不得提权,防越权看全部租户
+                    if (role != null && role.ParentId == 0 && role.TenantId == 0) IsSystem = true;
                 }
                 if (IsSystem)
                 {
