@@ -1,39 +1,3 @@
-
-// 测试设备列表接口
-const testDeviceApi = async () => {
-  if (!formData.value.config.deviceUrl) {
-    ElMessage.warning('请先配置设备列表接口地址');
-    return;
-  }
-
-  try {
-    ElMessage.info('正在测试接口...');
-    const response = await fetch(formData.value.config.deviceUrl, {
-      method: 'GET',
-      headers: formData.value.config.headers || {}
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // 验证数据格式
-    if (!data.Result) {
-      ElMessage.error('接口返回格式错误: 缺少 Result 字段');
-      return;
-    }
-
-    const devices = JSON.parse(data.Result);
-    ElMessage.success(`接口测试成功! 获取到 ${devices.length} 个设备`);
-    console.log('设备列表:', devices);
-  } catch (error) {
-    ElMessage.error(`接口测试失败: ${error.message}`);
-    console.error('测试错误:', error);
-  }
-};
-
 <template>
   <el-dialog
     v-model="visible"
@@ -1143,6 +1107,34 @@ const saveConfig = () => {
   emit("save-config", config);
   visible.value = false;
   ElMessage.success("数据集配置已保存");
+};
+
+/** 测试"设备列表接口"(API 数据源)是否可达且格式正确 */
+const testDeviceApi = async () => {
+  const url = formData.config.deviceUrl;
+  if (!url) {
+    ElMessage.warning("请先配置设备列表接口地址");
+    return;
+  }
+  try {
+    ElMessage.info("正在测试接口...");
+    const response = await fetch(url, {
+      method: "GET",
+      headers: formData.config.headers || {}
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (!data.Result) {
+      ElMessage.error("接口返回格式错误: 缺少 Result 字段");
+      return;
+    }
+    const devices = JSON.parse(data.Result);
+    ElMessage.success(`接口测试成功! 获取到 ${devices.length} 个设备`);
+  } catch (error) {
+    ElMessage.error(`接口测试失败: ${(error as Error).message}`);
+  }
 };
 
 const testDataset = async () => {

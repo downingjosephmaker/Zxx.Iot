@@ -5,7 +5,7 @@ import { ref, reactive, type Ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { Router } from "vue-router";
 import html2canvas from "html2canvas";
-import scadaApi, {
+import {
   createProjectApi,
   type ProjectApi,
   type ProjectKind,
@@ -277,11 +277,7 @@ export const handleImageUpload = async (
   try {
     loading.value = true;
     // 上传到服务器
-    const response = await scadaApi.uploadResource(
-      file,
-      projectInfo.value.SnowId,
-      "image"
-    );
+    const response = await api.uploadResource(file);
     if (response.success) {
       const resourceData = response.data;
       // 创建图片元素获取尺寸
@@ -376,11 +372,7 @@ export const handleVideoUpload = async (
   try {
     loading.value = true;
 
-    const response = await scadaApi.uploadResource(
-      file,
-      projectInfo.value.SnowId,
-      "video"
-    );
+    const response = await api.uploadResource(file);
 
     if (response.success) {
       const resourceData = response.data;
@@ -450,11 +442,7 @@ export const handleSvgUpload = async (
   try {
     loading.value = true;
 
-    const response = await scadaApi.uploadResource(
-      file,
-      projectInfo.value.SnowId,
-      "svg"
-    );
+    const response = await api.uploadResource(file);
 
     if (response.success) {
       ElMessage.success(`SVG上传成功：${response.data.fileName}`);

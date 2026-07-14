@@ -97,6 +97,39 @@ export const saveProjectData = (data: {
   });
 };
 
+/**
+ * 上传画布资源（图片/视频/SVG），走平台附件模块。
+ * 编辑器一直在调 `scadaApi.uploadResource`，但此函数从未存在过——图片/视频/SVG 上传必然
+ * TypeError。此处补齐，并把后端 MetaData({Status,Result=访问路径}) 适配成调用方期望的形状。
+ */
+export const uploadResource = async (file: File) => {
+  storage.setItem("button", "上传" + button + "资源");
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await http.request<Result>(
+    "post",
+    "/AttachFile/UploadFile?filetype=1",
+    {
+      data: formData,
+      headers: { "Content-Type": "multipart/form-data" }
+    }
+  );
+  if (!res.Status) {
+    return { success: false, message: res.Message, data: null };
+  }
+  const url = res.Result as unknown as string;
+  return {
+    success: true,
+    message: res.Message,
+    data: {
+      fileName: file.name,
+      filePath: url,
+      url,
+      size: file.size
+    }
+  };
+};
+
 /** 画布截图 Base64 上传（复用附件模块），返回的 Message 为文件访问路径 */
 export const uploadBase64Image = (data: {
   Base64String: string;
@@ -136,6 +169,7 @@ export interface ProjectApi {
     Thumbnail?: string;
   }) => Promise<Result>;
   uploadBase64Image: typeof uploadBase64Image;
+  uploadResource: typeof uploadResource;
 }
 
 /** 报表项目：DashProject 端点适配层 */
@@ -187,7 +221,9 @@ const dashApi: ProjectApi = {
       data
     });
   },
-  uploadBase64Image
+  // 附件上传与项目类型无关，两套共用同一实现
+  uploadBase64Image,
+  uploadResource
 };
 
 /** 组态项目：ScadaProject 原生端点 */
@@ -199,7 +235,8 @@ const scadaApi: ProjectApi = {
   dashPublish,
   getDataInfo,
   saveProjectData,
-  uploadBase64Image
+  uploadBase64Image,
+  uploadResource
 };
 
 /** 按项目类型取 API（默认组态项目） */
@@ -214,6 +251,7 @@ export default {
   dashPublish,
   getDataInfo,
   saveProjectData,
+  uploadResource,
   uploadBase64Image,
   createProjectApi
 };

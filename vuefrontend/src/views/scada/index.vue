@@ -487,6 +487,17 @@ const loadProject = async (projectId: string) => {
   );
   // 持久化的数据集回灌编辑器列表(否则刷新后停留在mock数据,保存即丢)
   rehydrateDatasetList(projectData, datasetList);
+
+  // 重建已保存组件的 DOM。redrawCanvas 只给"当前选中的组件"刷样式、不创建任何元素，
+  // 组件 DOM 原本只在拖拽落画布那一刻创建过——因此打开已有项目会是一张白纸，存过的组态再也编辑不了。
+  await nextTick();
+  const canvasContent = editorContainer.value?.querySelector(".canvas-content");
+  if (canvasContent) {
+    canvasContent.innerHTML = "";
+    (projectData.value.components || []).forEach((component: any) =>
+      createComponentElement(component)
+    );
+  }
 };
 
 /**
