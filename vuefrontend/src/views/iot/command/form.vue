@@ -5,6 +5,7 @@ import {
   getSupportedCommands,
   type PluginCommandInfo
 } from "@/api/iot/plugin";
+import ProductTreeSelect from "@/views/iot/components/ProductTreeSelect.vue";
 
 defineOptions({
   name: "ProductCommandForm"
@@ -104,12 +105,10 @@ defineExpose({ getRef });
     :rules="rules"
     label-width="130px"
   >
-    <el-form-item label="产品类型编码" prop="DeviceTypeCode">
-      <el-input
+    <el-form-item label="产品类型" prop="DeviceTypeCode">
+      <ProductTreeSelect
         v-model="formValue.DeviceTypeCode"
-        placeholder="所属产品的设备类型编码，如 dianbiao"
-        maxlength="50"
-        clearable
+        placeholder="选择所属产品类型"
       />
     </el-form-item>
 

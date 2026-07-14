@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import type { ProtocolScriptFormProps } from "./utils/types";
 import { SCRIPT_TEMPLATE } from "./utils/types";
+import ProductTreeSelect from "@/views/iot/components/ProductTreeSelect.vue";
 
 defineOptions({
   name: "ProtocolScriptForm"
@@ -59,12 +60,10 @@ defineExpose({ getRef });
       />
     </el-form-item>
 
-    <el-form-item label="挂靠产品编码" prop="DeviceTypeCode">
-      <el-input
+    <el-form-item label="挂靠产品" prop="DeviceTypeCode">
+      <ProductTreeSelect
         v-model="formValue.DeviceTypeCode"
-        placeholder="设备类型编码，该产品的非JSON载荷/透传帧用此脚本解析"
-        maxlength="50"
-        clearable
+        placeholder="选择产品类型（该产品的非JSON载荷/透传帧用此脚本解析）"
       />
     </el-form-item>
 
