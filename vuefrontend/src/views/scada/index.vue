@@ -22,6 +22,7 @@ import WebcamPropertyDialog from "./components/WebcamPropertyDialog.vue";
 import TablePropertyDialog from "./components/TablePropertyDialog.vue";
 import ThermometerPropertyDialog from "./components/ThermometerPropertyDialog.vue";
 import TextCardPropertyDialog from "./components/TextCardPropertyDialog.vue";
+import StatCardPropertyDialog from "./components/StatCardPropertyDialog.vue";
 import {
   addResizeHandles,
   removeResizeHandles,
@@ -178,6 +179,10 @@ const thermometerConfigVisible = ref(false);
 const textCardConfigDialogVisible = ref(false);
 const currentTextCardComponent = ref(null);
 
+// 统计数值卡配置弹框状态
+const statCardConfigDialogVisible = ref(false);
+const currentStatCardComponent = ref(null);
+
 // 数据集配置状态
 const datasetDialogVisible = ref(false);
 const datasetList = ref([
@@ -316,6 +321,8 @@ const contextMenuItems = computed(() => {
     hasSelection && selectedCanvasComponent.value?.type === "thermometer";
   const isTextCardComponent =
     hasSelection && selectedCanvasComponent.value?.type === "text-card";
+  const isStatCardComponent =
+    hasSelection && selectedCanvasComponent.value?.type === "stat-card";
 
   return [
     {
@@ -373,6 +380,13 @@ const contextMenuItems = computed(() => {
       icon: "ep:document",
       disabled: !isTextCardComponent,
       action: "textCardConfig"
+    },
+    {
+      id: "stat-card-config",
+      label: "统计数值卡配置",
+      icon: "ep:histogram",
+      disabled: !isStatCardComponent,
+      action: "statCardConfig"
     },
     { separator: true },
     {
@@ -1617,6 +1631,9 @@ const handleMenuClick = (item: any) => {
     case "textCardConfig":
       showTextCardConfigDialog(selectedCanvasComponent.value);
       break;
+    case "statCardConfig":
+      showStatCardConfigDialog(selectedCanvasComponent.value);
+      break;
     case "binding":
       handleDataBinding();
       break;
@@ -1823,6 +1840,34 @@ const handleSaveTextCardConfig = (config: any) => {
   isSaved.value = false;
 
   ElMessage.success("文本卡片配置已更新");
+};
+
+// 显示统计数值卡配置对话框
+const showStatCardConfigDialog = (component: any) => {
+  currentStatCardComponent.value = component;
+  statCardConfigDialogVisible.value = true;
+};
+
+// 保存统计数值卡配置
+const handleSaveStatCardConfig = (config: any) => {
+  if (!currentStatCardComponent.value) return;
+
+  // 更新组件的 properties(统计数值卡按扁平字段存 properties)
+  currentStatCardComponent.value.properties = {
+    ...currentStatCardComponent.value.properties,
+    ...config
+  };
+
+  // 使用 ComponentManager 更新组件(内部路由到 statCardManager.updateStatCardComponent)
+  componentManager.updateComponent(
+    currentStatCardComponent.value.id,
+    currentStatCardComponent.value.properties
+  );
+
+  // 标记未保存
+  isSaved.value = false;
+
+  ElMessage.success("统计数值卡配置已更新");
 };
 
 // 保存视频配置
@@ -3911,6 +3956,14 @@ onUnmounted(() => {
       :text-card-component="currentTextCardComponent"
       @update:visible="textCardConfigDialogVisible = $event"
       @save-config="handleSaveTextCardConfig"
+    />
+
+    <!-- 统计数值卡配置对话框 -->
+    <StatCardPropertyDialog
+      :visible="statCardConfigDialogVisible"
+      :stat-card-component="currentStatCardComponent"
+      @update:visible="statCardConfigDialogVisible = $event"
+      @save-config="handleSaveStatCardConfig"
     />
   </div>
 </template>

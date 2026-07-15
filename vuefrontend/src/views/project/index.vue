@@ -20,8 +20,13 @@ const router = useRouter();
 const route = useRoute();
 const formRef = ref<FormInstance>();
 const tableRef = ref();
-// 项目类型由路由 meta 决定：同一个页面同时服务组态项目与报表项目两个入口
-const kind = (route.meta?.projectKind as ProjectKind) ?? "scada";
+// 项目类型由路由 meta 决定：同一个页面同时服务组态项目与报表项目两个入口。
+// meta.projectKind 由菜单 meta_json 下发；一旦缺失(前后端构建不同步 / 旧后端未平铺 extra /
+// 授权菜单未带 meta)会静默塌成默认 scada，两个列表就"没分开"。此处按路由 path 兜底:
+// 报表入口 path 恒以 /report 开头，据此回落到 dash，保证任何构建组合下两个列表都分离。
+const kind: ProjectKind =
+  (route.meta?.projectKind as ProjectKind) ??
+  (route.path.startsWith("/report") ? "dash" : "scada");
 const title = kind === "dash" ? "报表项目" : "组态项目";
 
 // 使用hook获取表格管理功能
