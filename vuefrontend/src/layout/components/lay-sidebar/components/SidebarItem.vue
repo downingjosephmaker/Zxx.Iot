@@ -74,7 +74,9 @@ const expandCloseIcon = computed(() => {
 const onlyOneChild: menuType = ref(null);
 
 function hasOneShowingChild(children: menuType[] = [], parent: menuType) {
-  const showingChildren = children.filter((item: any) => {
+  // 后端下发的叶子菜单 children 为显式 null(Operator.ToJson 不省 null),
+  // 默认参数 =[] 只在 undefined 时生效,null 会直接 null.filter 崩掉整个侧边栏
+  const showingChildren = (children ?? []).filter((item: any) => {
     onlyOneChild.value = item;
     return true;
   });
