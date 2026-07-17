@@ -47,6 +47,12 @@ namespace IotModel
         [SugarColumn(ColumnName = "mqtt_server_port", ColumnDescription = "Mqtt服务端端口", DefaultValue = "0", ColumnDataType = "int")]
         public int MqttServerPort { get; set; }
         /// <summary>
+        /// 内网绑定地址（默认0.0.0.0等价IPAddress.Any，可收窄到指定网卡）
+        ///</summary>
+        [DisplayName("内网绑定地址")]
+        [SugarColumn(ColumnName = "lan_bind_address", Length = 64, IsNullable = true, ColumnDataType = "varchar", DefaultValue = "0.0.0.0")]
+        public string LanBindAddress { get; set; }
+        /// <summary>
         /// Mqtt用户名
         ///</summary>
         [DisplayName("Mqtt用户名")]
