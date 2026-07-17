@@ -475,6 +475,7 @@ namespace IotWebApi.Services
                 // 上线即时生效,离线告警共用判定结果即时恢复(§9.6);上线通知同设备60秒限频
                 bool notify = _offlineDebounceService.OnOnline(data.DeviceId);
                 _alarmEngineService.FireOfflineRecover(data.DeviceId);
+                _northboundForwardService.ForwardDeviceState(data.DeviceId, data.device.DeviceTypeCode, 2, "通信恢复上线");   // 新增:上线事实,状态=2
                 _ruleLinkageService.OnDeviceState(data.DeviceId, true);  //规则联动:设备上线触发(§10.1)
                 dbdev.DeviceState = data.device.DeviceState;
                 if (!data.device.LastOnlineTime.IsZxxNullOrEmpty()) dbdev.LastOnlineTime = data.device.LastOnlineTime;
@@ -523,6 +524,7 @@ namespace IotWebApi.Services
                     dbdev.DeviceState = confirm.DeviceState;
                     deviceupdates.Add(dbdev);
                     offlinefires.Add((confirm.DeviceId, confirm.Reason));
+                    _northboundForwardService.ForwardDeviceState(confirm.DeviceId, dbdev.DeviceTypeCode, confirm.DeviceState, confirm.Reason);   // 新增:离线/掉电事实,状态=confirm.DeviceState(0或1)
 
                     var run = new EventRun
                     {
