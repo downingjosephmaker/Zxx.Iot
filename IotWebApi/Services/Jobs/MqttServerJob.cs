@@ -4,7 +4,10 @@ using MQTTnet.Protocol;
 using MQTTnet.Server;
 using Quartz;
 using System.Buffers;
+using System.IO;
 using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using IotModel;
 using IotWebApi.Services.Mqtt;
@@ -114,6 +117,12 @@ namespace IotWebApi.Services.Jobs
                 optionsBuilder.WithDefaultEndpointPort(MqttParam.MqttServerPort);// 配置端口
                 optionsBuilder.WithConnectionBacklog(1000); // 最大连接数
 
+                // 8883 单向 TLS 加密端点(仅加密,不建CA,客户端跳过链校验);默认 1883 明文口保持不变
+                optionsBuilder.WithEncryptedEndpoint();
+                optionsBuilder.WithEncryptedEndpointPort(8883);
+                optionsBuilder.WithEncryptionCertificate(GetOrCreateSelfSignedCert());
+                optionsBuilder.WithEncryptionSslProtocol(System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13);
+
                 // 构建服务器选项
                 MqttServerOptions options = optionsBuilder.Build();
                 // 创建MQTT服务器实例
@@ -143,6 +152,23 @@ namespace IotWebApi.Services.Jobs
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"初始化MQTT服务端失败: {ex.Message}", "MQTT服务端检查任务");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 获取8883加密端点使用的服务端证书:优先加载配置路径下的pfx;无则运行时自签一张(仅加密,客户端跳过链校验,不建CA)
+        /// </summary>
+        private static X509Certificate2 GetOrCreateSelfSignedCert()
+        {
+            var pfxPath = AppSetting.GetConfig("Mqtt:TlsPfxPath");
+            var pfxPass = AppSetting.GetConfig("Mqtt:TlsPfxPass") ?? "";
+            if (!string.IsNullOrWhiteSpace(pfxPath) && File.Exists(pfxPath))
+                return X509CertificateLoader.LoadPkcs12FromFile(pfxPath, pfxPass, X509KeyStorageFlags.Exportable);
+
+            using var rsa = RSA.Create(2048);
+            var req = new CertificateRequest("CN=zxx-iot-mqtt", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var cert = req.CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddYears(10));
+            // 导出再导入,确保私钥可用于服务端TLS(规避CreateSelfSigned返回证书的临时密钥集无法被部分TLS场景直接使用的问题)
+            return X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pfx), string.Empty, X509KeyStorageFlags.Exportable);
         }
 
         #region MQTT服务器事件处理
