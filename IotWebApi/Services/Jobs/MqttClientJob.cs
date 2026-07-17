@@ -235,7 +235,7 @@ namespace IotWebApi.Services.Jobs
                     // 契约③兜底:非JSON载荷按产品挂JS脚本解码(§6.5,deviceKey=topic末段)
                     var segments = args.ApplicationMessage.Topic.Split('/', StringSplitOptions.RemoveEmptyEntries);
                     string devicekey = segments.Length > 0 ? segments[^1] : "";
-                    var scriptdata = MqttClientService.ScriptService?.DecodeMqttPayload(devicekey, buffer);
+                    var scriptdata = MqttClientService.ScriptService?.DecodePayload(devicekey, buffer);
                     if (scriptdata.IsZxxAny())
                     {
                         message = new PluginMessage

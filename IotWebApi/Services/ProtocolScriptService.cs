@@ -145,7 +145,7 @@ namespace IotWebApi.Services
         /// 匹配DeviceInfo.DeviceGateway,纯数字兜底按DeviceId;
         /// 无脚本/未启用/解码失败返回null由调用方丢弃该消息)
         /// </summary>
-        public List<DeviceData> DecodeMqttPayload(string devicekey, byte[] payload)
+        public List<DeviceData> DecodePayload(string devicekey, byte[] payload)
         {
             try
             {
