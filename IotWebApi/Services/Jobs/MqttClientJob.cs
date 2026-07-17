@@ -207,44 +207,9 @@ namespace IotWebApi.Services.Jobs
                     LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler", "事件总线未就绪，MQTT上行消息已丢弃。", mqttname);
                     return Task.CompletedTask;
                 }
-                PluginMessage? message = null;
-                try
-                {
-                    var wrapped = strdata.ToObject<PluginMessage>();
-                    if (wrapped != null && !wrapped.MessageJson.IsZxxNullOrEmpty()) message = wrapped;
-                }
-                catch { }
-                if (message == null)
-                {
-                    try
-                    {
-                        var datalist = strdata.ToObject<List<DeviceData>>();
-                        if (datalist.IsZxxAny() && datalist.Exists(t => t.DeviceId > 0))
-                        {
-                            message = new PluginMessage
-                            {
-                                MessageType = PluginMessageEnum.协议解析,
-                                MessageJson = strdata
-                            };
-                        }
-                    }
-                    catch { }
-                }
-                if (message == null)
-                {
-                    // 契约③兜底:非JSON载荷按产品挂JS脚本解码(§6.5,deviceKey=topic末段)
-                    var segments = args.ApplicationMessage.Topic.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                    string devicekey = segments.Length > 0 ? segments[^1] : "";
-                    var scriptdata = MqttClientService.ScriptService?.DecodePayload(devicekey, buffer);
-                    if (scriptdata.IsZxxAny())
-                    {
-                        message = new PluginMessage
-                        {
-                            MessageType = PluginMessageEnum.协议解析,
-                            MessageJson = scriptdata.ToJson()
-                        };
-                    }
-                }
+                var segments = args.ApplicationMessage.Topic.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string devicekey = segments.Length > 0 ? segments[^1] : "";
+                var message = IotWebApi.Services.Uplink.UplinkPayloadRouter.Route(devicekey, buffer);
                 if (message == null)
                 {
                     LogHelper.SysLogWrite("MqttClientJob", "MessageReceivedHandler",
