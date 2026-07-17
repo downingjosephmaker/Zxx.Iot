@@ -269,6 +269,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<NorthboundForwardS
 builder.Services.AddSingleton<IotWebApi.Services.Uplink.UdpUplinkListener>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IotWebApi.Services.Uplink.UdpUplinkListener>());
 
+// TCP南向上报监听器(复用TcpServerChannel连接管理,换行定界拆帧,默认端口0=不启用)
+builder.Services.AddSingleton<IotWebApi.Services.Uplink.TcpUplinkListener>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<IotWebApi.Services.Uplink.TcpUplinkListener>());
+
 // JS协议脚本管理服务(§6.4:Jint沙箱缓存按版本热切换,试运行干跑;脚本默认禁用)
 builder.Services.AddSingleton<ProtocolScriptService>();
 
