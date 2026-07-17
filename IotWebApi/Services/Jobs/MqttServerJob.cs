@@ -129,6 +129,7 @@ namespace IotWebApi.Services.Jobs
                 MqttFwdService._mqttServer.StartedAsync += _mqttServer_StartedAsync; // 启动后事件
                 MqttFwdService._mqttServer.StoppedAsync += _mqttServer_StoppedAsync; // 关闭后事件
                 MqttFwdService._mqttServer.InterceptingPublishAsync += _mqttServer_InterceptingPublishAsync; // 消息接收事件
+                MqttFwdService._mqttServer.InterceptingSubscriptionAsync += _mqttServer_InterceptingSubscriptionAsync; // 订阅拦截:Topic ACL
                 MqttFwdService._mqttServer.ValidatingConnectionAsync += _mqttServer_ValidatingConnectionAsync; // 用户名和密码验证有关
 
                 // 启动服务器
@@ -202,8 +203,30 @@ namespace IotWebApi.Services.Jobs
             // 每条消息载荷日志挂开关,防高频遥测刷盘
             if (AppSetting.GetConfig("MqttConfig:LogOpen").ToLower() == "true")
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"InterceptingPublishAsync：客户端ID=【{arg.ClientId}】 Topic主题=【{arg.ApplicationMessage.Topic}】 消息=【{Encoding.UTF8.GetString(arg.ApplicationMessage.Payload.ToArray())}】 qos等级=【{arg.ApplicationMessage.QualityOfServiceLevel}】", "MQTT服务端");
+
+            // Topic ACL:该连接若已绑定设备,只放行末段为自身deviceGateway的topic(未绑定的全局账号不受限)
+            if (!Mqtt.MqttAclMap.Match(arg.ClientId, arg.ApplicationMessage.Topic))
+            {
+                arg.ProcessPublish = false;
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"InterceptingPublishAsync：ACL拒绝发布 客户端ID=【{arg.ClientId}】 Topic主题=【{arg.ApplicationMessage.Topic}】", "MQTT服务端");
+            }
             return Task.CompletedTask;
 
+        }
+
+        /// <summary>
+        /// 客户端订阅拦截事件(Topic ACL:该连接若已绑定设备,只放行末段为自身deviceGateway的topic)
+        /// </summary>
+        /// <param name="arg"></param>
+        /// <returns></returns>
+        private Task _mqttServer_InterceptingSubscriptionAsync(InterceptingSubscriptionEventArgs arg)
+        {
+            if (!Mqtt.MqttAclMap.Match(arg.ClientId, arg.TopicFilter.Topic))
+            {
+                arg.ProcessSubscription = false;
+                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"InterceptingSubscriptionAsync：ACL拒绝订阅 客户端ID=【{arg.ClientId}】 Topic主题=【{arg.TopicFilter.Topic}】", "MQTT服务端");
+            }
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -247,6 +270,8 @@ namespace IotWebApi.Services.Jobs
         {
             // 抖动计数(§6.5:1分钟窗口断连超阈值封禁,防重连风暴)
             Mqtt.MqttFlappingGuard.OnDisconnected(arg.ClientId);
+            // 断开清 Topic ACL 绑定映射,防绑定映射长期驻留
+            Mqtt.MqttAclMap.Unbind(arg.ClientId);
             LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ClientDisconnectedAsync：客户端ID=【{arg.ClientId}】已断开, 地址=【{arg.RemoteEndPoint}】", "MQTT服务端");
             return Task.CompletedTask;
         }
