@@ -139,6 +139,25 @@ namespace IotWebApi
             }
         }
 
+        /// <summary>PBKDF2(SHA256,100k 迭代)口令哈希。返回 hash 的 base64;salt 经 out 参数以 base64 返回。</summary>
+        public static string Pbkdf2Hash(string password, out string saltBase64)
+        {
+            byte[] salt = RandomNumberGenerator.GetBytes(16);
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, 32);
+            saltBase64 = Convert.ToBase64String(salt);
+            return Convert.ToBase64String(hash);
+        }
+
+        /// <summary>定长时间比较校验口令。</summary>
+        public static bool Pbkdf2Verify(string password, string saltBase64, string hashBase64)
+        {
+            if (string.IsNullOrEmpty(saltBase64) || string.IsNullOrEmpty(hashBase64)) return false;
+            byte[] salt = Convert.FromBase64String(saltBase64);
+            byte[] expected = Convert.FromBase64String(hashBase64);
+            byte[] actual = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, expected.Length);
+            return CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+
         /// <summary> 
         /// 返回16位Md5加密结果
         /// </summary> 
