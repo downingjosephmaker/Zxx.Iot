@@ -20,6 +20,8 @@ namespace IotWebApi.Services.Mqtt
         /// MQTT客户端上行的虚拟插件标识(与插件GUID同构,用于上行事件溯源)
         /// </summary>
         public const string MqttPluginGuid = "0af3b6c9d2e5081b4a7c0d3e6f9a2b5c";
+        public const string TcpUplinkPluginGuid = "1b0c4d7e2f6a093c5b8d1e4f7a0b3c6d";   // TCP 南向上行溯源
+        public const string UdpUplinkPluginGuid = "2c1d5e8f3a7b0a4d6c9e2f5a8b1c4d7e";   // UDP 南向上行溯源
 
         /// <summary>
         /// 协议脚本服务静态桥(应用启动后由Program赋值;
