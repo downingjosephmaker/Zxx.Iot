@@ -157,6 +157,25 @@ namespace IotWebApi.Services
         }
 
         /// <summary>
+        /// 北向设备状态事件出口（与遥测/告警并列的第三出口）：上线/离线/掉电作为客观事实转发，
+        /// 不查告警字典、不进告警生命周期、不受屏蔽规则影响。devicestate: 2=在线,1=掉电,0=离线。
+        /// </summary>
+        public void ForwardDeviceState(int deviceid, string typecode, int devicestate, string reason)
+        {
+            if (_workers.IsEmpty) return;
+            foreach (var worker in _workers.Values)
+            {
+                if (worker.Sink.ContentMode == 1) continue;              // 1=仅遥测,状态事件属事件类,跳过
+                if (!worker.MatchScope(deviceid, typecode)) continue;
+                worker.AcceptDeviceState(deviceid, devicestate, reason);
+            }
+        }
+
+        /// <summary>构造设备状态北向报文（纯函数，供 AcceptDeviceState 复用并可单测）。</summary>
+        public static string BuildDeviceStatePayload(int deviceid, int devicestate, string reason)
+            => new { msgType = "deviceState", deviceId = deviceid, deviceState = devicestate, reason }.ToJson();
+
+        /// <summary>
         /// 队列水位快照(每目的地:在线状态/内存积压/落盘积压/累计计数)
         /// </summary>
         public List<SinkStatus> GetStatus()
@@ -405,6 +424,15 @@ namespace IotWebApi.Services
                 {
                     Topic = _eventTopic.Replace("{deviceId}", deviceid.ToString()),
                     Payload = new { msgType = "alarm", data = signal }.ToJson()
+                });
+            }
+
+            public void AcceptDeviceState(int deviceid, int devicestate, string reason)
+            {
+                Enqueue(new ForwardItem
+                {
+                    Topic = _eventTopic.Replace("{deviceId}", deviceid.ToString()),
+                    Payload = NorthboundForwardService.BuildDeviceStatePayload(deviceid, devicestate, reason)
                 });
             }
 
