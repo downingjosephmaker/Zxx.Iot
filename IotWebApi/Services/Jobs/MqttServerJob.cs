@@ -183,12 +183,21 @@ namespace IotWebApi.Services.Jobs
                 return Task.CompletedTask;
             }
             arg.ReasonCode = MqttConnectReasonCode.Success;
-            if ((arg.UserName ?? string.Empty) != MqttParam.MqttUser || (arg.Password ?? string.Empty) != MqttParam.MqttPass)
-            {
-                arg.ReasonCode = MqttConnectReasonCode.Banned;
-                Mqtt.MqttFlappingGuard.OnAuthFailed(arg.ClientId);
-                LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ValidatingConnectionAsync：客户端ID=【{arg.ClientId}】用户名或密码验证错误 ", "MQTT服务端");
 
+            // 内网存量:仍允许全局账号(1883 明文口不断存量);否则走每设备凭据
+            bool isGlobal = (arg.UserName ?? string.Empty) == MqttParam.MqttUser && (arg.Password ?? string.Empty) == MqttParam.MqttPass;
+            if (!isGlobal)
+            {
+                var (ok, gateway) = Services.Mqtt.MqttCredentialCache.Validate(arg.UserName ?? string.Empty, arg.Password ?? string.Empty);
+                if (!ok)
+                {
+                    arg.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
+                    Mqtt.MqttFlappingGuard.OnAuthFailed(arg.ClientId);
+                    LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ValidatingConnectionAsync：客户端ID=【{arg.ClientId}】用户名或密码验证错误 ", "MQTT服务端");
+                    return Task.CompletedTask;
+                }
+                // 认证通过:把 ClientId→deviceGateway 写入会话映射,供 Topic ACL 用(§4.4 已挂校验)
+                Mqtt.MqttAclMap.Bind(arg.ClientId, gateway);
             }
             return Task.CompletedTask;
         }
