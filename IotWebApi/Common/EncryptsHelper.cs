@@ -152,10 +152,14 @@ namespace IotWebApi
         public static bool Pbkdf2Verify(string password, string saltBase64, string hashBase64)
         {
             if (string.IsNullOrEmpty(saltBase64) || string.IsNullOrEmpty(hashBase64)) return false;
-            byte[] salt = Convert.FromBase64String(saltBase64);
-            byte[] expected = Convert.FromBase64String(hashBase64);
-            byte[] actual = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(actual, expected);
+            try
+            {
+                byte[] salt = Convert.FromBase64String(saltBase64);
+                byte[] expected = Convert.FromBase64String(hashBase64);
+                byte[] actual = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, expected.Length);
+                return CryptographicOperations.FixedTimeEquals(actual, expected);
+            }
+            catch (FormatException) { return false; }
         }
 
         /// <summary> 
