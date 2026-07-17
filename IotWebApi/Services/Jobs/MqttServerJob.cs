@@ -196,6 +196,14 @@ namespace IotWebApi.Services.Jobs
                     LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ValidatingConnectionAsync：客户端ID=【{arg.ClientId}】用户名或密码验证错误 ", "MQTT服务端");
                     return Task.CompletedTask;
                 }
+                // 每设备凭据必须绑定设备;gateway 为空会让该连接不受 Topic ACL 约束(可发布/订阅任意 topic),视为配置错误直接拒绝(堵 Topic ACL 绕过)
+                if (string.IsNullOrEmpty(gateway))
+                {
+                    arg.ReasonCode = MqttConnectReasonCode.NotAuthorized;
+                    Mqtt.MqttFlappingGuard.OnAuthFailed(arg.ClientId);
+                    LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"ValidatingConnectionAsync：客户端ID=【{arg.ClientId}】凭据未绑定设备(device_gateway 为空)已拒绝 ", "MQTT服务端");
+                    return Task.CompletedTask;
+                }
                 // 认证通过:把 ClientId→deviceGateway 写入会话映射,供 Topic ACL 用(§4.4 已挂校验)
                 Mqtt.MqttAclMap.Bind(arg.ClientId, gateway);
             }
