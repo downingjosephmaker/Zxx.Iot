@@ -6,6 +6,7 @@ using MQTTnet.Protocol;
 using Quartz;
 using System.Buffers;
 using System.Text;
+using System.Threading;
 using IotModel;
 using IotWebApi.Services.Mqtt;
 
@@ -21,6 +22,11 @@ namespace IotWebApi.Services.Jobs
         private MqttClientOptions? clientOptions;
         private AdminMqttparam? MqttParam;
         private string mqttname = "";
+        /// <summary>
+        /// MQTT客户端重连串行锁:断线重连与Quartz巡检重连共用同一入口,
+        /// 保证任意时刻只有一条重连在跑,不会建出多个并存客户端导致上行重复。
+        /// </summary>
+        private static readonly SemaphoreSlim _initLock = new SemaphoreSlim(1, 1);
         /// <summary>
         /// 执行任务
         /// </summary>
@@ -69,8 +75,14 @@ namespace IotWebApi.Services.Jobs
         /// </summary>
         private async Task<bool> TryInitializeClient()
         {
+            // 串行化:断线重连与巡检重连都经此入口,任意时刻只放行一条,杜绝多客户端并存
+            await _initLock.WaitAsync();
             try
             {
+                // 幂等:若已有其它重连路径把连接建好,直接返回,不重复建客户端
+                if (MqttClientService._mqttClient != null && MqttClientService._mqttClient.IsConnected)
+                    return true;
+
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, "尝试初始化MQTT客户端", mqttname);
 
                 await Task.Delay(1000);
@@ -81,11 +93,20 @@ namespace IotWebApi.Services.Jobs
                     return false;
                 }
 
+                // 释放旧客户端(断开的残留连接),防止新旧客户端并存造成上行消息重复入库
+                var old = MqttClientService._mqttClient;
+                if (old != null)
+                {
+                    MqttClientService._mqttClient = null;
+                    try { if (old.IsConnected) await old.DisconnectAsync(); } catch { }
+                    try { old.Dispose(); } catch { }
+                }
+
                 // 创建客户端选项
                 var optionsBuilder = new MqttClientOptionsBuilder()
                  .WithTcpServer(MqttParam.MqttServer, MqttParam.MqttClientPort)
                  .WithCredentials(MqttParam.MqttUser, MqttParam.MqttPass)
-                 .WithClientId($"{mqttname}_{SnowModel.Instance.NewId()}")
+                 .WithClientId(mqttname)  // 固定ClientId:持久会话(CleanSession=false)依赖稳定标识;随机雪花ID会让会话永不复用并在broker端堆积僵尸会话,重连时broker也无法用同名连接顶替旧连接
                  .WithCleanSession(false) //建议保持会话
                  .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V311)
                  .WithKeepAlivePeriod(TimeSpan.FromSeconds(15))  // 心跳间隔时间
@@ -96,17 +117,24 @@ namespace IotWebApi.Services.Jobs
                  });
                 clientOptions = optionsBuilder.Build();
 
-                // 创建客户端实例
+                // 创建客户端实例并注册事件,先备妥再挂到静态字段
                 var factory = new MqttClientFactory();
-                MqttClientService._mqttClient = factory.CreateMqttClient();
+                var client = factory.CreateMqttClient();
+                client.ConnectedAsync += ConnectedHandler;
+                client.DisconnectedAsync += DisconnectedHandler;
+                client.ApplicationMessageReceivedAsync += MessageReceivedHandler;
+                MqttClientService._mqttClient = client;
 
-                // 注册事件处理
-                MqttClientService._mqttClient.ConnectedAsync += ConnectedHandler;
-                MqttClientService._mqttClient.DisconnectedAsync += DisconnectedHandler;
-                MqttClientService._mqttClient.ApplicationMessageReceivedAsync += MessageReceivedHandler;
-
-                // 连接客户端
-                _ = MqttClientService._mqttClient.ConnectAsync(clientOptions);
+                // 不再fire-and-forget:等待连接结果并记录异常,失败留待下次巡检/断线重连
+                try
+                {
+                    await client.ConnectAsync(clientOptions);
+                }
+                catch (Exception cex)
+                {
+                    LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"MQTT客户端连接失败: {cex.Message}", mqttname);
+                    return false;
+                }
 
                 LogHelper.SysLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, "MQTT客户端初始化成功", mqttname);
                 return true;
@@ -115,6 +143,10 @@ namespace IotWebApi.Services.Jobs
             {
                 LogHelper.ErrorLogWrite(ClassHelper.ClassName, ClassHelper.MethodName, $"初始化MQTT客户端失败: {ex.Message}", mqttname);
                 return false;
+            }
+            finally
+            {
+                _initLock.Release();
             }
         }
 
@@ -138,11 +170,17 @@ namespace IotWebApi.Services.Jobs
         /// <summary>
         /// 连接断开事件处理
         /// </summary>
-        private async Task DisconnectedHandler(MqttClientDisconnectedEventArgs args)
+        private Task DisconnectedHandler(MqttClientDisconnectedEventArgs args)
         {
-            await Task.Delay(20 * 1000);
-            _ = MqttClientService._mqttClient.ConnectAsync(clientOptions);
             LogHelper.SysLogWrite("MqttClientJob", "DisconnectedHandler", $"MQTT客户端连接断开，原因: {args.Reason}", mqttname);
+            // 脱离断开事件的回调栈后再重连:避免在自身断开回调内Dispose自己的客户端;
+            // 重连统一走TryInitializeClient(信号量串行+幂等),与巡检重连不再打架。
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(20 * 1000);
+                await TryInitializeClient();
+            });
+            return Task.CompletedTask;
         }
 
         /// <summary>
