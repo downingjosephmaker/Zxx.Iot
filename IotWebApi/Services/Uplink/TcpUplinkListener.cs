@@ -41,7 +41,11 @@ namespace IotWebApi.Services.Uplink
             };
             _channel.FrameReceived = OnFrame;
             _channel.SessionClosed = ep => _acc.Reset(ep);
-            _channel.Start();
+            if (!_channel.Start())
+            {
+                LogHelper.ErrorLogWrite("TcpUplinkListener", "StartAsync", $"TCP 南向监听启动失败:端口 {_port} 可能被占用", "TcpUplink");
+                return Task.CompletedTask;
+            }
             LogHelper.SysLogWrite("TcpUplinkListener", "StartAsync", $"TCP 南向监听已启动:端口 {_port}", "TcpUplink");
             return Task.CompletedTask;
         }
@@ -60,7 +64,6 @@ namespace IotWebApi.Services.Uplink
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _channel?.Stop();
             _channel?.Dispose();
             return Task.CompletedTask;
         }
