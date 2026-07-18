@@ -15,8 +15,6 @@ export interface ExpandDeviceType {
   SbjgType: boolean;
   /** Mqtt通讯Key */
   MqttKey: string;
-  /** 是否有策略 */
-  IsHasStrategy: boolean;
 }
 
 /** 设备类型（对应后端 DeviceTypeEntity；FullCode/FullName/TreeLevel 由服务端计算） */

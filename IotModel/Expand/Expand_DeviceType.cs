@@ -33,11 +33,5 @@ namespace IotModel
         [DisplayName("Mqtt通讯Key")]
         public string MqttKey { get; set; } = "";
 
-        /// <summary>
-        /// 是否有策略
-        ///</summary>
-        [DisplayName("是否有策略")]
-        public bool IsHasStrategy { get; set; } = false;
-
     }
 }

@@ -4,6 +4,7 @@ import { type FormInstance } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useDeviceTypeParam } from "./utils/hook";
+import ProductTreeSelect from "../components/ProductTreeSelect.vue";
 import AddFill from "~icons/ri/add-circle-line";
 import Search from "~icons/ep/search";
 import Refresh from "~icons/ep/refresh";
@@ -49,12 +50,10 @@ const {
         class="search-form bg-bg_color w-[99/100] pl-8 pt-[12px]"
       >
         <el-form-item label="产品编码" prop="typecode">
-          <el-input
+          <ProductTreeSelect
             v-model="searchForm.typecode"
-            placeholder="产品类型编码"
-            clearable
-            class="!w-[160px]"
-            @keyup.enter="onSearch"
+            placeholder="选择产品类型"
+            class="!w-[220px]"
           />
         </el-form-item>
         <el-form-item label="参数名称" prop="keyword">

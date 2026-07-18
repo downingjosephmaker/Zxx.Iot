@@ -209,8 +209,7 @@ function openAddProduct() {
     OfflineMinute: 0,
     SubChannels: 0,
     SbjgType: false,
-    MqttKey: "",
-    IsHasStrategy: false
+    MqttKey: ""
   };
   const typeOptions = buildTypeOptions();
   addDialog({
@@ -233,8 +232,7 @@ function openAddProduct() {
           OfflineMinute: Number(curData.OfflineMinute) || 0,
           SubChannels: Number(curData.SubChannels) || 0,
           SbjgType: curData.SbjgType,
-          MqttKey: curData.MqttKey ?? "",
-          IsHasStrategy: curData.IsHasStrategy
+          MqttKey: curData.MqttKey ?? ""
         };
         const data = await insertType({
           TypeCode: curData.TypeCode,

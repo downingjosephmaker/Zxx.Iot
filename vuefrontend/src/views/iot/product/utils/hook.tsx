@@ -17,8 +17,7 @@ const DEFAULT_EXPAND: ExpandDeviceType = {
   OfflineMinute: 0,
   SubChannels: 0,
   SbjgType: false,
-  MqttKey: "",
-  IsHasStrategy: false
+  MqttKey: ""
 };
 
 export function useDeviceType() {
@@ -211,8 +210,7 @@ export function useDeviceType() {
       OfflineMinute: expand.OfflineMinute,
       SubChannels: expand.SubChannels,
       SbjgType: expand.SbjgType,
-      MqttKey: expand.MqttKey,
-      IsHasStrategy: expand.IsHasStrategy
+      MqttKey: expand.MqttKey
     };
     const typeOptions = buildSelectTree(
       title === "修改" ? row?.FullCode : undefined
@@ -238,8 +236,7 @@ export function useDeviceType() {
               OfflineMinute: Number(curData.OfflineMinute) || 0,
               SubChannels: Number(curData.SubChannels) || 0,
               SbjgType: curData.SbjgType,
-              MqttKey: curData.MqttKey ?? "",
-              IsHasStrategy: curData.IsHasStrategy
+              MqttKey: curData.MqttKey ?? ""
             };
             // FullCode/FullName/TreeLevel由服务端DAO重算，无需上送
             const payload = {

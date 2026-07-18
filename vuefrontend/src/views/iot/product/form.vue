@@ -18,8 +18,7 @@ const props = withDefaults(defineProps<DeviceTypeFormProps>(), {
     OfflineMinute: 0,
     SubChannels: 0,
     SbjgType: false,
-    MqttKey: "",
-    IsHasStrategy: false
+    MqttKey: ""
   }),
   typeOptions: () => []
 });
@@ -143,10 +142,6 @@ defineExpose({ getRef });
         maxlength="50"
         clearable
       />
-    </el-form-item>
-
-    <el-form-item label="是否有策略" prop="IsHasStrategy">
-      <el-switch v-model="formValue.IsHasStrategy" />
     </el-form-item>
   </el-form>
 </template>

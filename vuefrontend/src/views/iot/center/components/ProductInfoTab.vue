@@ -33,8 +33,7 @@ const DEFAULT_EXPAND: ExpandDeviceType = {
   OfflineMinute: 0,
   SubChannels: 0,
   SbjgType: false,
-  MqttKey: "",
-  IsHasStrategy: false
+  MqttKey: ""
 };
 
 /** 读取拓展属性，兼容服务端返回ExpandObject或仅ExpandJson两种形态 */
@@ -124,8 +123,7 @@ async function openEditDialog() {
     OfflineMinute: curExpand.OfflineMinute,
     SubChannels: curExpand.SubChannels,
     SbjgType: curExpand.SbjgType,
-    MqttKey: curExpand.MqttKey,
-    IsHasStrategy: curExpand.IsHasStrategy
+    MqttKey: curExpand.MqttKey
   };
 
   addDialog({
@@ -148,8 +146,7 @@ async function openEditDialog() {
             OfflineMinute: Number(curData.OfflineMinute) || 0,
             SubChannels: Number(curData.SubChannels) || 0,
             SbjgType: curData.SbjgType,
-            MqttKey: curData.MqttKey ?? "",
-            IsHasStrategy: curData.IsHasStrategy
+            MqttKey: curData.MqttKey ?? ""
           };
           // FullCode/FullName/TreeLevel由服务端DAO重算，无需上送
           const payload = {
@@ -218,9 +215,6 @@ async function openEditDialog() {
       </el-descriptions-item>
       <el-descriptions-item label="Mqtt通讯Key">
         {{ expand.MqttKey || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="是否有策略">
-        {{ expand.IsHasStrategy ? "是" : "否" }}
       </el-descriptions-item>
     </el-descriptions>
   </div>

@@ -21,7 +21,6 @@ export interface DeviceTypeFormItemProps {
   SubChannels: number;
   SbjgType: boolean;
   MqttKey: string;
-  IsHasStrategy: boolean;
 }
 
 export interface TreeSelectOption {
