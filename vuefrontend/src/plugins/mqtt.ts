@@ -37,6 +37,11 @@ class MqttClient {
   private client: MqttClientType | null = null;
   private subscriptions: Map<string, ((message: any) => void)[]> = new Map();
   private isConnected = false;
+  // 死地址(如 ws://127.0.0.1/ws 未反代)会触发 mqtt.js 按 reconnectPeriod 无限重连,
+  // 浏览器每次打印 WebSocket failed 刷屏;累计重连超上限即彻底 end,停止刷屏。
+  // 告警红点由 AlarmBadge 每30秒 API 轮询兜底,不受影响。
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
 
   // 获取当前连接状态
   getStatus(): MqttConnectionState {
@@ -125,6 +130,7 @@ class MqttClient {
           // 连接成功事件
           this.client.on("connect", () => {
             // console.log("MQTT连接成功");
+            this.reconnectAttempts = 0;
             this.isConnected = true;
             this.status = MqttConnectionState.CONNECTED;
             emitter.emit("mqttStatusChange", this.status);
@@ -207,6 +213,16 @@ class MqttClient {
           // 重连事件
           this.client.on("reconnect", () => {
             // console.log("MQTT正在重连...");
+            // 地址不可达时 mqtt.js 会无限重连、浏览器每次打印 WebSocket failed 刷屏;
+            // 超过上限即彻底 end 停止重连(告警走30秒 API 轮询兜底,功能不受损)。
+            this.reconnectAttempts++;
+            if (this.reconnectAttempts > this.maxReconnectAttempts) {
+              this.client?.end(true);
+              this.isConnected = false;
+              this.status = MqttConnectionState.DISCONNECTED;
+              emitter.emit("mqttStatusChange", this.status);
+              return;
+            }
             this.status = MqttConnectionState.RECONNECTING;
             emitter.emit("mqttStatusChange", this.status);
           });
