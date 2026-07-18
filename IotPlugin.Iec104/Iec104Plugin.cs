@@ -16,8 +16,27 @@ namespace IotPlugin.Iec104
     /// 点表寻址:公共地址CA=DeviceInfo.DeviceAdr,信息体地址IOA=ParamAddr,类型标识TI=CollectFuncCode;
     /// 遥控45/46/50默认选择后执行SBO——方案§4.6)
     /// </summary>
-    public class Iec104Plugin : ICenBoPlugin
+    public class Iec104Plugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托Iec104Simulator;从站编解码独立实现) =====
+        private readonly Sim.Iec104Simulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
+        public bool OwnsDeviceType(string deviceTypeCode) =>
+            _config != null && _config.DeviceTypeCodes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(deviceTypeCode, StringComparer.OrdinalIgnoreCase);
+
         private IEventBus<PluginEvent>? _eventBus;
         private Iec104PluginConfig? _config;
         private TimerX? _heartTimer;
@@ -184,6 +203,7 @@ namespace IotPlugin.Iec104
                     _deviceMap = new Dictionary<int, Iec104DeviceBinding>();
                     _endpointMap = new Dictionary<string, List<Iec104DeviceBinding>>(StringComparer.OrdinalIgnoreCase);
                 }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("Iec104Plugin", "PluginStop", ex.ToString(), "IEC104插件"); }
             return true;
