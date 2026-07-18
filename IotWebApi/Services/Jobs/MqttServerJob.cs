@@ -110,9 +110,11 @@ namespace IotWebApi.Services.Jobs
 
                 // 创建服务器选项构建器
                 MqttServerOptionsBuilder optionsBuilder = new MqttServerOptionsBuilder();
-                // 默认绑定到所有IPv4和IPv6地址（LanBindAddress为空时兜底0.0.0.0，等价IPAddress.Any，存量行为不变）
+                // 默认绑定到所有IPv4和IPv6地址（LanBindAddress为空或畸形时兜底0.0.0.0，等价IPAddress.Any，存量行为不变，不致broker初始化崩溃）
                 var lanbind = string.IsNullOrWhiteSpace(MqttParam.LanBindAddress) ? "0.0.0.0" : MqttParam.LanBindAddress;
-                optionsBuilder.WithDefaultEndpointBoundIPAddress(IPAddress.Parse(lanbind));
+                if (!IPAddress.TryParse(lanbind, out var lanAddr))
+                    lanAddr = IPAddress.Any;
+                optionsBuilder.WithDefaultEndpointBoundIPAddress(lanAddr);
                 optionsBuilder.WithDefaultEndpointBoundIPV6Address(IPAddress.IPv6Any);
                 optionsBuilder.WithDefaultEndpointPort(MqttParam.MqttServerPort);// 配置端口
                 optionsBuilder.WithConnectionBacklog(1000); // 最大连接数

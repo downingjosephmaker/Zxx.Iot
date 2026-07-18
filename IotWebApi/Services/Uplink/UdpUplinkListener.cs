@@ -25,8 +25,19 @@ namespace IotWebApi.Services.Uplink
         public Task StartAsync(CancellationToken cancellationToken)
         {
             if (_port <= 0) return Task.CompletedTask;   // 未配置端口=不启用
+            // 绑定失败(端口占用/BindAddress 畸形)只记日志返回,不抛出——IHostedService.StartAsync 抛异常会中止整个 Host 启动
+            if (!IPAddress.TryParse(AppSetting.GetConfig("Uplink:BindAddress") ?? "0.0.0.0", out var bindAddr))
+                bindAddr = IPAddress.Any;
+            try
+            {
+                _udp = new UdpClient(new IPEndPoint(bindAddr, _port));
+            }
+            catch (Exception ex)
+            {
+                LogHelper.ErrorLogWrite("UdpUplinkListener", "StartAsync", $"UDP 南向监听启动失败(端口 {_port}):{ex.Message}", "UdpUplink");
+                return Task.CompletedTask;
+            }
             _cts = new CancellationTokenSource();
-            _udp = new UdpClient(new IPEndPoint(IPAddress.Parse(AppSetting.GetConfig("Uplink:BindAddress") ?? "0.0.0.0"), _port));
             _ = Task.Run(() => ReceiveLoop(_cts.Token));
             LogHelper.SysLogWrite("UdpUplinkListener", "StartAsync", $"UDP 南向监听已启动:端口 {_port}", "UdpUplink");
             return Task.CompletedTask;
