@@ -18,8 +18,27 @@ namespace IotPlugin.S7
     /// 按(区,DB)分组经PointBatchBuilder连续性合包批量读;
     /// 写下发nets7write:CollectWritable点位入每设备写队列由采集循环串行消费)
     /// </summary>
-    public class S7Plugin : ICenBoPlugin
+    public class S7Plugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托S7Simulator;从站编码手写与库客户端独立) =====
+        private readonly Sim.S7Simulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
+        public bool OwnsDeviceType(string deviceTypeCode) =>
+            _config != null && _config.DeviceTypeCodes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(deviceTypeCode, StringComparer.OrdinalIgnoreCase);
+
         private IEventBus<PluginEvent>? _eventBus;
         private S7PluginConfig? _config;
         private TimerX? _heartTimer;
@@ -148,6 +167,7 @@ namespace IotPlugin.S7
                 _cts?.Cancel();
                 _cts = null;
                 lock (_bindingLock) { _deviceMap = new Dictionary<int, S7DeviceBinding>(); }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("S7Plugin", "PluginStop", ex.ToString(), "S7插件"); }
             return true;
