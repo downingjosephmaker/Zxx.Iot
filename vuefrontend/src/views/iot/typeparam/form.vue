@@ -40,9 +40,6 @@ const props = withDefaults(defineProps<DeviceTypeParamFormProps>(), {
     IsSet: false,
     IsPeak: false,
     IsReport: false,
-    IsMapDefault: false,
-    IsPt: false,
-    IsCt: false,
     IsCustomAlarm: false,
     CollectFuncCode: 0,
     CollectDataType: "",
@@ -195,6 +192,29 @@ const GROUP_SPECS: Record<string, Partial<CollectFieldSpec>> = {
     showRegLength: false,
     writableTip: "经OPC UA Write服务下发",
     gateByFuncCode: false
+  },
+  iec104: {
+    funcCodeLabel: "类型标识TI",
+    funcCodeOptions: [
+      { value: 0, label: "0 不采集" },
+      { value: 1, label: "1 单点信息" },
+      { value: 3, label: "3 双点信息" },
+      { value: 9, label: "9 归一化测量值" },
+      { value: 11, label: "11 标度化测量值" },
+      { value: 13, label: "13 短浮点测量值" },
+      { value: 30, label: "30 单点信息(带时标)" },
+      { value: 31, label: "31 双点信息(带时标)" },
+      { value: 34, label: "34 归一化测量值(带时标)" },
+      { value: 36, label: "36 短浮点测量值(带时标)" }
+    ],
+    paramAddrLabel: "信息体地址IOA",
+    paramAddrTip: "1~16777215，公共地址CA取设备通讯地址",
+    showDataType: false,
+    showByteOrder: false,
+    showBitOffset: false,
+    showRegLength: false,
+    writableTip: "遥控/设定值经45/46/50命令下发，默认选择后执行SBO",
+    showNodeId: false
   }
 };
 
@@ -653,21 +673,6 @@ defineExpose({ getRef });
       <el-col :span="8">
         <el-form-item label="统计计算" prop="IsReport">
           <el-switch v-model="formValue.IsReport" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item label="电子图默认" prop="IsMapDefault">
-          <el-switch v-model="formValue.IsMapDefault" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item label="是否乘PT" prop="IsPt">
-          <el-switch v-model="formValue.IsPt" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item label="是否乘CT" prop="IsCt">
-          <el-switch v-model="formValue.IsCt" />
         </el-form-item>
       </el-col>
       <el-col :span="8">

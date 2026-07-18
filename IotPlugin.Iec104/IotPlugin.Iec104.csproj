@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SatelliteResourceLanguages>en;de;pt</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CenBoCommon.Zxx\CenBoCommon.Zxx.csproj" />
+    <ProjectReference Include="..\CenboEventBus\CenboEventBus.csproj" />
+    <ProjectReference Include="..\IotDriverCore\IotDriverCore.csproj" />
+    <ProjectReference Include="..\IotLog\IotLog.csproj" />
+    <ProjectReference Include="..\IotModel\IotModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 开放internal给测试项目(APCI/ASDU编解码纯函数单测,方案§8) -->
+    <InternalsVisibleTo Include="IotTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="NewLife.Core">
+      <HintPath>..\ZhjngkLib\NewLife.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

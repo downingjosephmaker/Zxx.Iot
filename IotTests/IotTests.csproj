@@ -20,6 +20,7 @@
     <ProjectReference Include="..\IotPlugin.Modbus\IotPlugin.Modbus.csproj" />
     <ProjectReference Include="..\IotPlugin.Dlt645\IotPlugin.Dlt645.csproj" />
     <ProjectReference Include="..\IotPlugin.Cjt188\IotPlugin.Cjt188.csproj" />
+    <ProjectReference Include="..\IotPlugin.Iec104\IotPlugin.Iec104.csproj" />
     <ProjectReference Include="..\IotWebApi\IotWebApi.csproj" />
   </ItemGroup>
 

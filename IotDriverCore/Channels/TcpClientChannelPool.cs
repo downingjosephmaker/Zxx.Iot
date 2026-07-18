@@ -159,6 +159,18 @@ namespace IotDriverCore
         public bool IsOnline(string endpoint) =>
             _clients.TryGetValue(endpoint, out var entry) && entry.Online;
 
+        /// <summary>
+        /// 强制断开指定端点(连接循环随退避自动重连;
+        /// 供协议层判死使用,如IEC104的t1等确认超时/序号错乱)
+        /// </summary>
+        public void Disconnect(string endpoint)
+        {
+            if (_clients.TryGetValue(endpoint, out var entry))
+            {
+                try { entry.Client?.Close(); } catch { }
+            }
+        }
+
         #endregion
 
         #region IChannelTransport
