@@ -158,29 +158,11 @@ namespace IotModel
         [SugarColumn(ColumnName = "is_report", Length = 1, ColumnDescription = "统计计算(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
         public bool IsReport { get; set; }
         /// <summary>
-        /// 电子图默认(0:否1:是)
-        ///</summary>
-        [DisplayName("电子图默认(0:否1:是)")]
-        [SugarColumn(ColumnName = "is_map_default", Length = 1, ColumnDescription = "电子图默认(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
-        public bool IsMapDefault { get; set; }
-        /// <summary>
         /// 小数显示位数
         ///</summary>
         [DisplayName("小数显示位数")]
         [SugarColumn(ColumnName = "decimal_digit", Length = 0, ColumnDescription = "小数显示位数", DefaultValue = "0", ColumnDataType = "int")]
         public int DecimalDigit { get; set; }
-        /// <summary>
-        /// 是否乘PT(0:否1:是)
-        ///</summary>
-        [DisplayName("是否乘PT(0:否1:是)")]
-        [SugarColumn(ColumnName = "is_pt", Length = 1, ColumnDescription = "是否乘PT(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
-        public bool IsPt { get; set; }
-        /// <summary>
-        /// 是否乘CT(0:否1:是)
-        ///</summary>
-        [DisplayName("是否乘CT(0:否1:是)")]
-        [SugarColumn(ColumnName = "is_ct", Length = 1, ColumnDescription = "是否乘CT(0:否1:是)", DefaultValue = "0", ColumnDataType = "bit")]
-        public bool IsCt { get; set; }
         /// <summary>
         /// 是否自定义告警显示(0:否1:是)
         ///</summary>

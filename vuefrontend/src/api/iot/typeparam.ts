@@ -52,10 +52,7 @@ export interface DeviceTypeParamItem {
   IsSet?: boolean;
   IsPeak?: boolean;
   IsReport?: boolean;
-  IsMapDefault?: boolean;
   DecimalDigit?: number;
-  IsPt?: boolean;
-  IsCt?: boolean;
   IsCustomAlarm?: boolean;
   /** 采集功能码(0:不采集,1/2/3/4:Modbus读区) */
   CollectFuncCode?: number;

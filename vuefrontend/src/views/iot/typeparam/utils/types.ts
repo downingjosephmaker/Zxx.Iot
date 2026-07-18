@@ -37,9 +37,6 @@ export interface DeviceTypeParamFormItemProps {
   IsSet: boolean;
   IsPeak: boolean;
   IsReport: boolean;
-  IsMapDefault: boolean;
-  IsPt: boolean;
-  IsCt: boolean;
   IsCustomAlarm: boolean;
   CollectFuncCode: number;
   CollectDataType: string;

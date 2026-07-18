@@ -393,7 +393,6 @@ namespace IotWebApi.Controllers
                         IsSet = false,
                         IsPeak = false,
                         IsReport = false,
-                        IsMapDefault = false,
                         DecimalDigit = 2,
                         CreateId = 1,//optmdl.UserID,
                         CreateTime = now.ToDateTimeString(),
