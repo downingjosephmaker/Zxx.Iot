@@ -18,8 +18,27 @@ namespace IotPlugin.OpcUa
     /// 匿名/用户名两种认证(证书认证待后续);每设备独立会话循环+ReconnectBackoff退避重连;
     /// 写下发netopcuawrite:CollectWritable点位入每设备写队列由会话循环串行消费)
     /// </summary>
-    public class OpcUaPlugin : ICenBoPlugin
+    public class OpcUaPlugin : ICenBoPlugin, ISimulatable
     {
+        // ===== 模拟人格(方案A:独立端口/生命周期,委托OpcUaSimulator;官方Server栈托管节点) =====
+        private readonly Sim.OpcUaSimulator _simulator = new();
+
+        public SimCapability Capability => _simulator.Capability;
+        public Action<SimLogEntry>? OnSimLog
+        {
+            get => _simulator.OnSimLog;
+            set => _simulator.OnSimLog = value;
+        }
+        public Task<SimStatus> StartSimAsync(SimStartRequest request, CancellationToken ct) => _simulator.StartSimAsync(request, ct);
+        public Task StopSimAsync(string simId) => _simulator.StopSimAsync(simId);
+        public IReadOnlyList<SimStatus> ListSims() => _simulator.ListSims();
+        public Task InjectFaultAsync(string simId, SimFaultSpec fault) => _simulator.InjectFaultAsync(simId, fault);
+
+        public bool OwnsDeviceType(string deviceTypeCode) =>
+            _config != null && _config.DeviceTypeCodes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(deviceTypeCode, StringComparer.OrdinalIgnoreCase);
+
         private IEventBus<PluginEvent>? _eventBus;
         private OpcUaPluginConfig? _config;
         private TimerX? _heartTimer;
@@ -150,6 +169,7 @@ namespace IotPlugin.OpcUa
                 _cts?.Cancel();
                 _cts = null;
                 lock (_bindingLock) { _deviceMap = new Dictionary<int, OpcUaDeviceBinding>(); }
+                _simulator.StopAll();
             }
             catch (Exception ex) { LogHelper.ErrorLogWrite("OpcUaPlugin", "PluginStop", ex.ToString(), "OpcUa插件"); }
             return true;

@@ -9,6 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Client" Version="1.5.378.156" />
+    <!-- 模拟人格:官方Server栈托管模拟节点(与客户端同版本,仅Sim目录使用) -->
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Server" Version="1.5.378.156" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="IotTests" />
   </ItemGroup>
 
   <ItemGroup>
