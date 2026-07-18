@@ -114,6 +114,8 @@ namespace IotWebApi.Services.Jobs
                 var lanbind = string.IsNullOrWhiteSpace(MqttParam.LanBindAddress) ? "0.0.0.0" : MqttParam.LanBindAddress;
                 if (!IPAddress.TryParse(lanbind, out var lanAddr))
                     lanAddr = IPAddress.Any;
+                // MQTTnet v5 默认端点默认禁用,须显式启用,否则明文口(MqttServerPort)不监听、内网存量设备连不上
+                optionsBuilder.WithDefaultEndpoint();
                 optionsBuilder.WithDefaultEndpointBoundIPAddress(lanAddr);
                 optionsBuilder.WithDefaultEndpointBoundIPV6Address(IPAddress.IPv6Any);
                 optionsBuilder.WithDefaultEndpointPort(MqttParam.MqttServerPort);// 配置端口

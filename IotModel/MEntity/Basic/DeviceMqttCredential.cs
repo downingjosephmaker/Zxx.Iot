@@ -44,7 +44,7 @@ namespace IotModel
         /// 启用(吊销开关)
         ///</summary>
         [DisplayName("启用(吊销开关)")]
-        [SugarColumn(ColumnName = "is_enable", ColumnDescription = "启用(吊销开关)", DefaultValue = "1", ColumnDataType = "tinyint")]
+        [SugarColumn(ColumnName = "is_enable", Length = 1, ColumnDescription = "启用(吊销开关)", DefaultValue = "1", ColumnDataType = "bit")]
         public bool IsEnable { get; set; }
         /// <summary>
         /// 租户ID
